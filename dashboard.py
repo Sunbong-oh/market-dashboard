@@ -125,13 +125,17 @@ def _similar(a, b):
 
 def google_news(query):
     """Google 뉴스 RSS(한국어) 검색 결과. raw는 말머리 포함 원제목, title은 말머리·꼬리표를 뗀 제목."""
-    url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(query) + "&hl=ko&gl=KR&ceid=KR:ko"
+    return google_news_feed("https://news.google.com/rss/search?q=" + urllib.parse.quote(query)
+                            + "&hl=ko&gl=KR&ceid=KR:ko", query)
+
+
+def google_news_feed(url, label=""):
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA})
         with urllib.request.urlopen(req, timeout=20) as r:
             root = ET.fromstring(r.read())
     except Exception as e:
-        print("뉴스 수집 실패:", query, type(e).__name__, file=sys.stderr)
+        print("뉴스 수집 실패:", label or url, type(e).__name__, file=sys.stderr)
         return []
     items = []
     for it in root.iter("item"):
@@ -139,9 +143,10 @@ def google_news(query):
         raw = unescape(it.findtext("title") or "").strip()
         if src and raw.endswith(" - " + src):
             raw = raw[:-len(src) - 3].strip()
+        raw = re.sub(r"\s+-\s+[^\s-]{2,12}$", "", raw)  # 제목에 남은 ' - 매체명' 꼬리
         # [속보] [美특징주] 등 말머리, '-[美증시 특징주]' 같은 꼬리표 제거
         title = re.sub(r"^\[[^\]]*\]\s*|\s*-?\s*\[[^\]]*\]$", "", raw).strip()
-        title = re.sub(r"\s*\((상보|종합|속보|\d보)\)$", "", title)  # (상보) 등 꼬리표
+        title = re.sub(r"\s*\((상보|종합|속보|\d보)\)$|\s*·\s*핵심 ?정리$", "", title)  # (상보)·핵심 정리 등 꼬리표
         if src.startswith("v.daum") or len(title) < 12:  # 다음 재전송본은 원문과 중복
             continue
         try:
@@ -178,6 +183,48 @@ def fetch_movers(since_ts=None, exclude=None, n=2):
              if MOVER_TAG.search(x["raw"]) and "개장 전" not in x["raw"]
              and not (exclude and exclude in x["title"])]
     return rank(items, since_ts, n)
+
+
+# ---------- 한국 시장 영향 뉴스 ----------
+KR_THEME_QUERIES = ("수혜주 when:1d", "관련주 when:1d", "특징주 when:1d")
+KR_POOL_QUERIES = ("코스피 when:1d", "경제 when:1d", "산업 when:1d", "정부 when:1d")
+GN_BUSINESS = "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko"
+KR_THEME = re.compile(r"수혜주|관련주|株|주 ?(강세|급등|들썩|훨훨|↑|상승)|[가-힣]주↑")
+# 지난 시황(지수 등락·마감)과 미국 증시 기사는 '오늘 영향'이 아니므로 제외
+KR_RECAP = re.compile(r"뉴욕증시|美 ?증시|나스닥|다우|S&P|마감|연속|사흘|이틀|연일|보합|장중|후퇴"
+                      r"|코스피.*(\d|하락|상승)|코스닥.*(\d|하락|상승)")
+KR_SKIP_SRC = ("simplywall", "초이스스탁", "Investing.com", "네이버 프리미엄", "Hypebeast")
+KR_STOP = {"증시", "코스", "스피", "주가", "전망", "기대", "강세", "상승", "하락", "오늘", "특징", "징주", "수혜", "혜주",
+           "관련", "련주", "국내", "마감", "반등", "급등", "투자", "시장", "종합", "속보", "미국", "한국", "코스닥", "스닥"}
+
+
+def _grams(t):
+    t = re.sub(r"[^0-9A-Za-z가-힣]", "", t)
+    return {t[i:i + 2] for i in range(len(t) - 1)} - KR_STOP
+
+
+def fetch_kr_news(n=2, hours=18):
+    """오늘 한국 증시에 영향이 클 뉴스 n개.
+    후보: 국내 테마(수혜주·관련주·특징주) 기사 + Google 뉴스 경제 주요 기사.
+    중요도: 최근 hours시간 동안 같은 주제를 다룬 기사 수(여러 언론이 크게 다룰수록 영향이 크다고 본다)."""
+    start = datetime.now(timezone.utc).timestamp() - hours * 3600
+    fresh = lambda items: [x for x in items if x["ts"] >= start and not x["src"].startswith(KR_SKIP_SRC)]
+    theme = fresh([x for q in KR_THEME_QUERIES for x in google_news(q) if KR_THEME.search(x["raw"])])
+    biz = fresh(google_news_feed(GN_BUSINESS, "경제 주요뉴스"))
+    pool = {x["link"]: x for x in theme + biz + fresh([x for q in KR_POOL_QUERIES for x in google_news(q)])}
+    pool = list(pool.values())
+    cands = [x for x in {c["link"]: c for c in theme + biz}.values() if not KR_RECAP.search(x["raw"])]
+    for c in cands:
+        g = _grams(c["title"])
+        c["heat"] = sum(1 for m in pool if m["link"] != c["link"] and len(g & _grams(m["title"])) >= 4)
+    cands.sort(key=lambda c: (-c["heat"], -c["ts"]))
+    picked = []
+    for c in cands:
+        if c["heat"] >= 2 and all(len(_grams(c["title"]) & _grams(p["title"])) < 4 for p in picked):
+            picked.append(c)
+        if len(picked) >= n:
+            break
+    return picked
 
 
 def _cap(row):
@@ -362,6 +409,16 @@ def movers_block(movers):
     return f'<div class="panel"><div class="tag">시장 특징주</div>{body}</div>'
 
 
+def kr_block(items):
+    if not items:
+        body = '<p class="err">관련 뉴스를 찾지 못했습니다.</p>'
+    else:
+        body = "".join(f'<li><a href="{escape(k["link"])}" target="_blank" rel="noopener">{escape(k["title"])}</a>'
+                       f'{src_line(k)}</li>' for k in items)
+        body = f'<ol class="items">{body}</ol>'
+    return f'<section class="panel kr"><div class="tag">오늘 한국 시장 영향</div>{body}</section>'
+
+
 def earnings_block(e):
     if not e:
         return ""
@@ -376,7 +433,7 @@ def earnings_block(e):
             f'<div class="earn-co"><b>{escape(e["name"])}</b><span>{escape(e["sym"])} · {meta}</span></div>{body}</div>')
 
 
-def top_section(cnn, news, movers, earnings):
+def top_section(cnn, news, movers, earnings, kr):
     if cnn:
         pc, hd = cnn["put_call_options"], cnn["put_call_options"]["data"][-1]
         s = pc["score"]
@@ -396,6 +453,7 @@ def top_section(cnn, news, movers, earnings):
   {movers_block(movers)}
   {earnings_block(earnings)}
 </div>
+{kr_block(kr)}
 <section class="fg">
   <h2>Put/Call 비율 (CNN)</h2>
   {pc_html}
@@ -624,7 +682,8 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
 .hl-src{font-size:14px;color:var(--muted);margin-top:10px}
 .panels{display:grid;gap:14px;margin-top:14px}.panels.two{grid-template-columns:1fr 1fr}
-.panels+.fg{margin-top:14px}
+.panels+.panel,.panel+.fg{margin-top:14px}
+.panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
 @media (max-width:640px){.panels.two{grid-template-columns:1fr}}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
@@ -676,6 +735,7 @@ def main():
     news = fetch_news(since)
     earnings = fetch_earnings(session_day)
     movers = fetch_movers(since, exclude=earnings["name"] if earnings else None)
+    kr = fetch_kr_news()
 
     now = datetime.now(KST)
     weekday = "월화수목금토일"[now.weekday()]
@@ -688,7 +748,7 @@ def main():
 <header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준 · 일봉 종가 기준 (장중이면 현재가)</div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, movers, earnings)}
+{top_section(cnn, news, movers, earnings, kr)}
 <h2>주요 지표</h2>
 <div class="grid">{cards}</div>
 <footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
