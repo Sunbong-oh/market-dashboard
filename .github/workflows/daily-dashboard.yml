@@ -2,7 +2,8 @@ name: Daily Market Dashboard
 
 on:
   schedule:
-    - cron: "0 22 * * *"   # 매일 07:00 KST (UTC 22:00)
+    # 정각(:00)은 GitHub 서버가 붐벼 예약 실행이 누락되기 쉬워 일부러 어긋난 분으로 둔다
+    - cron: "37 21 * * *"  # 매일 06:37 KST (UTC 21:37)
   workflow_dispatch:        # Actions 탭에서 수동 실행
 
 jobs:
