@@ -86,7 +86,30 @@ def fetch_cnn():
 
 
 NEWS_QUERY = "뉴욕증시 when:1d"
-NEWS_MAX = 8  # 헤드라인 후보 수(이 중 하나만 표시)
+MOVER_QUERIES = ("미국 특징주 when:1d", "뉴욕증시 특징주 when:1d")
+MOVER_TAG = re.compile(r"\[(美|미국|뉴욕)[^\]]*특징주\]")  # 국내 종목 [특징주]는 제외
+EARN_MIN_CAP = 10e9  # 이 시가총액 이상 기업의 실적 발표만 요약
+
+# 나스닥 실적 일정은 영문명뿐이라, 국내 기사 검색용 한글명(없으면 영문 약칭으로 검색)
+KO_NAMES = {
+    "AAPL": "애플", "MSFT": "마이크로소프트", "NVDA": "엔비디아", "AMZN": "아마존", "GOOGL": "알파벳",
+    "GOOG": "알파벳", "META": "메타", "TSLA": "테슬라", "AVGO": "브로드컴", "AMD": "AMD", "MU": "마이크론",
+    "INTC": "인텔", "QCOM": "퀄컴", "ORCL": "오라클", "CRM": "세일즈포스", "ADBE": "어도비", "NFLX": "넷플릭스",
+    "PANW": "팔로알토", "CRWD": "크라우드스트라이크", "SNOW": "스노우플레이크", "PLTR": "팔란티어",
+    "LITE": "루멘텀", "SPCX": "스페이스X", "TSM": "TSMC", "ASML": "ASML", "ARM": "ARM", "SMCI": "슈퍼마이크로",
+    "DELL": "델", "HPE": "HPE", "HPQ": "HP", "CSCO": "시스코", "IBM": "IBM", "ACN": "액센츄어",
+    "NKE": "나이키", "SBUX": "스타벅스", "MCD": "맥도날드", "KO": "코카콜라", "PEP": "펩시코", "WMT": "월마트",
+    "COST": "코스트코", "TGT": "타깃", "HD": "홈디포", "LOW": "로우스", "DIS": "디즈니", "JPM": "JP모건",
+    "BAC": "뱅크오브아메리카", "WFC": "웰스파고", "C": "씨티그룹", "GS": "골드만삭스", "MS": "모건스탠리",
+    "V": "비자", "MA": "마스터카드", "PYPL": "페이팔", "UNH": "유나이티드헬스", "JNJ": "존슨앤드존슨",
+    "PFE": "화이자", "LLY": "일라이릴리", "MRK": "머크", "ABBV": "애브비", "MRNA": "모더나", "BA": "보잉",
+    "CAT": "캐터필러", "GE": "GE", "F": "포드", "GM": "GM", "UBER": "우버", "ABNB": "에어비앤비",
+    "FDX": "페덱스", "UPS": "UPS", "XOM": "엑슨모빌", "CVX": "셰브런", "COIN": "코인베이스", "HOOD": "로빈후드",
+    "JBL": "자빌", "GIS": "제너럴밀스", "CCL": "카니발", "LEN": "레나", "KMX": "카맥스", "PAYX": "페이첵스",
+    "CTAS": "신타스", "DRI": "다든", "CAG": "코나그라", "STZ": "컨스텔레이션브랜즈", "PGR": "프로그레시브",
+    "LULU": "룰루레몬", "AZO": "오토존", "ADSK": "오토데스크", "WDAY": "워크데이", "INTU": "인튜이트",
+    "MRVL": "마벨", "ANET": "아리스타", "NOW": "서비스나우", "SHOP": "쇼피파이",
+}
 
 
 def _norm(title):
@@ -100,44 +123,97 @@ def _similar(a, b):
     return len(ga & gb) / (min(len(ga), len(gb)) or 1)
 
 
-def fetch_news(since_ts=None):
-    """국내 언론의 최근 하루 뉴욕증시 기사 제목을 모은다(Google 뉴스 RSS).
-    since_ts(미 증시 마감 무렵) 이후 기사를 우선하고, 모자라면 그 전 최신 기사로 채운다.
-    기사 제목에 이미 '국채금리 부담에 혼조' 같은 등락 이유가 담겨 있어 그대로 요인으로 쓴다."""
-    url = ("https://news.google.com/rss/search?q=" + urllib.parse.quote(NEWS_QUERY)
-           + "&hl=ko&gl=KR&ceid=KR:ko")
+def google_news(query):
+    """Google 뉴스 RSS(한국어) 검색 결과. raw는 말머리 포함 원제목, title은 말머리·꼬리표를 뗀 제목."""
+    url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(query) + "&hl=ko&gl=KR&ceid=KR:ko"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA})
         with urllib.request.urlopen(req, timeout=20) as r:
             root = ET.fromstring(r.read())
     except Exception as e:
-        print("뉴스 수집 실패:", type(e).__name__, file=sys.stderr)
+        print("뉴스 수집 실패:", query, type(e).__name__, file=sys.stderr)
         return []
     items = []
     for it in root.iter("item"):
         src = (it.findtext("source") or "").strip()
-        title = unescape(it.findtext("title") or "").strip()
-        if src and title.endswith(" - " + src):
-            title = title[:-len(src) - 3].strip()
-        title = re.sub(r"^\[[^\]]*\]\s*|\s*\[[^\]]*\]$", "", title).strip()  # [속보] [○○ 브리핑] 등 말머리·꼬리표
-        if "증시" not in title or src.startswith("v.daum") or len(title) < 12:
+        raw = unescape(it.findtext("title") or "").strip()
+        if src and raw.endswith(" - " + src):
+            raw = raw[:-len(src) - 3].strip()
+        # [속보] [美특징주] 등 말머리, '-[美증시 특징주]' 같은 꼬리표 제거
+        title = re.sub(r"^\[[^\]]*\]\s*|\s*-?\s*\[[^\]]*\]$", "", raw).strip()
+        title = re.sub(r"\s*\((상보|종합|속보|\d보)\)$", "", title)  # (상보) 등 꼬리표
+        if src.startswith("v.daum") or len(title) < 12:  # 다음 재전송본은 원문과 중복
             continue
         try:
             ts = parsedate_to_datetime(it.findtext("pubDate")).timestamp()
         except Exception:
             continue
-        items.append(dict(title=title, src=src, link=it.findtext("link") or "", ts=ts))
-    items.sort(key=lambda n: n["ts"], reverse=True)
+        items.append(dict(raw=raw, title=title, src=src, link=it.findtext("link") or "", ts=ts))
+    return items
+
+
+def rank(items, since_ts=None, limit=8):
+    """since_ts 이후 기사 먼저, 그 안에서 최신순. 여러 매체가 받아쓴 비슷한 제목은 하나만 남긴다."""
+    items = sorted(items, key=lambda n: n["ts"], reverse=True)
     if since_ts:
-        items.sort(key=lambda n: n["ts"] < since_ts)  # 마감 후 기사 먼저(안정 정렬이라 최신순 유지)
+        items.sort(key=lambda n: n["ts"] < since_ts)  # 안정 정렬이라 최신순 유지
     picked = []
     for n in items:
         k = _norm(n["title"])
         if all(_similar(k, _norm(p["title"])) < 0.55 for p in picked):
             picked.append(n)
-        if len(picked) >= NEWS_MAX:
+        if len(picked) >= limit:
             break
     return picked
+
+
+def fetch_news(since_ts=None):
+    """뉴욕증시 마감 기사 제목 후보. 제목에 '국채금리 부담에 혼조' 같은 등락 이유가 담겨 있다."""
+    return rank([n for n in google_news(NEWS_QUERY) if "증시" in n["title"]], since_ts)
+
+
+def fetch_movers(since_ts=None, exclude=None, n=2):
+    """국내 언론 [미국 특징주] 기사 중 개장 전 기사를 빼고 서로 다른 종목 n개."""
+    items = [x for q in MOVER_QUERIES for x in google_news(q)
+             if MOVER_TAG.search(x["raw"]) and "개장 전" not in x["raw"]
+             and not (exclude and exclude in x["title"])]
+    return rank(items, since_ts, n)
+
+
+def _cap(row):
+    try:
+        return float(re.sub(r"[^\d.]", "", row.get("marketCap") or "") or 0)
+    except ValueError:
+        return 0.0
+
+
+def fetch_earnings(session_day):
+    """session_day(미국 날짜) 개장 전·마감 후 실적을 낸 기업 중 시가총액 최대 1곳과 관련 국내 기사.
+    EARN_MIN_CAP 미만이면 '주목할 실적 없음'으로 보고 None."""
+    try:
+        j = fetch_json(f"https://api.nasdaq.com/api/calendar/earnings?date={session_day:%Y-%m-%d}",
+                       {"Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"})
+        rows = (j.get("data") or {}).get("rows") or []
+    except Exception as e:
+        print("실적 일정 수집 실패:", type(e).__name__, file=sys.stderr)
+        return None
+    rows = [r for r in rows if r.get("time") in ("time-pre-market", "time-after-hours") and "." not in r["symbol"]]
+    if not rows:
+        return None
+    top = max(rows, key=_cap)
+    if _cap(top) < EARN_MIN_CAP:
+        return None
+    sym = top["symbol"]
+    short = re.sub(r",?\s+(Inc|Corp|Corporation|Company|Co|plc|Ltd|Holdings|Technology|Technologies|Brands)\b.*$",
+                   "", top["name"]).strip()
+    name = KO_NAMES.get(sym, short)
+    when = "장 마감 후" if top["time"] == "time-after-hours" else "개장 전"
+    news = [x for x in google_news(f"{name} 실적 when:2d")
+            if name.lower() in x["title"].lower() and re.search(r"실적|매출|EPS|가이던스|어닝|순이익", x["title"])
+            and not re.search(r"앞두고|발표 예정|오늘 실적|내일|주목", x["title"])]
+    news.sort(key=lambda x: (not re.search(r"상회|하회|서프라이즈|쇼크|예상|가이던스", x["title"]), -x["ts"]))
+    return dict(sym=sym, name=name, day=session_day, when=when, eps_fc=top.get("epsForecast") or "",
+                news=news[0] if news else None)
 
 
 # ---------- 포맷 헬퍼 ----------
@@ -272,7 +348,35 @@ def headline_block(news):
             f'<div class="hl-src">{escape(n["src"])} · {when:%m/%d %H:%M}</div>')
 
 
-def top_section(cnn, news):
+def src_line(n):
+    return f'<div class="it-src">{escape(n["src"])} · {datetime.fromtimestamp(n["ts"], KST):%m/%d %H:%M}</div>'
+
+
+def movers_block(movers):
+    if not movers:
+        body = '<p class="err">특징주 기사를 찾지 못했습니다.</p>'
+    else:
+        body = "".join(f'<li><a href="{escape(m["link"])}" target="_blank" rel="noopener">{escape(m["title"])}</a>'
+                       f'{src_line(m)}</li>' for m in movers)
+        body = f'<ol class="items">{body}</ol>'
+    return f'<div class="panel"><div class="tag">시장 특징주</div>{body}</div>'
+
+
+def earnings_block(e):
+    if not e:
+        return ""
+    meta = f'{e["day"]:%m/%d} {e["when"]} 발표' + (f' · EPS 예상 {escape(e["eps_fc"])}' if e["eps_fc"] else "")
+    if e["news"]:
+        n = e["news"]
+        body = (f'<a class="earn-hl" href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
+                f'{src_line(n)}')
+    else:
+        body = '<p class="err">관련 기사를 아직 찾지 못했습니다.</p>'
+    return (f'<div class="panel earn"><div class="tag">실적 발표</div>'
+            f'<div class="earn-co"><b>{escape(e["name"])}</b><span>{escape(e["sym"])} · {meta}</span></div>{body}</div>')
+
+
+def top_section(cnn, news, movers, earnings):
     if cnn:
         pc, hd = cnn["put_call_options"], cnn["put_call_options"]["data"][-1]
         s = pc["score"]
@@ -286,9 +390,12 @@ def top_section(cnn, news):
         pc_html = '<p class="err">CNN 데이터를 가져오지 못했습니다.</p>'
 
     return f'''<section class="fg driver">
-  <h2>미국 증시 상승·하락 요인</h2>
   {headline_block(news)}
 </section>
+<div class="panels{' two' if earnings else ''}">
+  {movers_block(movers)}
+  {earnings_block(earnings)}
+</div>
 <section class="fg">
   <h2>Put/Call 비율 (CNN)</h2>
   {pc_html}
@@ -514,8 +621,23 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .top-grid{display:grid;grid-template-columns:1fr minmax(260px,320px);gap:24px}
 @media (max-width:760px){.top-grid{grid-template-columns:1fr}}
 .driver{border-left:6px solid var(--accent);padding:18px 22px}
-.headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em;margin-top:2px}
+.headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
 .hl-src{font-size:14px;color:var(--muted);margin-top:10px}
+.panels{display:grid;gap:14px;margin-top:14px}.panels.two{grid-template-columns:1fr 1fr}
+.panels+.fg{margin-top:14px}
+@media (max-width:640px){.panels.two{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
+  padding:3px 12px;border-radius:99px;margin-bottom:8px}
+.panel.earn .tag{background:var(--hd2)}
+.items{list-style:none;margin:0;padding:0;counter-reset:i}
+.items li{counter-increment:i;position:relative;padding:10px 0 10px 34px;font-size:20px;font-weight:700;line-height:1.4}
+.items li+li{border-top:1px solid var(--line)}
+.items li:before{content:counter(i);position:absolute;left:0;top:12px;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:14px;font-weight:800;text-align:center;line-height:24px}
+.it-src{font-size:13px;font-weight:400;color:var(--muted);margin-top:3px}
+.earn-co{font-size:14px;color:var(--muted);margin:2px 0 8px}.earn-co b{display:block;font-size:24px;color:var(--text)}
+.earn-hl{display:block;font-size:20px;font-weight:700;line-height:1.4}
 .pc-grid{display:grid;grid-template-columns:minmax(240px,1fr) 1.3fr;gap:24px;align-items:center}
 @media (max-width:640px){.pc-grid{grid-template-columns:1fr}}
 .fg-main{text-align:center}.gauge{width:100%;max-width:300px}
@@ -547,7 +669,13 @@ def main():
         cnn = cnn_f.result()
     nas = next((q for q in quotes if q["ok"] and q["sym"] == "^IXIC"), None)
     # 일봉 타임스탬프는 개장 시각(13:30~14:30 UTC)이라 +6시간이면 마감 무렵이 된다
-    news = fetch_news(nas["pts"][-1][0] + 6 * 3600 if nas else None)
+    since = nas["pts"][-1][0] + 6 * 3600 if nas else None
+    # 일봉 타임스탬프(미 동부 개장 시각)의 날짜 = 가장 최근 미국 거래일
+    session_day = (datetime.fromtimestamp(nas["pts"][-1][0], timezone(timedelta(hours=-5))).date()
+                   if nas else (datetime.now(KST) - timedelta(days=1)).date())
+    news = fetch_news(since)
+    earnings = fetch_earnings(session_day)
+    movers = fetch_movers(since, exclude=earnings["name"] if earnings else None)
 
     now = datetime.now(KST)
     weekday = "월화수목금토일"[now.weekday()]
@@ -560,7 +688,7 @@ def main():
 <header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준 · 일봉 종가 기준 (장중이면 현재가)</div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news)}
+{top_section(cnn, news, movers, earnings)}
 <h2>주요 지표</h2>
 <div class="grid">{cards}</div>
 <footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
