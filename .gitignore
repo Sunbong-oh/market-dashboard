@@ -1,0 +1,5 @@
+# 기본은 전부 제외하고, GitHub에서 필요한 것만 올린다 (.env 등 비밀값 보호)
+/*
+!/.gitignore
+!/dashboard.py
+!/.github/

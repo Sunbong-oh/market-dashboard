@@ -1,0 +1,30 @@
+name: Daily Market Dashboard
+
+on:
+  schedule:
+    - cron: "0 22 * * *"   # 매일 07:00 KST (UTC 22:00)
+  workflow_dispatch:        # Actions 탭에서 수동 실행
+
+jobs:
+  send:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build dashboard and send to Telegram
+        env:
+          PYTHONIOENCODING: utf-8
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python dashboard.py --notify --no-open
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard
+          path: |
+            dashboard.html
+            dashboard.png
+          if-no-files-found: ignore
