@@ -86,7 +86,7 @@ def fetch_cnn():
 
 
 NEWS_QUERY = "뉴욕증시 when:1d"
-NEWS_MAX = 6
+NEWS_MAX = 8  # 헤드라인 후보 수(이 중 하나만 표시)
 
 
 def _norm(title):
@@ -252,48 +252,27 @@ def zone_color(score):
     return ZONES[-1][2]
 
 
-def market_driver_summary(quotes):
-    """뉴스 문구 없이, 이미 수집한 실제 수치로만 등락 요인을 한 줄로 요약한다.
-    (실제 뉴스의 인과 서술("관세 우려 완화" 등)은 매일 무인 실행에서 검증할 방법이
-    없어 넣지 않는다 — 숫자로 확인 가능한 사실만 말한다.)"""
-    def find(sym):
-        return next((q for q in quotes if q["ok"] and q["sym"] == sym), None)
-
-    parts = []
-    nas = find("^IXIC")
-    if nas:
-        last, prev = nas["pts"][-1][1], nas["pts"][-2][1]
-        chg = (last / prev - 1) * 100
-        parts.append(f"나스닥 {chg:+.2f}%")
-
-    tnx = find("^TNX")
-    if tnx:
-        last, prev = tnx["pts"][-1][1], tnx["pts"][-2][1]
-        parts.append(f"10년물 금리 {(last - prev) * 100:+.1f}bp")
-
-    vix = find("^VIX")
-    if vix:
-        last, prev = vix["pts"][-1][1], vix["pts"][-2][1]
-        vd = last - prev
-        vd_str = "0.0" if abs(vd) < 0.05 else f"{vd:+.1f}"
-        parts.append(f"VIX {last:.1f}({vix_label(last)}, {vd_str})")
-
-    return " · ".join(parts) if parts else "데이터를 가져오지 못했습니다."
+def pick_headline(news):
+    """후보 중 등락 이유가 드러나는('…에 혼조', '…에도 상승') 간결한 제목을 우선 고른다."""
+    for n in news:
+        t = n["title"]
+        if len(t) <= 56 and ("…" in t or "에 " in t or "에도" in t or "속" in t):
+            return n
+    return news[0] if news else None
 
 
-def news_list(news):
-    if not news:
+def headline_block(news):
+    n = pick_headline(news)
+    if not n:
         return '<p class="err">뉴스를 가져오지 못했습니다.</p>'
-    rows = "".join(
-        f'<li><a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
-        f'<span class="src">{escape(n["src"])} · {datetime.fromtimestamp(n["ts"], KST):%m/%d %H:%M}</span></li>'
-        for n in news)
-    return f'<ul class="news">{rows}</ul>'
+    when = datetime.fromtimestamp(n["ts"], KST)
+    # '…나스닥 0.24%↑'처럼 뒤에 붙은 지수 등락 꼬리는 떼고 요인만 남긴다
+    title = re.sub(r"\s*(…|\.{2,})[^…]*\d[^…]*$", "", n["title"]).strip(" ….") or n["title"]
+    return (f'<a class="headline" href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(title)}</a>'
+            f'<div class="hl-src">{escape(n["src"])} · {when:%m/%d %H:%M}</div>')
 
 
-def top_section(cnn, quotes, news):
-    driver = market_driver_summary(quotes)
-
+def top_section(cnn, news):
     if cnn:
         pc, hd = cnn["put_call_options"], cnn["put_call_options"]["data"][-1]
         s = pc["score"]
@@ -306,11 +285,9 @@ def top_section(cnn, quotes, news):
     else:
         pc_html = '<p class="err">CNN 데이터를 가져오지 못했습니다.</p>'
 
-    return f'''<section class="fg">
+    return f'''<section class="fg driver">
   <h2>미국 증시 상승·하락 요인</h2>
-  <p class="driver-line">{escape(driver)}</p>
-  {news_list(news)}
-  <div class="driver-cap">국내 언론 뉴욕증시 기사 제목(Google 뉴스, 최근 24시간) · 요약 수치는 전일 종가 대비</div>
+  {headline_block(news)}
 </section>
 <section class="fg">
   <h2>Put/Call 비율 (CNN)</h2>
@@ -495,16 +472,20 @@ def notify(quotes, cnn, now):
 
 
 CSS = """
-:root{--bg:#f4f5f7;--card:#fff;--text:#1c2330;--muted:#6b7385;--line:#e3e6ec;--up:#d63c3c;--down:#2f6fdb;--flat:#8a92a3;--accent:#3b5bdb}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#7b93ff}}
-:root[data-theme=dark]{--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#7b93ff}
+:root{--bg:#f4f5f7;--card:#fff;--text:#1c2330;--muted:#6b7385;--line:#e3e6ec;--up:#d63c3c;--down:#2f6fdb;--flat:#8a92a3;--accent:#f08c00;--hd1:#ffd43b;--hd2:#ff922b;--hd-text:#2b1a00}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#ffa94d;--hd1:#f59f00;--hd2:#e8590c;--hd-text:#1a0f00}}
+:root[data-theme=dark]{--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#ffa94d;--hd1:#f59f00;--hd2:#e8590c;--hd-text:#1a0f00}
 :root[data-color=us]{--up:#1f9d55;--down:#d63c3c}
 :root[data-color=us][data-theme=dark]{--up:#3ddc84;--down:#ff5d5d}
 @media (prefers-color-scheme:dark){:root[data-color=us]:not([data-theme=light]){--up:#3ddc84;--down:#ff5d5d}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:'Malgun Gothic','Segoe UI',system-ui,sans-serif;line-height:1.4}
 .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
-.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:18px}
-h1{margin:0;font-size:30px}.sub{color:var(--muted);font-size:16px;margin-top:4px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:16px;
+  padding:22px 24px;border-radius:18px;color:var(--hd-text);background:linear-gradient(120deg,var(--hd1),var(--hd2));
+  box-shadow:0 6px 18px -8px rgba(232,89,12,.55)}
+.kicker{font-size:13px;font-weight:800;letter-spacing:.18em;opacity:.7}
+h1{margin:2px 0 0;font-size:32px;font-weight:800;letter-spacing:-.01em}.top .sub{color:var(--hd-text);opacity:.8;font-size:16px;margin-top:6px}
+.top .tools button{background:rgba(255,255,255,.35);border-color:rgba(0,0,0,.08);color:var(--hd-text)}
 .tools button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;margin-left:6px}
 h2{font-size:22px;margin:26px 0 12px;color:var(--text);font-weight:700;letter-spacing:.01em}
 a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
@@ -532,13 +513,11 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 @media (max-width:760px){.fg-grid{grid-template-columns:1fr}}
 .top-grid{display:grid;grid-template-columns:1fr minmax(260px,320px);gap:24px}
 @media (max-width:760px){.top-grid{grid-template-columns:1fr}}
-.driver-line{font-size:22px;font-weight:700;line-height:1.5;margin:2px 0 6px}
-.news{list-style:none;margin:0;padding:0}.news li{font-size:20px;line-height:1.45;padding:10px 0 10px 20px;border-top:1px solid var(--line);position:relative}
-.news li:before{content:'';position:absolute;left:3px;top:21px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
-.news .src{display:block;font-size:14px;color:var(--muted);margin-top:2px}
+.driver{border-left:6px solid var(--accent);padding:18px 22px}
+.headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em;margin-top:2px}
+.hl-src{font-size:14px;color:var(--muted);margin-top:10px}
 .pc-grid{display:grid;grid-template-columns:minmax(240px,1fr) 1.3fr;gap:24px;align-items:center}
 @media (max-width:640px){.pc-grid{grid-template-columns:1fr}}
-.driver-cap{font-size:14px;color:var(--muted);margin-top:10px}
 .fg-main{text-align:center}.gauge{width:100%;max-width:300px}
 .gauge .needle{stroke:var(--text);stroke-width:3;stroke-linecap:round}.gauge .hub{fill:var(--text)}.gauge .gl{font-size:9px;fill:var(--muted)}
 .fg-score{font-size:44px;font-weight:800;line-height:1;margin-top:-6px}.fg-rating{font-weight:700;margin:4px 0 12px}
@@ -578,10 +557,10 @@ def main():
     html = f'''<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{report_title(now)}</title><style>{CSS}</style></head><body><div class="wrap">
-<div class="top"><div><h1>{report_title(now)}</h1>
+<header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준 · 일봉 종가 기준 (장중이면 현재가)</div></div>
-<div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></div>
-{top_section(cnn, quotes, news)}
+<div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
+{top_section(cnn, news)}
 <h2>주요 지표</h2>
 <div class="grid">{cards}</div>
 <footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
