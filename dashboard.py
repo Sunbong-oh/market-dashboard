@@ -3,6 +3,7 @@
 실행: python dashboard.py  ->  dashboard.html 생성 후 브라우저로 열기
 데이터: Yahoo Finance(시세), CNN Fear & Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목)
 """
+import http.cookiejar
 import json
 import math
 import os
@@ -26,6 +27,9 @@ OUT = Path(__file__).with_name("dashboard.html")
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 KST = timezone(timedelta(hours=9))
+# 미국 거래일 판정용. 주식 일봉(09:30 ET)·선물 일봉(00:00 ET)·마감 시각(16:00 ET)이
+# 서머타임 여부와 관계없이 모두 같은 미국 날짜로 떨어지도록 UTC-4로 고정한다.
+US_DAY_TZ = timezone(timedelta(hours=-4))
 
 # (표시명, 야후 티커, 종류, 접두/접미, Investing.com 링크)
 ITEMS = [
@@ -66,6 +70,11 @@ def fetch_quote(item):
         ts = res["timestamp"]
         closes = res["indicators"]["quote"][0]["close"]
         pts = [(t, c) for t, c in zip(ts, closes) if c is not None]
+        # 날짜가 바뀌는 시간대에 마지막 일봉 종가가 비는 경우가 있어, 그때는 meta의 최신 정규장 가격으로 채운다
+        m, rt = res["meta"], res["meta"].get("regularMarketTime")
+        us_day = lambda t: datetime.fromtimestamp(t, US_DAY_TZ).date()
+        if pts and rt and m.get("regularMarketPrice") and us_day(rt) > us_day(pts[-1][0]):
+            pts.append((rt, m["regularMarketPrice"]))
         if len(pts) < 2:
             raise ValueError("데이터 부족")
         return dict(name=name, sym=sym, kind=kind, unit=unit, link=link,
@@ -234,8 +243,34 @@ def _cap(row):
         return 0.0
 
 
+def yahoo_summary(sym, modules):
+    """Yahoo quoteSummary. 쿠키+crumb가 있어야 열리므로 세션을 따로 만든다. 실패하면 None."""
+    try:
+        jar = http.cookiejar.CookieJar()
+        op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+        op.addheaders = [("User-Agent", UA), ("Accept", "*/*")]
+        try:
+            op.open("https://fc.yahoo.com", timeout=15)  # 쿠키 발급용(응답 자체는 404)
+        except Exception:
+            pass
+        crumb = op.open("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=15).read().decode()
+        url = (f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{sym}"
+               f"?modules={','.join(modules)}&crumb={urllib.parse.quote(crumb)}")
+        return json.loads(op.open(url, timeout=20).read())["quoteSummary"]["result"][0]
+    except Exception as e:
+        print("Yahoo 실적 조회 실패:", sym, type(e).__name__, file=sys.stderr)
+        return None
+
+
+def _raw(d, *keys):
+    for k in keys:
+        d = (d or {}).get(k)
+    return d.get("raw") if isinstance(d, dict) else d
+
+
 def fetch_earnings(session_day):
-    """session_day(미국 날짜) 개장 전·마감 후 실적을 낸 기업 중 시가총액 최대 1곳과 관련 국내 기사.
+    """session_day(미국 날짜) 개장 전·마감 후 실적을 낸 기업 중 시가총액 최대 1곳의
+    EPS 실제/예상, 매출(전분기 대비), 발표 후 주가 반응(마감 후 발표면 시간외, 개장 전 발표면 당일 정규장).
     EARN_MIN_CAP 미만이면 '주목할 실적 없음'으로 보고 None."""
     try:
         j = fetch_json(f"https://api.nasdaq.com/api/calendar/earnings?date={session_day:%Y-%m-%d}",
@@ -253,14 +288,43 @@ def fetch_earnings(session_day):
     sym = top["symbol"]
     short = re.sub(r",?\s+(Inc|Corp|Corporation|Company|Co|plc|Ltd|Holdings|Technology|Technologies|Brands)\b.*$",
                    "", top["name"]).strip()
-    name = KO_NAMES.get(sym, short)
-    when = "장 마감 후" if top["time"] == "time-after-hours" else "개장 전"
-    news = [x for x in google_news(f"{name} 실적 when:2d")
-            if name.lower() in x["title"].lower() and re.search(r"실적|매출|EPS|가이던스|어닝|순이익", x["title"])
-            and not re.search(r"앞두고|발표 예정|오늘 실적|내일|주목", x["title"])]
-    news.sort(key=lambda x: (not re.search(r"상회|하회|서프라이즈|쇼크|예상|가이던스", x["title"]), -x["ts"]))
-    return dict(sym=sym, name=name, day=session_day, when=when, eps_fc=top.get("epsForecast") or "",
-                news=news[0] if news else None)
+    after = top["time"] == "time-after-hours"
+    e = dict(sym=sym, name=KO_NAMES.get(sym, short), day=session_day, when="장 마감 후" if after else "개장 전",
+             quarter=top.get("fiscalQuarterEnding") or "", eps_act=None, eps_est=None, surprise=None,
+             rev=None, rev_qoq=None, px=None, px_pct=None, px_label="시간외" if after else "발표 당일")
+    try:
+        e["eps_est"] = float(re.sub(r"[^\d.\-]", "", top.get("epsForecast") or "").replace("--", "") or "x")
+    except ValueError:
+        pass
+
+    r = yahoo_summary(sym, ["earnings", "earningsHistory", "price"])
+    if not r:
+        return e
+    q = ((r.get("earnings") or {}).get("earningsChart") or {}).get("quarterly") or []
+    last = q[-1] if q else {}
+    rep_day = _raw(last, "reportedDate")
+    fresh = rep_day and abs(datetime.fromtimestamp(rep_day, timezone.utc).date() - session_day).days <= 1
+    if fresh:  # 이번 발표분이 반영됐을 때만 실제치로 쓴다(아니면 직전 분기 값이 나온다)
+        hist = ((r.get("earningsHistory") or {}).get("history") or [{}])[-1]
+        e["eps_act"] = _raw(hist, "epsActual") or _raw(last, "actual")
+        e["eps_est"] = _raw(hist, "epsEstimate") or _raw(last, "estimate") or e["eps_est"]
+        if e["eps_act"] is not None and e["eps_est"]:
+            e["surprise"] = (e["eps_act"] / e["eps_est"] - 1) * 100
+        fin = ((r.get("earnings") or {}).get("financialsChart") or {}).get("quarterly") or []
+        if fin:
+            e["rev"] = _raw(fin[-1], "revenue")
+            prev = _raw(fin[-2], "revenue") if len(fin) > 1 else None
+            if e["rev"] and prev:
+                e["rev_qoq"] = (e["rev"] / prev - 1) * 100
+        fq = re.match(r"(\d)Q(\d{4})", last.get("fiscalQuarter") or "")
+        e["quarter"] = f"FY{fq.group(2)[2:]} {fq.group(1)}분기" if fq else e["quarter"]
+    pr = r.get("price") or {}
+    if after:
+        e["px"], pct = _raw(pr, "postMarketPrice"), _raw(pr, "postMarketChangePercent")
+    else:
+        e["px"], pct = _raw(pr, "regularMarketPrice"), _raw(pr, "regularMarketChangePercent")
+    e["px_pct"] = pct * 100 if pct is not None else None
+    return e
 
 
 # ---------- 포맷 헬퍼 ----------
@@ -350,7 +414,8 @@ def card(q):
     lo, hi = min(vals), max(vals)
     pos = (last - lo) / ((hi - lo) or 1) * 100
     fmt = (lambda v: fnum(v, 3)) if is_yield else fnum
-    asof = datetime.fromtimestamp(pts[-1][0], KST).strftime("%m/%d")
+    # 미국 거래일 기준(코인은 UTC 자정 일봉이라 UTC 날짜)
+    asof = datetime.fromtimestamp(pts[-1][0], timezone.utc if q["sym"].endswith("-USD") else US_DAY_TZ).strftime("%m/%d")
 
     return f'''<article class="card">
   <header><h3><a href="{q["link"]}" target="_blank" rel="noopener">{escape(q["name"])}</a></h3>
@@ -419,18 +484,40 @@ def kr_block(items):
     return f'<section class="panel kr"><div class="tag">오늘 한국 시장 영향</div>{body}</section>'
 
 
+def _usd(v):
+    """매출 표기: 1억 달러 단위(예: 54.23B -> 542.3억 달러)."""
+    eok = v / 1e8
+    return f"{eok / 1e4:,.2f}조 달러" if eok >= 1e4 else f"{eok:,.1f}억 달러"
+
+
+def _pct(v, d=1):
+    return f'<b class="{cls(v)}">{"+" if v > 0 else ""}{v:.{d}f}%</b>'
+
+
 def earnings_block(e):
     if not e:
         return ""
-    meta = f'{e["day"]:%m/%d} {e["when"]} 발표' + (f' · EPS 예상 {escape(e["eps_fc"])}' if e["eps_fc"] else "")
-    if e["news"]:
-        n = e["news"]
-        body = (f'<a class="earn-hl" href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
-                f'{src_line(n)}')
+    q = f' · {escape(e["quarter"])}' if e["quarter"] else ""
+    rows = []
+    if e["eps_act"] is not None:
+        verdict = ""
+        if e["surprise"] is not None:
+            word = "상회" if e["surprise"] > 0 else "하회" if e["surprise"] < 0 else "부합"
+            verdict = f'<span class="ev">{_pct(e["surprise"])} {word}</span>'
+        est = f'<small>예상 ${e["eps_est"]:,.2f}</small>' if e["eps_est"] else ""
+        rows.append(f'<div class="er"><span class="ek">EPS</span><span class="evv">${e["eps_act"]:,.2f}{est}</span>{verdict}</div>')
     else:
-        body = '<p class="err">관련 기사를 아직 찾지 못했습니다.</p>'
+        est = f'예상 ${e["eps_est"]:,.2f} · ' if e["eps_est"] else ""
+        rows.append(f'<div class="er"><span class="ek">EPS</span><span class="evv"><small>{est}실제치 집계 전</small></span></div>')
+    if e["rev"]:
+        qoq = f'<span class="ev">{_pct(e["rev_qoq"])} <small>전분기 대비</small></span>' if e["rev_qoq"] is not None else ""
+        rows.append(f'<div class="er"><span class="ek">매출</span><span class="evv">{_usd(e["rev"])}</span>{qoq}</div>')
+    if e["px"] is not None and e["px_pct"] is not None:
+        rows.append(f'<div class="er"><span class="ek">{e["px_label"]}</span><span class="evv">${e["px"]:,.2f}</span>'
+                    f'<span class="ev">{_pct(e["px_pct"], 2)}</span></div>')
     return (f'<div class="panel earn"><div class="tag">실적 발표</div>'
-            f'<div class="earn-co"><b>{escape(e["name"])}</b><span>{escape(e["sym"])} · {meta}</span></div>{body}</div>')
+            f'<div class="earn-co"><b>{escape(e["name"])}</b><span>{escape(e["sym"])} · {e["day"]:%m/%d} {e["when"]} 발표{q}</span></div>'
+            f'<div class="erows">{"".join(rows)}</div></div>')
 
 
 def top_section(cnn, news, movers, earnings, kr):
@@ -696,7 +783,9 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
   background:var(--accent);color:#fff;font-size:14px;font-weight:800;text-align:center;line-height:24px}
 .it-src{font-size:13px;font-weight:400;color:var(--muted);margin-top:3px}
 .earn-co{font-size:14px;color:var(--muted);margin:2px 0 8px}.earn-co b{display:block;font-size:24px;color:var(--text)}
-.earn-hl{display:block;font-size:20px;font-weight:700;line-height:1.4}
+.erows{margin-top:4px}.er{display:grid;grid-template-columns:64px 1fr auto;align-items:baseline;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+.ek{font-size:15px;color:var(--muted);font-weight:700}.evv{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}.evv small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
+.ev{font-size:15px;text-align:right;white-space:nowrap}.ev b{font-size:19px}.ev small{display:block;font-size:12px;color:var(--muted)}
 .pc-grid{display:grid;grid-template-columns:minmax(240px,1fr) 1.3fr;gap:24px;align-items:center}
 @media (max-width:640px){.pc-grid{grid-template-columns:1fr}}
 .fg-main{text-align:center}.gauge{width:100%;max-width:300px}
@@ -730,7 +819,7 @@ def main():
     # 일봉 타임스탬프는 개장 시각(13:30~14:30 UTC)이라 +6시간이면 마감 무렵이 된다
     since = nas["pts"][-1][0] + 6 * 3600 if nas else None
     # 일봉 타임스탬프(미 동부 개장 시각)의 날짜 = 가장 최근 미국 거래일
-    session_day = (datetime.fromtimestamp(nas["pts"][-1][0], timezone(timedelta(hours=-5))).date()
+    session_day = (datetime.fromtimestamp(nas["pts"][-1][0], US_DAY_TZ).date()
                    if nas else (datetime.now(KST) - timedelta(days=1)).date())
     news = fetch_news(since)
     earnings = fetch_earnings(session_day)
