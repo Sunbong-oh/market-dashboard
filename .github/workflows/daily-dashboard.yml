@@ -2,22 +2,48 @@ name: Daily Market Dashboard
 
 on:
   schedule:
-    # 정각(:00)은 GitHub 서버가 붐벼 예약 실행이 누락되기 쉬워 일부러 어긋난 분으로 둔다
-    # 실행에 3~4분 걸리므로 06:48에 시작해 7시 전후 도착을 노린다(GitHub 사정으로 몇 분~수십 분 늦을 수 있음)
-    # 한국 월~금 06:48 = UTC 전날(일~목) 21:48
-    - cron: "48 21 * * 0-4"
+    # 한국 월~금 아침 = UTC 전날(일~목) 밤. 정각(:00)은 GitHub 서버가 붐벼 누락되기 쉬워 피한다.
+    # 실행에 3~4분 걸리므로 06:48에 시작해 7시 전후 도착을 노린다.
+    - cron: "48 21 * * 0-4"   # 06:48 KST 본 발송
+    # 예약 실행은 가끔 통째로 건너뛰어지므로 예비 2번. 이미 보냈으면 아래 guard가 건너뛴다.
+    - cron: "7 22 * * 0-4"    # 07:07 KST 예비
+    - cron: "27 22 * * 0-4"   # 07:27 KST 예비
+    - cron: "25 23 * * 4"     # 임시: 2026-10-02 08:25 KST 예약 동작 확인용 (확인 후 삭제)
   workflow_dispatch:        # Actions 탭에서 수동 실행
+
+permissions:
+  contents: read
+  actions: read
+
+# 본 발송이 늦게 시작돼 예비와 겹쳐도 차례로 돌게 해서, 뒤엣것이 "이미 보냄"을 볼 수 있게 한다
+concurrency:
+  group: daily-dashboard
+  cancel-in-progress: false
 
 jobs:
   send:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
+      - name: Skip if this morning's scheduled send already succeeded
+        id: guard
+        if: github.event_name == 'schedule'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          since=$(date -u -d '3 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          n=$(gh api "repos/${{ github.repository }}/actions/workflows/daily-dashboard.yml/runs?event=schedule&status=success&created=>$since" --jq '.total_count')
+          echo "already sent in last 3h: $n"
+          echo "sent=$n" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
+        if: github.event_name != 'schedule' || steps.guard.outputs.sent == '0'
       - uses: actions/setup-python@v5
+        if: github.event_name != 'schedule' || steps.guard.outputs.sent == '0'
         with:
           python-version: "3.12"
       - name: Build dashboard and send to Telegram
+        if: github.event_name != 'schedule' || steps.guard.outputs.sent == '0'
         env:
           PYTHONIOENCODING: utf-8
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
