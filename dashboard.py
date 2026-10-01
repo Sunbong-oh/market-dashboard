@@ -490,7 +490,22 @@ def pick_headline(news):
     return news[0] if news else None
 
 
-def headline_block(news):
+INDEX_STRIP = (("나스닥", "^IXIC"), ("S&P500", "^GSPC"))
+
+
+def index_chips(quotes):
+    out = []
+    for label, sym in INDEX_STRIP:
+        q = next((q for q in quotes if q["ok"] and q["sym"] == sym), None)
+        if not q:
+            continue
+        last, prev = q["pts"][-1][1], q["pts"][-2][1]
+        v = (last / prev - 1) * 100
+        out.append(f'<span class="ix">{label} <b class="{cls(v)}">{"+" if v > 0 else ""}{v:.2f}%</b></span>')
+    return f'<div class="ixs">{"".join(out)}</div>' if out else ""
+
+
+def headline_block(news, quotes=()):
     n = pick_headline(news)
     if not n:
         return '<p class="err">뉴스를 가져오지 못했습니다.</p>'
@@ -498,7 +513,8 @@ def headline_block(news):
     # '…나스닥 0.24%↑'처럼 뒤에 붙은 지수 등락 꼬리는 떼고 요인만 남긴다
     title = re.sub(r"\s*(…|\.{2,})[^…]*\d[^…]*$", "", n["title"]).strip(" ….") or n["title"]
     return (f'<a class="headline" href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(title)}</a>'
-            f'<div class="hl-src">{escape(n["src"])} · {when:%m/%d %H:%M}</div>')
+            f'<div class="hl-foot"><div class="hl-src">{escape(n["src"])} · {when:%m/%d %H:%M}</div>'
+            f'{index_chips(quotes)}</div>')
 
 
 def src_line(n):
@@ -608,9 +624,9 @@ def putcall_block(cnn):
     return f'<section class="panel pc-solo">{putcall_badge(cnn)}</section>'
 
 
-def top_section(cnn, news, earnings, kr):
+def top_section(cnn, news, earnings, kr, quotes=()):
     return f'''<section class="fg driver">
-  {headline_block(news)}
+  {headline_block(news, quotes)}
 </section>
 {earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
 {kr_block(kr)}'''
@@ -845,8 +861,8 @@ CSS = """
 @media (prefers-color-scheme:dark){:root[data-color=us]:not([data-theme=light]){--up:#3ddc84;--down:#ff5d5d}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:'Malgun Gothic','Segoe UI',system-ui,sans-serif;line-height:1.4}
 .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
-.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:16px;
-  padding:22px 24px;border-radius:18px;color:var(--hd-text);background:linear-gradient(120deg,var(--hd1),var(--hd2));
+.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:14px;
+  padding:14px 22px;border-radius:18px;color:var(--hd-text);background:linear-gradient(120deg,var(--hd1),var(--hd2));
   box-shadow:0 6px 18px -8px rgba(232,89,12,.55)}
 .kicker{font-size:13px;font-weight:800;letter-spacing:.18em;opacity:.7}
 h1{margin:2px 0 0;font-size:32px;font-weight:800;letter-spacing:-.01em}.top .sub{color:var(--hd-text);opacity:.8;font-size:16px;margin-top:6px}
@@ -876,7 +892,9 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .fg{padding:16px 18px}.fg h2{margin-top:0}
 .driver{border-left:6px solid var(--accent);padding:18px 22px}
 .headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
-.hl-src{font-size:14px;color:var(--muted);margin-top:10px}
+.hl-src{font-size:14px;color:var(--muted)}
+.hl-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:10px}
+.ixs{display:flex;gap:6px}.ix{background:var(--bg);border-radius:8px;padding:4px 10px;font-size:14px;font-weight:700;white-space:nowrap}.ix b{font-size:16px;font-variant-numeric:tabular-nums}
 .driver+.panel,.panel+.panel,.panel+.fg{margin-top:14px}
 .earn-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 .earn-co .tk{font-size:18px;font-weight:700;color:var(--muted)}
@@ -923,8 +941,8 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 footer{margin-top:24px;color:var(--muted);font-size:14px}
 @media (max-width:520px){
 .wrap{padding:12px 10px 20px}.sub-x{display:none}
-.top{padding:16px;border-radius:14px;margin-bottom:10px}.kicker{font-size:11px}h1{font-size:24px}.top .sub{font-size:13px}
-.driver{padding:14px 16px;border-left-width:5px}.headline{font-size:24px;line-height:1.3}.hl-src{font-size:13px;margin-top:6px}
+.top{padding:9px 14px 10px;border-radius:12px;margin-bottom:10px}.kicker{font-size:10px;letter-spacing:.14em}h1{font-size:22px;margin:0;line-height:1.25}.top .sub{font-size:12px;margin-top:1px}
+.driver{padding:14px 16px;border-left-width:5px}.headline{font-size:24px;line-height:1.3}.hl-src{font-size:13px}.hl-foot{margin-top:8px}.ix{font-size:13px;padding:3px 8px}.ix b{font-size:15px}
 .driver+.panel,.panel+.panel,.panel+.fg{margin-top:10px}
 .panel{padding:14px}.tag{font-size:13px}
 .earn-head{gap:8px}.pcb{padding:8px 10px;column-gap:8px}.pcb-k{font-size:14px}.pcb-v{font-size:28px}.pcb-n{font-size:10.5px}.pcb.alert .pcb-v{font-size:32px}.pcb-a{font-size:11px;padding:1px 7px}.earn-co b{font-size:22px}.earn-co .tk{font-size:16px}.earn-co{font-size:13px}
@@ -959,6 +977,8 @@ def main():
     with ThreadPoolExecutor(max_workers=10) as ex:
         cnn_f = ex.submit(fetch_cnn)
         quotes = list(ex.map(fetch_quote, ITEMS))
+        have = {q["sym"] for q in quotes}
+        extra = list(ex.map(fetch_quote, [(n, sym, "price", "", "") for n, sym in INDEX_STRIP if sym not in have]))
         cnn = cnn_f.result()
     nas = next((q for q in quotes if q["ok"] and q["sym"] == "^IXIC"), None)
     # 일봉 타임스탬프는 개장 시각(13:30~14:30 UTC)이라 +6시간이면 마감 무렵이 된다
@@ -981,7 +1001,7 @@ def main():
 <div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, earnings, kr)}
+{top_section(cnn, news, earnings, kr, quotes + extra)}
 </div>
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
