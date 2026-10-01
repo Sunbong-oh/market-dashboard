@@ -722,7 +722,7 @@ SHOT_LAYOUT_W = 420  # 폰 화면 폭. 캡처 때는 이 폭 기준 레이아웃
 
 def screenshot(png_path, width=SHOT_W, layout_w=SHOT_LAYOUT_W, part=None, scale=3, attempts=3, timeout=150):
     """헤드리스 Edge/Chrome으로 dashboard.html을 PNG로 저장. 실패하면 False.
-    기본은 폰 폭 레이아웃. part('a'=요약, 'b'·'c'=지표 앞/뒤 절반)를 주면 그 부분만 찍는다.
+    기본은 폰 폭 레이아웃. part('a'=요약, 'b'·'c'=지표 앞/뒤 절반, 'i'=지표 전체)를 주면 그 부분만 찍는다.
     layout_w=None, width=900이면 PC 폭 전체 화면(블로그용).
     부팅 직후 등 시스템이 무거운 시점을 대비해 시간 초과 시 재시도하고,
     한쪽 브라우저가 통째로 먹통이면 설치된 다른 브라우저로 넘어간다."""
@@ -936,7 +936,7 @@ footer{font-size:12px}
 
 JS = """
 const r=document.documentElement,g=k=>{try{return localStorage.getItem(k)}catch(e){return null}},s=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-const sh=location.hash.match(/^#shot([0-9]*)(?:-([a-z]))?/);if(sh){r.dataset.shot='1';if(sh[1])r.style.zoom=innerWidth/+sh[1];const pt=sh[2];if(pt){document.querySelectorAll('[data-part]').forEach(e=>{if(!e.dataset.part.includes(pt))e.style.display='none'});if(pt!=='a'){const cs=[...document.querySelectorAll('.grid>.card')],h=Math.ceil(cs.length/2);cs.forEach((c,i)=>{if((pt==='b')!==(i<h))c.style.display='none'});const t=document.querySelector('.ind-h');t.textContent+=pt==='b'?' (1/2)':' (2/2)';t.style.marginTop='4px'}}}if(g('color')==='us')r.dataset.color='us';if(g('theme'))r.dataset.theme=g('theme');
+const sh=location.hash.match(/^#shot([0-9]*)(?:-([a-z]))?/);if(sh){r.dataset.shot='1';if(sh[1])r.style.zoom=innerWidth/+sh[1];const pt=sh[2];if(pt){document.querySelectorAll('[data-part]').forEach(e=>{if(!e.dataset.part.includes(pt))e.style.display='none'});if(pt==='b'||pt==='c'){const cs=[...document.querySelectorAll('.grid>.card')],h=Math.ceil(cs.length/2);cs.forEach((c,i)=>{if((pt==='b')!==(i<h))c.style.display='none'});const t=document.querySelector('.ind-h');t.textContent+=pt==='b'?' (1/2)':' (2/2)';t.style.marginTop='4px'}}}if(g('color')==='us')r.dataset.color='us';if(g('theme'))r.dataset.theme=g('theme');
 document.getElementById('bc').onclick=()=>{const u=r.dataset.color!=='us';u?r.dataset.color='us':delete r.dataset.color;s('color',u?'us':'kr');lab()};
 document.getElementById('bt').onclick=()=>{const d=(r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';r.dataset.theme=d?'light':'dark';s('theme',r.dataset.theme)};
 function lab(){document.getElementById('bc').textContent=r.dataset.color==='us'?'색상: 상승 초록':'색상: 상승 빨강'}lab();
@@ -971,7 +971,7 @@ def main():
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
 {top_section(cnn, news, earnings, kr)}
 </div>
-<div data-part="bc"><h2 class="ind-h">주요 지표</h2>
+<div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
 <footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
 SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
