@@ -838,12 +838,13 @@ def notify(quotes, cnn, now):
     png = OUT.with_name("dashboard.png")
     caption = (f"📊 데일리 마켓 {now:%m/%d}({'월화수목금토일'[now.weekday()]}) {now:%H:%M} KST\n"
                f"종목별 지도: {FINVIZ_MAP_URL}")
-    # 블로그용은 PC 폭 한 장, 텔레그램은 폰 폭으로 나눈 3장(요약 / 지표 앞 절반 / 지표 뒤 절반)
+    # 블로그용은 PC 폭 한 장, 텔레그램은 2장: 요약(폰 폭) + 지표 12개(600px 폭 3열 4줄)
     desktop_ok = screenshot(png, width=900, layout_w=None, scale=2)
     if desktop_ok:
         save_blog_post(png, now)
-    shots = [OUT.with_name(f"dashboard_{pt}.png") for pt in "abc"]
-    sent = all(screenshot(f, part=pt) for f, pt in zip(shots, "abc")) and send_telegram_album(shots, caption)
+    shots = [OUT.with_name("dashboard_a.png"), OUT.with_name("dashboard_i.png")]
+    sent = (screenshot(shots[0], part="a") and screenshot(shots[1], width=600, layout_w=600, part="i")
+            and send_telegram_album(shots, caption))
     if not sent and desktop_ok:
         print("앨범 발송 불가/실패 -> 한 장짜리 사진으로 대체")
         sent = send_telegram_photo(png, caption)
