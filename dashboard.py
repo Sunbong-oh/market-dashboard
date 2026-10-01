@@ -95,8 +95,6 @@ def fetch_cnn():
 
 
 NEWS_QUERY = "뉴욕증시 when:1d"
-MOVER_QUERIES = ("미국 특징주 when:1d", "뉴욕증시 특징주 when:1d")
-MOVER_TAG = re.compile(r"\[(美|미국|뉴욕)[^\]]*특징주\]")  # 국내 종목 [특징주]는 제외
 EARN_MIN_CAP = 10e9  # 이 시가총액 이상 기업의 실적 발표만 요약
 
 # 나스닥 실적 일정은 영문명뿐이라, 국내 기사 검색용 한글명(없으면 영문 약칭으로 검색)
@@ -184,14 +182,6 @@ def rank(items, since_ts=None, limit=8):
 def fetch_news(since_ts=None):
     """뉴욕증시 마감 기사 제목 후보. 제목에 '국채금리 부담에 혼조' 같은 등락 이유가 담겨 있다."""
     return rank([n for n in google_news(NEWS_QUERY) if "증시" in n["title"]], since_ts)
-
-
-def fetch_movers(since_ts=None, exclude=None, n=2):
-    """국내 언론 [미국 특징주] 기사 중 개장 전 기사를 빼고 서로 다른 종목 n개."""
-    items = [x for q in MOVER_QUERIES for x in google_news(q)
-             if MOVER_TAG.search(x["raw"]) and "개장 전" not in x["raw"]
-             and not (exclude and exclude in x["title"])]
-    return rank(items, since_ts, n)
 
 
 # ---------- 한국 시장 영향 뉴스 ----------
@@ -513,16 +503,6 @@ def src_line(n):
     return f'<div class="it-src">{escape(n["src"])} · {datetime.fromtimestamp(n["ts"], KST):%m/%d %H:%M}</div>'
 
 
-def movers_block(movers):
-    if not movers:
-        body = '<p class="err">특징주 기사를 찾지 못했습니다.</p>'
-    else:
-        body = "".join(f'<li><a href="{escape(m["link"])}" target="_blank" rel="noopener">{escape(m["title"])}</a>'
-                       f'{src_line(m)}</li>' for m in movers)
-        body = f'<ol class="items">{body}</ol>'
-    return f'<div class="panel"><div class="tag">시장 특징주</div>{body}</div>'
-
-
 def kr_block(items):
     if not items:
         body = '<p class="err">관련 뉴스를 찾지 못했습니다.</p>'
@@ -592,7 +572,7 @@ def earnings_block(e):
             f'<div class="erows">{"".join(rows)}</div></div>')
 
 
-def top_section(cnn, news, movers, earnings, kr):
+def top_section(cnn, news, earnings, kr):
     if cnn:
         pc, hd = cnn["put_call_options"], cnn["put_call_options"]["data"][-1]
         s = pc["score"]
@@ -608,10 +588,7 @@ def top_section(cnn, news, movers, earnings, kr):
     return f'''<section class="fg driver">
   {headline_block(news)}
 </section>
-<div class="panels{' two' if earnings else ''}">
-  {movers_block(movers)}
-  {earnings_block(earnings)}
-</div>
+{earnings_block(earnings)}
 {kr_block(kr)}
 <section class="fg">
   <h2>Put/Call 비율 (CNN)</h2>
@@ -840,10 +817,8 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .driver{border-left:6px solid var(--accent);padding:18px 22px}
 .headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
 .hl-src{font-size:14px;color:var(--muted);margin-top:10px}
-.panels{display:grid;gap:14px;margin-top:14px}.panels.two{grid-template-columns:1fr 1.2fr}
-.panels+.panel,.panel+.fg{margin-top:14px}
+.driver+.panel,.panel+.panel,.panel+.fg{margin-top:14px}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
-@media (max-width:640px){.panels.two{grid-template-columns:1fr}}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
   padding:3px 12px;border-radius:99px;margin-bottom:8px}
@@ -855,9 +830,10 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
   background:var(--accent);color:#fff;font-size:14px;font-weight:800;text-align:center;line-height:24px}
 .it-src{font-size:13px;font-weight:400;color:var(--muted);margin-top:3px}
 .earn-co{font-size:14px;color:var(--muted);margin:2px 0 8px}.earn-co b{display:block;font-size:24px;color:var(--text)}
-.erows{margin-top:4px}.er{display:grid;grid-template-columns:70px 1fr auto;align-items:baseline;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+.erows{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:6px;border-top:1px solid var(--line)}
+.er{display:flex;flex-direction:column;gap:4px;padding:12px 14px 4px;border-left:1px solid var(--line)}.er:first-child{border-left:0;padding-left:0}
 .ek{font-size:15px;color:var(--muted);font-weight:700}.evv{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}.evv small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
-.ev{font-size:15px;text-align:right;white-space:nowrap}.ev b{font-size:18px}.ev small{display:block;font-size:12px;color:var(--muted)}
+.ev{font-size:15px;white-space:nowrap}.ev b{font-size:18px}.ev small{display:block;font-size:12px;color:var(--muted)}
 .vs{line-height:1.25}.vs+.vs{margin-top:4px}.vs small{display:inline!important;margin-right:5px}
 .ek{line-height:1.25}
 .pc-grid{display:grid;grid-template-columns:minmax(240px,1fr) 1.3fr;gap:24px;align-items:center}
@@ -897,7 +873,6 @@ def main():
                    if nas else (datetime.now(KST) - timedelta(days=1)).date())
     news = fetch_news(since)
     earnings = fetch_earnings(session_day)
-    movers = fetch_movers(since, exclude=earnings["name"] if earnings else None)
     kr = fetch_kr_news()
 
     now = datetime.now(KST)
@@ -911,7 +886,7 @@ def main():
 <header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준 · 일봉 종가 기준 (장중이면 현재가)</div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, movers, earnings, kr)}
+{top_section(cnn, news, earnings, kr)}
 <h2>주요 지표</h2>
 <div class="grid">{cards}</div>
 <footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
