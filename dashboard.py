@@ -268,6 +268,31 @@ def _raw(d, *keys):
     return d.get("raw") if isinstance(d, dict) else d
 
 
+def fetch_whisper(sym):
+    """Earnings Whispers 실적 상세(웹페이지가 쓰는 공개 JSON). 실제 EPS·매출과 컨센서스, 위스퍼 넘버,
+    회사 가이던스 문장이 들어 있다. 실패하면 None."""
+    try:
+        return fetch_json(f"https://www.earningswhispers.com/api/epsdetails/{sym.lower()}",
+                          {"Referer": f"https://www.earningswhispers.com/epsdetails/{sym.lower()}"})
+    except Exception as e:
+        print("Earnings Whispers 조회 실패:", sym, type(e).__name__, file=sys.stderr)
+        return None
+
+
+def _guidance(summary):
+    """'expects first quarter earnings of $37.15 to $39.15 per share on revenue of $60.0 billion to $63.0 billion.
+    The current consensus earnings estimate is $34.83 per share on revenue of $56.6 billion' 형태를 뽑는다."""
+    m = re.search(r"expects (\w+) quarter earnings of \$([\d.]+)(?: to \$([\d.]+))? per share"
+                  r"(?: on revenue of \$([\d.]+)(?: billion)?(?: to \$([\d.]+))? billion)?", summary or "")
+    if not m:
+        return None
+    c = re.search(r"current consensus earnings estimate is \$([\d.]+) per share(?: on revenue of \$([\d.]+) billion)?",
+                  summary)
+    f = lambda v: float(v) if v else None
+    return dict(q=m.group(1), eps_lo=f(m.group(2)), eps_hi=f(m.group(3)), rev_lo=f(m.group(4)), rev_hi=f(m.group(5)),
+                eps_cons=f(c.group(1)) if c else None, rev_cons=f(c.group(2)) if c else None)
+
+
 def fetch_earnings(session_day):
     """session_day(미국 날짜) 개장 전·마감 후 실적을 낸 기업 중 시가총액 최대 1곳의
     EPS 실제/예상, 매출(전분기 대비), 발표 후 주가 반응(마감 후 발표면 시간외, 개장 전 발표면 당일 정규장).
@@ -291,7 +316,8 @@ def fetch_earnings(session_day):
     after = top["time"] == "time-after-hours"
     e = dict(sym=sym, name=KO_NAMES.get(sym, short), day=session_day, when="장 마감 후" if after else "개장 전",
              quarter=top.get("fiscalQuarterEnding") or "", eps_act=None, eps_est=None, surprise=None,
-             rev=None, rev_qoq=None, px=None, px_pct=None, px_label="시간외" if after else "발표 당일")
+             rev=None, rev_qoq=None, px=None, px_pct=None, px_label="시간외" if after else "발표 당일",
+             whisper=None, rev_est=None, rev_yoy=None, guide=None)
     try:
         e["eps_est"] = float(re.sub(r"[^\d.\-]", "", top.get("epsForecast") or "").replace("--", "") or "x")
     except ValueError:
@@ -324,7 +350,30 @@ def fetch_earnings(session_day):
     else:
         e["px"], pct = _raw(pr, "regularMarketPrice"), _raw(pr, "regularMarketChangePercent")
     e["px_pct"] = pct * 100 if pct is not None else None
+    _apply_whisper(e, fetch_whisper(sym))
     return e
+
+
+def _apply_whisper(e, w):
+    if not w or not w.get("epsDate"):
+        return
+    try:
+        day = datetime.fromisoformat(w["epsDate"]).date()
+    except ValueError:
+        return
+    if abs((day - e["day"]).days) > 1:  # 이번 발표분이 아니면(직전 분기 자료) 쓰지 않는다
+        return
+    if w.get("eps") is not None:
+        e["eps_act"] = w["eps"]
+    e["eps_est"] = w.get("estimate") or e["eps_est"]
+    e["whisper"] = w.get("whisper")
+    e["surprise"] = (e["eps_act"] / e["eps_est"] - 1) * 100 if e["eps_act"] is not None and e["eps_est"] else None
+    if w.get("revenue"):
+        e["rev"] = w["revenue"] * 1e6  # 백만 달러 단위
+        e["rev_est"] = w["revenueEstimate"] * 1e6 if w.get("revenueEstimate") else None
+    if w.get("revenueGrowth") is not None:
+        e["rev_yoy"] = w["revenueGrowth"] * 100
+    e["guide"] = _guidance(w.get("summary"))
 
 
 # ---------- 포맷 헬퍼 ----------
@@ -494,24 +543,47 @@ def _pct(v, d=1):
     return f'<b class="{cls(v)}">{"+" if v > 0 else ""}{v:.{d}f}%</b>'
 
 
+def _vs(act, ref, label):
+    """실제치가 기준(컨센서스/위스퍼)보다 몇 % 높은지/낮은지."""
+    if act is None or not ref:
+        return ""
+    v = (act / ref - 1) * 100
+    word = "상회" if v > 0.05 else "하회" if v < -0.05 else "부합"
+    return f'<div class="vs"><small>{label}</small>{_pct(v)} {word}</div>'
+
+
 def earnings_block(e):
     if not e:
         return ""
     q = f' · {escape(e["quarter"])}' if e["quarter"] else ""
     rows = []
     if e["eps_act"] is not None:
-        verdict = ""
-        if e["surprise"] is not None:
-            word = "상회" if e["surprise"] > 0 else "하회" if e["surprise"] < 0 else "부합"
-            verdict = f'<span class="ev">{_pct(e["surprise"])} {word}</span>'
-        est = f'<small>예상 ${e["eps_est"]:,.2f}</small>' if e["eps_est"] else ""
-        rows.append(f'<div class="er"><span class="ek">EPS</span><span class="evv">${e["eps_act"]:,.2f}{est}</span>{verdict}</div>')
+        refs = " · ".join(x for x in (f'컨센 ${e["eps_est"]:,.2f}' if e["eps_est"] else "",
+                                       f'위스퍼 ${e["whisper"]:,.2f}' if e["whisper"] else "") if x)
+        rows.append(f'<div class="er"><span class="ek">EPS</span><span class="evv">${e["eps_act"]:,.2f}<small>{refs}</small></span>'
+                    f'<span class="ev">{_vs(e["eps_act"], e["eps_est"], "컨센")}{_vs(e["eps_act"], e["whisper"], "위스퍼")}</span></div>')
     else:
-        est = f'예상 ${e["eps_est"]:,.2f} · ' if e["eps_est"] else ""
-        rows.append(f'<div class="er"><span class="ek">EPS</span><span class="evv"><small>{est}실제치 집계 전</small></span></div>')
+        refs = " · ".join(x for x in (f'컨센서스 ${e["eps_est"]:,.2f}' if e["eps_est"] else "",
+                                       f'위스퍼 ${e["whisper"]:,.2f}' if e["whisper"] else "", "실제치 집계 전") if x)
+        rows.append(f'<div class="er"><span class="ek">EPS</span><span class="evv"><small>{refs}</small></span></div>')
     if e["rev"]:
-        qoq = f'<span class="ev">{_pct(e["rev_qoq"])} <small>전분기 대비</small></span>' if e["rev_qoq"] is not None else ""
-        rows.append(f'<div class="er"><span class="ek">매출</span><span class="evv">{_usd(e["rev"])}</span>{qoq}</div>')
+        est = f'<small>예상 {_usd(e["rev_est"])}</small>' if e["rev_est"] else ""
+        if e["rev_est"]:
+            right = _vs(e["rev"], e["rev_est"], "예상")
+        else:
+            right = f'<div class="vs"><small>전분기 대비</small>{_pct(e["rev_qoq"])}</div>' if e["rev_qoq"] is not None else ""
+        if e["rev_yoy"] is not None:
+            right += f'<div class="vs"><small>전년 대비</small>{_pct(e["rev_yoy"], 0)}</div>'
+        rows.append(f'<div class="er"><span class="ek">매출</span><span class="evv">{_usd(e["rev"])}{est}</span>'
+                    f'<span class="ev">{right}</span></div>')
+    g = e["guide"]
+    if g and g["eps_lo"]:
+        rng = f'${g["eps_lo"]:,.2f}' + (f'~{g["eps_hi"]:,.2f}' if g["eps_hi"] else "")
+        mid = (g["eps_lo"] + (g["eps_hi"] or g["eps_lo"])) / 2
+        cons = f'<small>다음 분기 · 컨센 ${g["eps_cons"]:,.2f}</small>' if g["eps_cons"] else "<small>다음 분기</small>"
+        right = _vs(mid, g["eps_cons"], "중간값") if g["eps_cons"] else ""
+        rows.append(f'<div class="er"><span class="ek">가이던스</span><span class="evv">{rng}{cons}</span>'
+                    f'<span class="ev">{right}</span></div>')
     if e["px"] is not None and e["px_pct"] is not None:
         rows.append(f'<div class="er"><span class="ek">{e["px_label"]}</span><span class="evv">${e["px"]:,.2f}</span>'
                     f'<span class="ev">{_pct(e["px_pct"], 2)}</span></div>')
@@ -768,7 +840,7 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .driver{border-left:6px solid var(--accent);padding:18px 22px}
 .headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
 .hl-src{font-size:14px;color:var(--muted);margin-top:10px}
-.panels{display:grid;gap:14px;margin-top:14px}.panels.two{grid-template-columns:1fr 1fr}
+.panels{display:grid;gap:14px;margin-top:14px}.panels.two{grid-template-columns:1fr 1.2fr}
 .panels+.panel,.panel+.fg{margin-top:14px}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
 @media (max-width:640px){.panels.two{grid-template-columns:1fr}}
@@ -783,9 +855,11 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
   background:var(--accent);color:#fff;font-size:14px;font-weight:800;text-align:center;line-height:24px}
 .it-src{font-size:13px;font-weight:400;color:var(--muted);margin-top:3px}
 .earn-co{font-size:14px;color:var(--muted);margin:2px 0 8px}.earn-co b{display:block;font-size:24px;color:var(--text)}
-.erows{margin-top:4px}.er{display:grid;grid-template-columns:64px 1fr auto;align-items:baseline;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+.erows{margin-top:4px}.er{display:grid;grid-template-columns:70px 1fr auto;align-items:baseline;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
 .ek{font-size:15px;color:var(--muted);font-weight:700}.evv{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}.evv small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
-.ev{font-size:15px;text-align:right;white-space:nowrap}.ev b{font-size:19px}.ev small{display:block;font-size:12px;color:var(--muted)}
+.ev{font-size:15px;text-align:right;white-space:nowrap}.ev b{font-size:18px}.ev small{display:block;font-size:12px;color:var(--muted)}
+.vs{line-height:1.25}.vs+.vs{margin-top:4px}.vs small{display:inline!important;margin-right:5px}
+.ek{line-height:1.25}
 .pc-grid{display:grid;grid-template-columns:minmax(240px,1fr) 1.3fr;gap:24px;align-items:center}
 @media (max-width:640px){.pc-grid{grid-template-columns:1fr}}
 .fg-main{text-align:center}.gauge{width:100%;max-width:300px}
