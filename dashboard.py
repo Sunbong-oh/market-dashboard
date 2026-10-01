@@ -525,28 +525,28 @@ def _pct(v, d=1):
     return f'<b class="{cls(v)}">{"+" if v > 0 else ""}{v:.{d}f}%</b>'
 
 
-def _vs(act, ref, label):
+def _vs(act, ref, label, cls=""):
     """실제치가 기준(컨센서스/위스퍼)보다 몇 % 높은지/낮은지."""
     if act is None or not ref:
         return ""
     v = (act / ref - 1) * 100
     word = "상회" if v > 0.05 else "하회" if v < -0.05 else "부합"
-    return f'<div class="vs"><small>{label}</small>{_pct(v)} {word}</div>'
+    return f'<div class="vs"><small class="{cls}">{label}</small>{_pct(v)} {word}</div>'
 
 
-def earnings_block(e):
+def earnings_block(e, pc=""):
     if not e:
         return ""
     q = f' · {escape(e["quarter"])}' if e["quarter"] else ""
     rows = []
     if e["eps_act"] is not None:
         refs = " · ".join(x for x in (f'컨센 ${e["eps_est"]:,.2f}' if e["eps_est"] else "",
-                                       f'위스퍼 ${e["whisper"]:,.2f}' if e["whisper"] else "") if x)
+                                       f'<span class="wh">위스퍼 ${e["whisper"]:,.2f}</span>' if e["whisper"] else "") if x)
         rows.append(f'<div class="er"><span class="ek">EPS</span><span class="evv">${e["eps_act"]:,.2f}<small>{refs}</small></span>'
-                    f'<span class="ev">{_vs(e["eps_act"], e["eps_est"], "컨센")}{_vs(e["eps_act"], e["whisper"], "위스퍼")}</span></div>')
+                    f'<span class="ev">{_vs(e["eps_act"], e["eps_est"], "컨센")}{_vs(e["eps_act"], e["whisper"], "위스퍼", "wh")}</span></div>')
     else:
         refs = " · ".join(x for x in (f'컨센서스 ${e["eps_est"]:,.2f}' if e["eps_est"] else "",
-                                       f'위스퍼 ${e["whisper"]:,.2f}' if e["whisper"] else "", "실제치 집계 전") if x)
+                                       f'<span class="wh">위스퍼 ${e["whisper"]:,.2f}</span>' if e["whisper"] else "", "실제치 집계 전") if x)
         rows.append(f'<div class="er"><span class="ek">EPS</span><span class="evv"><small>{refs}</small></span></div>')
     if e["rev"]:
         est = f'<small>예상 {_usd(e["rev_est"])}</small>' if e["rev_est"] else ""
@@ -569,40 +569,51 @@ def earnings_block(e):
     if e["px"] is not None and e["px_pct"] is not None:
         rows.append(f'<div class="er"><span class="ek">{e["px_label"]}</span><span class="evv">${e["px"]:,.2f}</span>'
                     f'<span class="ev">{_pct(e["px_pct"], 2)}</span></div>')
-    return (f'<div class="panel earn"><div class="tag">실적 발표</div>'
-            f'<div class="earn-co"><b>{escape(e["name"])}</b><span>{escape(e["sym"])} · {e["day"]:%m/%d} {e["when"]} 발표{q}</span></div>'
+    return (f'<div class="panel earn"><div class="earn-head"><div><div class="tag">실적 발표</div>'
+            f'<div class="earn-co"><b>{escape(e["name"])} <span class="tk">({escape(e["sym"])})</span></b>'
+            f'<span>{e["day"]:%m/%d} {e["when"]} 발표{q}</span></div></div>{pc}</div>'
             f'<div class="erows">{"".join(rows)}</div></div>')
 
 
 PC_LOW, PC_HIGH = 0.6, 1.0  # 이 범위를 벗어나면 경고 표시
 
 
-def putcall_block(cnn):
-    """CNN Put/Call(5일 평균) 수치만. 0.6 미만(콜 쏠림·과열)이나 1.0 초과(풋 쏠림·공포)면 경고등."""
+def _putcall(cnn):
+    """(값, 경고문). 0.6 미만(콜 쏠림·과열)이나 1.0 초과(풋 쏠림·공포)면 경고문이 붙는다. 데이터 없으면 (None, "")."""
     try:
         v = cnn["put_call_options"]["data"][-1]["y"]
     except (TypeError, KeyError, IndexError):
-        return '<section class="panel pc"><span class="pc-k">Put/Call 비율</span><p class="err">CNN 데이터를 가져오지 못했습니다.</p></section>'
+        return None, ""
     if v < PC_LOW:
-        alert = f"과열 경고 · {PC_LOW} 하회 (콜옵션 쏠림)"
-    elif v > PC_HIGH:
-        alert = f"공포 경고 · {PC_HIGH} 상회 (풋옵션 쏠림)"
-    else:
-        alert = ""
+        return v, f"과열 경고 · {PC_LOW} 하회 (콜옵션 쏠림)"
+    if v > PC_HIGH:
+        return v, f"공포 경고 · {PC_HIGH} 상회 (풋옵션 쏠림)"
+    return v, ""
+
+
+def putcall_badge(cnn):
+    """실적 칸 머리 오른쪽에 들어가는 작은 Put/Call 표시(CNN 5일 평균)."""
+    v, alert = _putcall(cnn)
+    if v is None:
+        return '<div class="pcb"><span class="pcb-k">Put/Call</span><span class="pcb-n">데이터 없음</span></div>'
     if alert:
-        return (f'<section class="panel pc alert"><div class="pc-l"><span class="pc-k">⚠ Put/Call 비율</span>'
-                f'<span class="pc-a">{alert}</span></div><b class="pc-v">{v:.2f}</b></section>')
-    return (f'<section class="panel pc"><div class="pc-l"><span class="pc-k">Put/Call 비율</span>'
-            f'<span class="pc-n">정상 범위 {PC_LOW}~{PC_HIGH}</span></div><b class="pc-v">{v:.2f}</b></section>')
+        return (f'<div class="pcb alert"><span class="pcb-k">⚠ Put/Call</span><b class="pcb-v">{v:.2f}</b>'
+                f'<span class="pcb-a">{alert}</span></div>')
+    return (f'<div class="pcb"><span class="pcb-k">Put/Call</span><b class="pcb-v">{v:.2f}</b>'
+            f'<span class="pcb-n">정상 범위 {PC_LOW}~{PC_HIGH}</span></div>')
+
+
+def putcall_block(cnn):
+    """실적 발표가 없는 날 쓰는 단독 Put/Call 칸."""
+    return f'<section class="panel pc-solo">{putcall_badge(cnn)}</section>'
 
 
 def top_section(cnn, news, earnings, kr):
     return f'''<section class="fg driver">
   {headline_block(news)}
 </section>
-{earnings_block(earnings)}
-{kr_block(kr)}
-{putcall_block(cnn)}'''
+{earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
+{kr_block(kr)}'''
 
 
 # ---------- 텔레그램 ----------
@@ -782,9 +793,9 @@ def notify(quotes, cnn, now):
 
 
 CSS = """
-:root{--bg:#f4f5f7;--card:#fff;--text:#1c2330;--muted:#6b7385;--line:#e3e6ec;--up:#d63c3c;--down:#2f6fdb;--flat:#8a92a3;--accent:#f08c00;--hd1:#ffd43b;--hd2:#ff922b;--hd-text:#2b1a00}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#ffa94d;--hd1:#f59f00;--hd2:#e8590c;--hd-text:#1a0f00}}
-:root[data-theme=dark]{--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#ffa94d;--hd1:#f59f00;--hd2:#e8590c;--hd-text:#1a0f00}
+:root{--bg:#f4f5f7;--card:#fff;--text:#1c2330;--muted:#6b7385;--line:#e3e6ec;--up:#d63c3c;--down:#2f6fdb;--flat:#8a92a3;--accent:#f08c00;--hd1:#ffd43b;--hd2:#ff922b;--hd-text:#2b1a00;--wh:#6741d9}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#ffa94d;--hd1:#f59f00;--hd2:#e8590c;--hd-text:#1a0f00;--wh:#b197fc}}
+:root[data-theme=dark]{--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#ffa94d;--hd1:#f59f00;--hd2:#e8590c;--hd-text:#1a0f00;--wh:#b197fc}
 :root[data-color=us]{--up:#1f9d55;--down:#d63c3c}
 :root[data-color=us][data-theme=dark]{--up:#3ddc84;--down:#ff5d5d}
 @media (prefers-color-scheme:dark){:root[data-color=us]:not([data-theme=light]){--up:#3ddc84;--down:#ff5d5d}}
@@ -827,12 +838,17 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
 .hl-src{font-size:14px;color:var(--muted);margin-top:10px}
 .driver+.panel,.panel+.panel,.panel+.fg{margin-top:14px}
-.pc{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 22px}
-.pc-l{display:flex;flex-direction:column;gap:2px}.pc-k{font-size:20px;font-weight:800}.pc-n{font-size:14px;color:var(--muted)}
-.pc-v{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
-.pc.alert{background:#e03131;border:0;color:#fff;box-shadow:0 0 0 4px rgba(224,49,49,.28),0 8px 22px -6px rgba(224,49,49,.7)}
-.pc.alert .pc-a{display:inline-block;margin-top:4px;font-size:16px;font-weight:800;background:#fff;color:#c92a2a;padding:3px 12px;border-radius:99px}
-.pc.alert .pc-v{font-size:52px}
+.earn-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.earn-co .tk{font-size:18px;font-weight:700;color:var(--muted)}
+.pcb{display:grid;grid-template-columns:auto auto;align-items:center;column-gap:12px;row-gap:2px;
+  padding:10px 16px;border-radius:12px;background:var(--bg);border:1px solid var(--line);text-align:right}
+.pcb-k{font-size:16px;font-weight:800}.pcb-v{grid-row:span 2;font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.pcb-n{font-size:12px;color:var(--muted)}
+.pcb.alert{background:#e03131;border-color:#e03131;color:#fff;box-shadow:0 0 0 4px rgba(224,49,49,.28),0 8px 22px -6px rgba(224,49,49,.7)}
+.pcb.alert .pcb-v{font-size:42px}
+.pcb-a{font-size:13px;font-weight:800;background:#fff;color:#c92a2a;padding:2px 10px;border-radius:99px;white-space:nowrap}
+.pc-solo{display:flex;justify-content:flex-end}
+.wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
