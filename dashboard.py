@@ -908,6 +908,18 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .vs{line-height:1.25}.vs+.vs{margin-top:4px}.vs small{display:inline!important;margin-right:5px}
 .ek{line-height:1.25}
 :root[data-shot] .tools,:root[data-shot] footer{display:none}:root[data-shot] .wrap{padding-bottom:6px}
+/* 지표 한 장(part i): 600px 폭에 3열 4줄 */
+:root[data-part=i] .wrap{padding:12px 10px 6px}:root[data-part=i] h2{font-size:22px;margin:4px 0 10px}
+:root[data-part=i] .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+:root[data-part=i] .card{padding:11px 11px 10px;border-radius:12px}
+:root[data-part=i] .card header{flex-direction:column;align-items:flex-start;gap:0}
+:root[data-part=i] .card h3{font-size:18px}:root[data-part=i] .sym{font-size:12px}
+:root[data-part=i] .price{font-size:27px;margin-top:4px}:root[data-part=i] .price small{font-size:15px}
+:root[data-part=i] .badge{font-size:12px;padding:1px 6px}:root[data-part=i] .delta{font-size:15px}
+:root[data-part=i] .spark{height:46px;margin-top:6px}
+:root[data-part=i] .range,:root[data-part=i] .range-cap{display:none}
+:root[data-part=i] .chips{gap:2px;margin-top:8px}:root[data-part=i] .chip{padding:4px 3px;font-size:12px;border-radius:6px;overflow:hidden}
+:root[data-part=i] .chip b{font-size:13px;letter-spacing:-.04em}:root[data-part=i] .chip small{display:none}
 footer{margin-top:24px;color:var(--muted);font-size:14px}
 @media (max-width:520px){
 .wrap{padding:12px 10px 20px}.sub-x{display:none}
@@ -936,7 +948,7 @@ footer{font-size:12px}
 
 JS = """
 const r=document.documentElement,g=k=>{try{return localStorage.getItem(k)}catch(e){return null}},s=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-const sh=location.hash.match(/^#shot([0-9]*)(?:-([a-z]))?/);if(sh){r.dataset.shot='1';if(sh[1])r.style.zoom=innerWidth/+sh[1];const pt=sh[2];if(pt){document.querySelectorAll('[data-part]').forEach(e=>{if(!e.dataset.part.includes(pt))e.style.display='none'});if(pt==='b'||pt==='c'){const cs=[...document.querySelectorAll('.grid>.card')],h=Math.ceil(cs.length/2);cs.forEach((c,i)=>{if((pt==='b')!==(i<h))c.style.display='none'});const t=document.querySelector('.ind-h');t.textContent+=pt==='b'?' (1/2)':' (2/2)';t.style.marginTop='4px'}}}if(g('color')==='us')r.dataset.color='us';if(g('theme'))r.dataset.theme=g('theme');
+const sh=location.hash.match(/^#shot([0-9]*)(?:-([a-z]))?/);if(sh){r.dataset.shot='1';if(sh[1])r.style.zoom=innerWidth/+sh[1];const pt=sh[2];if(pt){r.dataset.part=pt;document.querySelectorAll('[data-part]').forEach(e=>{if(!e.dataset.part.includes(pt))e.style.display='none'});if(pt==='b'||pt==='c'){const cs=[...document.querySelectorAll('.grid>.card')],h=Math.ceil(cs.length/2);cs.forEach((c,i)=>{if((pt==='b')!==(i<h))c.style.display='none'});const t=document.querySelector('.ind-h');t.textContent+=pt==='b'?' (1/2)':' (2/2)';t.style.marginTop='4px'}}}if(g('color')==='us')r.dataset.color='us';if(g('theme'))r.dataset.theme=g('theme');
 document.getElementById('bc').onclick=()=>{const u=r.dataset.color!=='us';u?r.dataset.color='us':delete r.dataset.color;s('color',u?'us':'kr');lab()};
 document.getElementById('bt').onclick=()=>{const d=(r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';r.dataset.theme=d?'light':'dark';s('theme',r.dataset.theme)};
 function lab(){document.getElementById('bc').textContent=r.dataset.color==='us'?'색상: 상승 초록':'색상: 상승 빨강'}lab();
