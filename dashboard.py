@@ -150,7 +150,7 @@ def google_news_feed(url, label=""):
         raw = unescape(it.findtext("title") or "").strip()
         if src and raw.endswith(" - " + src):
             raw = raw[:-len(src) - 3].strip()
-        raw = re.sub(r"\s+-\s+[^\s-]{2,12}$", "", raw)  # 제목에 남은 ' - 매체명' 꼬리
+        raw = re.sub(r"\s+-\s+[^\s-]{2,12}$|\s+By\s+\S.*$", "", raw)  # ' - 매체명', ' By 매체명' 꼬리
         # [속보] [美특징주] 등 말머리, '-[美증시 특징주]' 같은 꼬리표 제거
         title = re.sub(r"^\[[^\]]*\]\s*|\s*-?\s*\[[^\]]*\]$", "", raw).strip()
         title = re.sub(r"\s*\((상보|종합|속보|\d보)\)$|\s*·\s*핵심 ?정리$", "", title)  # (상보)·핵심 정리 등 꼬리표
@@ -701,7 +701,7 @@ def _run_killtree(cmd, timeout):
         raise
 
 
-def _screenshot_once(exe, uri, png_path, width, timeout):
+def _screenshot_once(exe, uri, png_path, width, timeout, scale=3):
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as prof:
         base = [exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--user-data-dir={prof}",
                 "--no-first-run", "--disable-extensions", "--disable-background-networking",
@@ -709,25 +709,31 @@ def _screenshot_once(exe, uri, png_path, width, timeout):
         dom = _run_killtree(base + [f"--window-size={width},2400", "--virtual-time-budget=3000", "--dump-dom", uri],
                             timeout).decode("utf-8", "ignore")
         m = re.search(r'data-h="(\d+)"', dom)
-        height = int(m.group(1)) + 16 if m else 1400
+        height = int(m.group(1)) + 4 if m else 1400
         Path(png_path).unlink(missing_ok=True)
-        _run_killtree(base + [f"--window-size={width},{height}", "--force-device-scale-factor=2",
+        _run_killtree(base + [f"--window-size={width},{height}", f"--force-device-scale-factor={scale}",
                               f"--screenshot={png_path}", uri], timeout)
     return Path(png_path).exists() and Path(png_path).stat().st_size > 10_000
 
 
-def screenshot(png_path, width=900, attempts=3, timeout=150):
-    """헤드리스 Edge/Chrome으로 dashboard.html 전체를 PNG로 저장. 실패하면 False.
+SHOT_W = 480  # 헤드리스 크롬은 이보다 좁은 창을 못 만든다(약 478px가 하한)
+SHOT_LAYOUT_W = 420  # 폰 화면 폭. 캡처 때는 이 폭 기준 레이아웃을 SHOT_W에 맞게 확대한다
+
+
+def screenshot(png_path, width=SHOT_W, layout_w=SHOT_LAYOUT_W, part=None, scale=3, attempts=3, timeout=150):
+    """헤드리스 Edge/Chrome으로 dashboard.html을 PNG로 저장. 실패하면 False.
+    기본은 폰 폭 레이아웃. part('a'=요약, 'b'·'c'=지표 앞/뒤 절반)를 주면 그 부분만 찍는다.
+    layout_w=None, width=900이면 PC 폭 전체 화면(블로그용).
     부팅 직후 등 시스템이 무거운 시점을 대비해 시간 초과 시 재시도하고,
     한쪽 브라우저가 통째로 먹통이면 설치된 다른 브라우저로 넘어간다."""
     exes = find_browsers()
     if not exes:
         return False
-    uri = OUT.as_uri() + '#shot'
+    uri = OUT.as_uri() + f"#shot{layout_w or ''}" + (f"-{part}" if part else "")
     for exe in exes:
         for i in range(1, attempts + 1):
             try:
-                if _screenshot_once(exe, uri, png_path, width, timeout):
+                if _screenshot_once(exe, uri, png_path, width, timeout, scale):
                     return True
                 print(f"스크린샷 시도 {Path(exe).stem} {i}/{attempts}: 결과 파일이 비정상", file=sys.stderr)
             except Exception as e:
@@ -764,6 +770,39 @@ def send_telegram_photo(png_path, caption):
     return ok
 
 
+def send_telegram_album(pngs, caption):
+    """사진 여러 장을 한 묶음(앨범)으로. 폰 한 화면 크기로 나눠 보내야 텔레그램 압축에도 글씨가 선명하다."""
+    token, chat = load_env("TELEGRAM_BOT_TOKEN"), load_env("TELEGRAM_CHAT_ID")
+    if not token or not chat:
+        return False
+    crlf = bytes([13, 10])
+    media = [dict(type="photo", media=f"attach://p{i}", **({"caption": caption} if i == 0 else {}))
+             for i in range(len(pngs))]
+    ok = True
+    for target in split_targets(chat):
+        bd = uuid.uuid4().hex
+        parts = []
+        for k, v in (("chat_id", target), ("media", json.dumps(media, ensure_ascii=False))):
+            parts.append(f'--{bd}'.encode() + crlf + f'Content-Disposition: form-data; name="{k}"'.encode()
+                         + crlf + crlf + v.encode("utf-8") + crlf)
+        for i, png in enumerate(pngs):
+            parts.append(f'--{bd}'.encode() + crlf
+                         + f'Content-Disposition: form-data; name="p{i}"; filename="p{i}.png"'.encode()
+                         + crlf + b"Content-Type: image/png" + crlf + crlf + Path(png).read_bytes() + crlf)
+        parts.append(f'--{bd}--'.encode() + crlf)
+        req = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMediaGroup", b"".join(parts),
+                                     {"Content-Type": f"multipart/form-data; boundary={bd}"})
+        try:
+            with urllib.request.urlopen(req, timeout=90) as r:
+                res = json.loads(r.read()).get("ok", False)
+        except Exception as e:
+            print("앨범 발송 실패:", target, type(e).__name__, getattr(e, "code", ""), file=sys.stderr)
+            res = False
+        print(f"텔레그램 앨범({len(pngs)}장) {'발송 완료' if res else '발송 실패'}: {target}")
+        ok = ok and res
+    return ok
+
+
 def report_title(now):
     """예: 26년 9월 27일 미국 데일리 마켓"""
     return f"{now.year % 100}년 {now.month}월 {now.day}일 미국 데일리 마켓"
@@ -783,9 +822,14 @@ def notify(quotes, cnn, now):
     png = OUT.with_name("dashboard.png")
     caption = (f"📊 데일리 마켓 {now:%m/%d}({'월화수목금토일'[now.weekday()]}) {now:%H:%M} KST\n"
                f"종목별 지도: {FINVIZ_MAP_URL}")
-    sent = False
-    if screenshot(png):
+    # 블로그용은 PC 폭 한 장, 텔레그램은 폰 폭으로 나눈 3장(요약 / 지표 앞 절반 / 지표 뒤 절반)
+    desktop_ok = screenshot(png, width=900, layout_w=None, scale=2)
+    if desktop_ok:
         save_blog_post(png, now)
+    shots = [OUT.with_name(f"dashboard_{pt}.png") for pt in "abc"]
+    sent = all(screenshot(f, part=pt) for f, pt in zip(shots, "abc")) and send_telegram_album(shots, caption)
+    if not sent and desktop_ok:
+        print("앨범 발송 불가/실패 -> 한 장짜리 사진으로 대체")
         sent = send_telegram_photo(png, caption)
     if not sent:
         print("사진 발송 불가/실패 -> 텍스트 요약으로 대체")
@@ -830,10 +874,6 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .chip span{color:var(--muted)}.chip b{white-space:nowrap;font-size:16px;font-variant-numeric:tabular-nums}.chip small{color:var(--muted);font-size:12px}
 .err{color:var(--muted);font-size:16px}
 .fg{padding:16px 18px}.fg h2{margin-top:0}
-.fg-grid{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:24px}
-@media (max-width:760px){.fg-grid{grid-template-columns:1fr}}
-.top-grid{display:grid;grid-template-columns:1fr minmax(260px,320px);gap:24px}
-@media (max-width:760px){.top-grid{grid-template-columns:1fr}}
 .driver{border-left:6px solid var(--accent);padding:18px 22px}
 .headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
 .hl-src{font-size:14px;color:var(--muted);margin-top:10px}
@@ -867,24 +907,36 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .ev{font-size:15px;white-space:nowrap}.ev b{font-size:18px}.ev small{display:block;font-size:12px;color:var(--muted)}
 .vs{line-height:1.25}.vs+.vs{margin-top:4px}.vs small{display:inline!important;margin-right:5px}
 .ek{line-height:1.25}
-.pc-grid{display:grid;grid-template-columns:minmax(240px,1fr) 1.3fr;gap:24px;align-items:center}
-@media (max-width:640px){.pc-grid{grid-template-columns:1fr}}
-.fg-main{text-align:center}.gauge{width:100%;max-width:300px}
-.gauge .needle{stroke:var(--text);stroke-width:3;stroke-linecap:round}.gauge .hub{fill:var(--text)}.gauge .gl{font-size:9px;fill:var(--muted)}
-.fg-score{font-size:44px;font-weight:800;line-height:1;margin-top:-6px}.fg-rating{font-weight:700;margin:4px 0 12px}
-.cmps{display:flex;gap:6px}.cmp{flex:1;background:var(--bg);border-radius:8px;padding:6px 4px;font-size:11px;display:flex;flex-direction:column}.cmp span{color:var(--muted)}.cmp b{font-size:16px}
-.fg-hist .spark{height:110px}.fg-hist-cap{font-size:14px;color:var(--muted);text-align:left}
-.fg-comps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 20px;align-content:start}
-.ct{display:flex;justify-content:space-between;align-items:baseline;font-size:18px;gap:8px}.cv{font-size:24px;font-variant-numeric:tabular-nums;font-weight:600}.cv small{color:var(--muted);font-weight:400}
-.cbar{height:10px;background:var(--line);border-radius:6px;margin:5px 0;overflow:hidden}.cbar i{display:block;height:100%}
-.cn{display:flex;justify-content:space-between;gap:8px;font-size:14px;color:var(--muted)}.cn em{font-style:normal;font-weight:600;white-space:nowrap}
-:root[data-shot] .tools,:root[data-shot] footer{display:none}
+:root[data-shot] .tools,:root[data-shot] footer{display:none}:root[data-shot] .wrap{padding-bottom:6px}
 footer{margin-top:24px;color:var(--muted);font-size:14px}
+@media (max-width:520px){
+.wrap{padding:12px 10px 20px}.sub-x{display:none}
+.top{padding:16px;border-radius:14px;margin-bottom:10px}.kicker{font-size:11px}h1{font-size:24px}.top .sub{font-size:13px}
+.driver{padding:14px 16px;border-left-width:5px}.headline{font-size:24px;line-height:1.3}.hl-src{font-size:13px;margin-top:6px}
+.driver+.panel,.panel+.panel,.panel+.fg{margin-top:10px}
+.panel{padding:14px}.tag{font-size:13px}
+.earn-head{gap:8px}.pcb{padding:8px 10px;column-gap:8px}.pcb-k{font-size:14px}.pcb-v{font-size:28px}.pcb-n{font-size:10.5px}.pcb.alert .pcb-v{font-size:32px}.pcb-a{font-size:11px;padding:1px 7px}.earn-co b{font-size:22px}.earn-co .tk{font-size:16px}.earn-co{font-size:13px}
+.erows{grid-template-columns:1fr 1fr;gap:8px;border-top:0;margin-top:10px}
+.er{background:var(--bg);border:0!important;border-radius:10px;padding:10px 12px!important;gap:3px}
+.ek{font-size:14px}.evv{font-size:21px}.evv small{font-size:12.5px}.ev{font-size:14px}.ev b{font-size:16px}.ev small{font-size:12px}
+.items li{font-size:18px;padding:10px 0 10px 30px}.items li:before{width:22px;height:22px;line-height:22px;font-size:13px;top:12px}
+.it-src{font-size:12.5px}
+h2{font-size:20px;margin:18px 0 10px}
+.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.card{padding:12px;border-radius:12px}
+.card header{flex-direction:column;align-items:flex-start;gap:0}.card h3{font-size:17px}.sym{font-size:12px}
+.price{font-size:25px;margin-top:4px}.price small{font-size:15px}.badge{font-size:12px;padding:1px 6px}
+.delta{font-size:15px}
+.spark{height:44px;margin-top:6px}
+.range{font-size:11px;gap:4px;margin-top:6px}.range-cap{display:none}
+.chips{gap:3px;margin-top:8px}.chip{padding:4px 4px;font-size:11px;border-radius:6px}.chip b{font-size:12px;letter-spacing:-.02em}.chip small{display:none}
+footer{font-size:12px}
+}
 """
 
 JS = """
 const r=document.documentElement,g=k=>{try{return localStorage.getItem(k)}catch(e){return null}},s=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-if(location.hash==='#shot')r.dataset.shot='1';if(g('color')==='us')r.dataset.color='us';if(g('theme'))r.dataset.theme=g('theme');
+const sh=location.hash.match(/^#shot([0-9]*)(?:-([a-z]))?/);if(sh){r.dataset.shot='1';if(sh[1])r.style.zoom=innerWidth/+sh[1];const pt=sh[2];if(pt){document.querySelectorAll('[data-part]').forEach(e=>{if(!e.dataset.part.includes(pt))e.style.display='none'});if(pt!=='a'){const cs=[...document.querySelectorAll('.grid>.card')],h=Math.ceil(cs.length/2);cs.forEach((c,i)=>{if((pt==='b')!==(i<h))c.style.display='none'});const t=document.querySelector('.ind-h');t.textContent+=pt==='b'?' (1/2)':' (2/2)';t.style.marginTop='4px'}}}if(g('color')==='us')r.dataset.color='us';if(g('theme'))r.dataset.theme=g('theme');
 document.getElementById('bc').onclick=()=>{const u=r.dataset.color!=='us';u?r.dataset.color='us':delete r.dataset.color;s('color',u?'us':'kr');lab()};
 document.getElementById('bt').onclick=()=>{const d=(r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';r.dataset.theme=d?'light':'dark';s('theme',r.dataset.theme)};
 function lab(){document.getElementById('bc').textContent=r.dataset.color==='us'?'색상: 상승 초록':'색상: 상승 빨강'}lab();
@@ -914,12 +966,13 @@ def main():
     html = f'''<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{report_title(now)}</title><style>{CSS}</style></head><body><div class="wrap">
-<header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
-<div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준 · 일봉 종가 기준 (장중이면 현재가)</div></div>
+<div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
+<div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
 {top_section(cnn, news, earnings, kr)}
-<h2>주요 지표</h2>
-<div class="grid">{cards}</div>
+</div>
+<div data-part="bc"><h2 class="ind-h">주요 지표</h2>
+<div class="grid">{cards}</div></div>
 <footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
 SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
 투자 판단의 근거가 아닌 참고용입니다.{"<br>수집 실패: " + ", ".join(failed) if failed else ""}</footer>

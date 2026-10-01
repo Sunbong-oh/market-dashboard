@@ -29,4 +29,5 @@ jobs:
           path: |
             dashboard.html
             dashboard.png
+            dashboard_*.png
           if-no-files-found: ignore
