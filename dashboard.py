@@ -192,9 +192,26 @@ KR_THEME = re.compile(r"수혜주|관련주|株|주 ?(강세|급등|들썩|훨�
 # 지난 시황(지수 등락·마감)과 미국 증시 기사는 '오늘 영향'이 아니므로 제외
 KR_RECAP = re.compile(r"뉴욕증시|美 ?증시|나스닥|다우|S&P|마감|연속|사흘|이틀|연일|보합|장중|후퇴"
                       r"|코스피.*(\d|하락|상승)|코스닥.*(\d|하락|상승)")
+# 경제정책·대외 경제협력·에너지(신재생/원전) 등 주제별 기사도 후보에 넣는다
+KR_TOPIC_QUERIES = ("경제정책 when:1d", "관세 통상 when:1d", "한미 경제 협력 when:1d", "한중 경제 협력 when:1d",
+                    "신재생에너지 when:1d", "원전 when:1d")
+# 경제·주식과 관련된 제목만 통과
+KR_ECON = re.compile(r"정책|정부|관세|통상|무역|수출|대미|한미|미국|美|트럼프|중국|中|한중|미중|협력|협정|투자|신재생|재생에너지"
+                     r"|태양광|풍력|수소|원전|원자력|SMR|반도체|배터리|2차전지|조선|방산|금리|환율|한은|물가|추경|예산|세제|규제"
+                     r"|코스피|코스닥|증시|수혜주|관련주|株|실적|공급망|에너지|LNG")
+# 부동산, 종목 추천·목표가류, 증권사 리포트 인용('…"-한투')은 뺀다
+KR_EXCLUDE = re.compile(r"부동산|아파트|전세|월세|분양|집값|주택|청약|재건축|재개발|임대|오피스텔|토지|땅값"
+                        r"|추천|톱픽|[Tt]op ?[Pp]ick|목표가|목표주가|사야 ?할|살 ?만한|유망주|유망 ?종목|담아라|담을|급등주|대장주 찾기"
+                        r"|매수 ?(의견|추천|타이밍|기회)|비중 ?확대|주목할 ?(종목|주식)|종목 ?(분석|진단|상담)|리딩"
+                        r"|[\"”’']\s*[-–]\s*[가-힣A-Za-z]{2,8}$"
+                        # 인사·동정, 지자체/기관 행사·홍보성 기사
+                        r"|발탁|임명|내정|선임|취임|인사청문|후보자|차관|수석|프로필|부고|별세|후임|인선|개각|정책실장|인사\b|(실장|장관|총재|위원장|원장|회장|대표)에 "
+                        r"|견학|벤치마킹|업무협약|MOU|박람회|설명회|간담회|포럼|세미나|토론회|공모|모집|시상|수상|캠페인|교육"
+                        r"|[가-힣]{2,4}(시|군|구|도)(청|의회)?,")
 KR_SKIP_SRC = ("simplywall", "초이스스탁", "Investing.com", "네이버 프리미엄", "Hypebeast")
 KR_STOP = {"증시", "코스", "스피", "주가", "전망", "기대", "강세", "상승", "하락", "오늘", "특징", "징주", "수혜", "혜주",
-           "관련", "련주", "국내", "마감", "반등", "급등", "투자", "시장", "종합", "속보", "미국", "한국", "코스닥", "스닥"}
+           "관련", "련주", "국내", "마감", "반등", "급등", "투자", "시장", "종합", "속보", "미국", "한국", "코스닥", "스닥",
+           "경제", "정책", "정부", "산업", "발표", "협력", "강화", "추진", "글로", "로벌", "기업", "에너", "너지"}
 
 
 def _grams(t):
@@ -204,7 +221,8 @@ def _grams(t):
 
 def fetch_kr_news(n=2, hours=18):
     """오늘 한국 증시에 영향이 클 뉴스 n개.
-    후보: 국내 테마(수혜주·관련주·특징주) 기사 + Google 뉴스 경제 주요 기사.
+    후보: 국내 테마(수혜주·관련주·특징주) 기사 + Google 뉴스 경제 주요 기사 + 정책·통상·에너지 주제 기사.
+    경제·주식 관련 제목만 남기고 부동산과 종목 추천류는 제외한다.
     중요도: 최근 hours시간 동안 같은 주제를 다룬 기사 수(여러 언론이 크게 다룰수록 영향이 크다고 본다)."""
     start = datetime.now(timezone.utc).timestamp() - hours * 3600
     fresh = lambda items: [x for x in items if x["ts"] >= start and not x["src"].startswith(KR_SKIP_SRC)]
@@ -212,7 +230,10 @@ def fetch_kr_news(n=2, hours=18):
     biz = fresh(google_news_feed(GN_BUSINESS, "경제 주요뉴스"))
     pool = {x["link"]: x for x in theme + biz + fresh([x for q in KR_POOL_QUERIES for x in google_news(q)])}
     pool = list(pool.values())
-    cands = [x for x in {c["link"]: c for c in theme + biz}.values() if not KR_RECAP.search(x["raw"])]
+    topic = fresh([x for q in KR_TOPIC_QUERIES for x in google_news(q)])
+    pool = list({x["link"]: x for x in pool + topic}.values())
+    cands = [x for x in {c["link"]: c for c in theme + biz + topic}.values()
+             if KR_ECON.search(x["raw"]) and not KR_RECAP.search(x["raw"]) and not KR_EXCLUDE.search(x["raw"])]
     for c in cands:
         g = _grams(c["title"])
         c["heat"] = sum(1 for m in pool if m["link"] != c["link"] and len(g & _grams(m["title"])) >= 4)
