@@ -481,10 +481,12 @@ def zone_color(score):
 
 def pick_headline(news):
     """후보 중 등락 이유가 드러나는('…에 혼조', '…에도 상승') 간결한 제목을 우선 고른다."""
-    for n in news:
-        t = n["title"]
-        if len(t) <= 56 and ("…" in t or "에 " in t or "에도" in t or "속" in t):
-            return n
+    reason = lambda t: len(t) <= 56 and ("…" in t or "에 " in t or "에도" in t or "속" in t)
+    # '뉴욕증시'가 들어간 당일 시황 기사를 먼저(월간 정리·칼럼성 '美증시' 기사가 끼어드는 것 방지)
+    for ok in (lambda t: "뉴욕증시" in t and reason(t), reason):
+        for n in news:
+            if ok(n["title"]):
+                return n
     return news[0] if news else None
 
 
@@ -572,28 +574,35 @@ def earnings_block(e):
             f'<div class="erows">{"".join(rows)}</div></div>')
 
 
-def top_section(cnn, news, earnings, kr):
-    if cnn:
-        pc, hd = cnn["put_call_options"], cnn["put_call_options"]["data"][-1]
-        s = pc["score"]
-        col = zone_color(s)
-        hist = [p["y"] for p in pc["data"]][-90:]
-        pc_html = f'''<div class="pc-grid"><div class="comp"><div class="ct"><b>Put/Call 비율</b><span class="cv">{hd["y"]:.2f}</span></div>
-  <div class="cbar"><i style="width:{s:.0f}%;background:{col}"></i></div>
-  <div class="cn"><span>5일 평균 · 낮을수록 탐욕, 높을수록 공포</span><em style="color:{col}">{CNN_KO.get(pc["rating"], pc["rating"])} · {s:.0f}</em></div></div>
-  <div class="fg-hist"><div class="fg-hist-cap">최근 90일 추이 (현재 {hist[-1]:.2f} / 범위 {min(hist):.2f}~{max(hist):.2f})</div>{sparkline(hist, h=90, color_cls="flat")}</div></div>'''
-    else:
-        pc_html = '<p class="err">CNN 데이터를 가져오지 못했습니다.</p>'
+PC_LOW, PC_HIGH = 0.6, 1.0  # 이 범위를 벗어나면 경고 표시
 
+
+def putcall_block(cnn):
+    """CNN Put/Call(5일 평균) 수치만. 0.6 미만(콜 쏠림·과열)이나 1.0 초과(풋 쏠림·공포)면 경고등."""
+    try:
+        v = cnn["put_call_options"]["data"][-1]["y"]
+    except (TypeError, KeyError, IndexError):
+        return '<section class="panel pc"><span class="pc-k">Put/Call 비율</span><p class="err">CNN 데이터를 가져오지 못했습니다.</p></section>'
+    if v < PC_LOW:
+        alert = f"과열 경고 · {PC_LOW} 하회 (콜옵션 쏠림)"
+    elif v > PC_HIGH:
+        alert = f"공포 경고 · {PC_HIGH} 상회 (풋옵션 쏠림)"
+    else:
+        alert = ""
+    if alert:
+        return (f'<section class="panel pc alert"><div class="pc-l"><span class="pc-k">⚠ Put/Call 비율</span>'
+                f'<span class="pc-a">{alert}</span></div><b class="pc-v">{v:.2f}</b></section>')
+    return (f'<section class="panel pc"><div class="pc-l"><span class="pc-k">Put/Call 비율</span>'
+            f'<span class="pc-n">정상 범위 {PC_LOW}~{PC_HIGH}</span></div><b class="pc-v">{v:.2f}</b></section>')
+
+
+def top_section(cnn, news, earnings, kr):
     return f'''<section class="fg driver">
   {headline_block(news)}
 </section>
 {earnings_block(earnings)}
 {kr_block(kr)}
-<section class="fg">
-  <h2>Put/Call 비율 (CNN)</h2>
-  {pc_html}
-</section>'''
+{putcall_block(cnn)}'''
 
 
 # ---------- 텔레그램 ----------
@@ -818,6 +827,12 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
 .hl-src{font-size:14px;color:var(--muted);margin-top:10px}
 .driver+.panel,.panel+.panel,.panel+.fg{margin-top:14px}
+.pc{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 22px}
+.pc-l{display:flex;flex-direction:column;gap:2px}.pc-k{font-size:20px;font-weight:800}.pc-n{font-size:14px;color:var(--muted)}
+.pc-v{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.pc.alert{background:#e03131;border:0;color:#fff;box-shadow:0 0 0 4px rgba(224,49,49,.28),0 8px 22px -6px rgba(224,49,49,.7)}
+.pc.alert .pc-a{display:inline-block;margin-top:4px;font-size:16px;font-weight:800;background:#fff;color:#c92a2a;padding:3px 12px;border-radius:99px}
+.pc.alert .pc-v{font-size:52px}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
