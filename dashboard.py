@@ -937,6 +937,14 @@ def notify(quotes, cnn, now):
     if not sent:
         print("사진 발송 불가/실패 -> 텍스트 요약으로 대체")
         send_telegram(build_summary(quotes, cnn, now))
+    # 뒤이어 미국 52주 신고가 앨범. 여기서 실패해도 위의 데일리 발송에는 영향이 없다.
+    if os.environ.get("NEWHIGHS", "on") != "off":
+        try:
+            import newhighs
+            newhighs.run(now, send=True)
+        except Exception as e:
+            print("신고가 섹션 실패:", type(e).__name__, e, file=sys.stderr)
+            send_telegram(f"⚠️ 52주 신고가 섹션 생성 실패: {type(e).__name__} {str(e)[:120]}")
 
 
 CSS = """
