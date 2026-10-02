@@ -208,7 +208,7 @@ KR_EXCLUDE = re.compile(r"부동산|아파트|전세|월세|분양|집값|주택
                         r"|추석|명절|연휴|귀성|차례상|성수품|장바구니|밥상|먹거리|선물세트|할인|마트|외식|농산물|과일값|채소값|체감물가"
                         # 인사·동정, 지자체/기관 행사·홍보성 기사
                         r"|발탁|임명|내정|선임|취임|인사청문|후보자|차관|수석|프로필|부고|별세|후임|인선|개각|정책실장|책사|인사\b|(실장|장관|총재|위원장|원장|회장|대표)에 "
-                        r"|견학|벤치마킹|업무협약|MOU|박람회|설명회|간담회|포럼|세미나|토론회|공모|모집|시상|수상|캠페인|교육|개최"
+                        r"|견학|벤치마킹|업무협약|MOU|박람회|설명회|간담회|포럼|세미나|토론회|공모|모집|시상|수상|캠페인|교육|개최|연구협력|협약"
                         r"|[가-힣]{2,4}(시|군|구|도)(청|의회)?,")
 KR_SKIP_SRC = ("simplywall", "초이스스탁", "Investing.com", "네이버 프리미엄", "Hypebeast")
 KR_STOP = {"증시", "코스", "스피", "주가", "전망", "기대", "강세", "상승", "하락", "오늘", "특징", "징주", "수혜", "혜주",
@@ -235,6 +235,12 @@ KR_BIG_MOVES = {"CL=F": (2.5, "pct", r"유가|석유|원유|정유|브렌트|WTI
 def _themes(title):
     """제목에 든 테마 키워드. 두 기사가 같은 테마면 같은 주제로 보고 하나만 싣는다."""
     return {KR_THEME_ALIAS.get(k, k) for k in KR_THEME_KEYS.findall(title)}
+
+
+# 공급 충격·통상 조치: 보도량이 적어도 시장 영향이 큰 유형이라 가중치를 준다
+KR_SHOCK = re.compile(r"수출 ?(중단|금지|통제|제한|규제|허가제)|수입 ?(중단|금지|제한)|금수|봉쇄|공급 ?(중단|차질|난|부족)|감산|셧다운|생산 ?중단"
+                      r"|제재|보복|관세 ?(부과|인상|폭탄)|파병|공습|전쟁|휴전|디폴트|긴급 ?(발표|조치)")
+KR_SHOCK_WEIGHT = 2  # 충격 표현 1개당 점수 배수 증가분(최대 2개까지: 1개 3배, 2개 5배)
 
 
 def big_move_patterns(quotes):
@@ -266,6 +272,7 @@ def fetch_kr_news(n=2, now=None, quotes=None):
     경제·주식 관련 제목만 남기고 부동산과 종목 추천류는 제외한다.
     대상: 직전 한국 장 마감(15:30) 이후에 나온 기사만(장중에 이미 반영된 뉴스 제외).
     중요도: 그 사이 같은 주제를 다룬 기사 수(여러 언론이 크게 다룰수록 영향이 크다고 본다).
+    수출 중단·제재·관세 부과 같은 공급 충격/통상 조치 기사는 점수를 3~5배로 올린다(KR_SHOCK).
     유가·금·금리가 크게 움직인 날은 그 원인 기사를 먼저 싣는다(KR_BIG_MOVES)."""
     end = now or datetime.now(timezone.utc).timestamp()
     start = last_kr_close(end)  # 한국 장이 아직 반영하지 못한, 마감 이후 뉴스만
@@ -281,10 +288,13 @@ def fetch_kr_news(n=2, now=None, quotes=None):
     for c in cands:
         g = _grams(c["title"])
         c["heat"] = sum(1 for m in pool if m["link"] != c["link"] and len(g & _grams(m["title"])) >= 4)
-    cands.sort(key=lambda c: (-c["heat"], -c["ts"]))
+        n_shock = min(len({m.group(0) for m in KR_SHOCK.finditer(c["title"])}), 2)
+        c["shock"] = n_shock > 0
+        c["score"] = (c["heat"] + 1) * (1 + KR_SHOCK_WEIGHT * n_shock)
+    cands.sort(key=lambda c: (-c["score"], -c["ts"]))
     picked = []
     for pat in big_move_patterns(quotes):  # 크게 움직인 지표의 원인 기사 먼저
-        hit = next((c for c in cands if pat.search(c["title"])
+        hit = next((c for c in cands if pat.search(c["title"])  # cands는 점수순이라 충격 기사부터 걸린다
                     and not any(_themes(c["title"]) & _themes(p["title"]) for p in picked)), None)
         if hit and len(picked) < n:
             picked.append(hit)
@@ -293,7 +303,7 @@ def fetch_kr_news(n=2, now=None, quotes=None):
             break
         if c in picked:
             continue
-        if c["heat"] >= 2 and all(len(_grams(c["title"]) & _grams(p["title"])) < 4
+        if (c["heat"] >= 2 or c["shock"]) and all(len(_grams(c["title"]) & _grams(p["title"])) < 4
                                   and not (_themes(c["title"]) & _themes(p["title"])) for p in picked):
             picked.append(c)
         if len(picked) >= n:
