@@ -204,9 +204,11 @@ KR_EXCLUDE = re.compile(r"부동산|아파트|전세|월세|분양|집값|주택
                         r"|추천|톱픽|[Tt]op ?[Pp]ick|목표가|목표주가|사야 ?할|살 ?만한|유망주|유망 ?종목|담아라|담을|급등주|대장주 찾기"
                         r"|매수 ?(의견|추천|타이밍|기회)|비중 ?확대|주목할 ?(종목|주식)|종목 ?(분석|진단|상담)|리딩"
                         r"|[\"”’']\s*[-–]\s*[가-힣A-Za-z]{2,8}$"
+                        # 명절·장바구니 등 생활물가 기사
+                        r"|추석|명절|연휴|귀성|차례상|성수품|장바구니|밥상|먹거리|선물세트|할인|마트|외식|농산물|과일값|채소값|체감물가"
                         # 인사·동정, 지자체/기관 행사·홍보성 기사
                         r"|발탁|임명|내정|선임|취임|인사청문|후보자|차관|수석|프로필|부고|별세|후임|인선|개각|정책실장|인사\b|(실장|장관|총재|위원장|원장|회장|대표)에 "
-                        r"|견학|벤치마킹|업무협약|MOU|박람회|설명회|간담회|포럼|세미나|토론회|공모|모집|시상|수상|캠페인|교육"
+                        r"|견학|벤치마킹|업무협약|MOU|박람회|설명회|간담회|포럼|세미나|토론회|공모|모집|시상|수상|캠페인|교육|개최"
                         r"|[가-힣]{2,4}(시|군|구|도)(청|의회)?,")
 KR_SKIP_SRC = ("simplywall", "초이스스탁", "Investing.com", "네이버 프리미엄", "Hypebeast")
 KR_STOP = {"증시", "코스", "스피", "주가", "전망", "기대", "강세", "상승", "하락", "오늘", "특징", "징주", "수혜", "혜주",
@@ -217,6 +219,15 @@ KR_STOP = {"증시", "코스", "스피", "주가", "전망", "기대", "강세",
 def _grams(t):
     t = re.sub(r"[^0-9A-Za-z가-힣]", "", t)
     return {t[i:i + 2] for i in range(len(t) - 1)} - KR_STOP
+
+
+KR_THEME_KEYS = re.compile(r"원전|원자력|SMR|태양광|풍력|신재생|재생에너지|2차전지|이차전지|배터리|반도체|관세|LNG|조선|방산|금리|환율|물가")
+KR_THEME_ALIAS = {"원자력": "원전", "SMR": "원전", "이차전지": "2차전지", "배터리": "2차전지", "재생에너지": "신재생"}
+
+
+def _themes(title):
+    """제목에 든 테마 키워드. 두 기사가 같은 테마면 같은 주제로 보고 하나만 싣는다."""
+    return {KR_THEME_ALIAS.get(k, k) for k in KR_THEME_KEYS.findall(title)}
 
 
 def fetch_kr_news(n=2, hours=18):
@@ -240,7 +251,8 @@ def fetch_kr_news(n=2, hours=18):
     cands.sort(key=lambda c: (-c["heat"], -c["ts"]))
     picked = []
     for c in cands:
-        if c["heat"] >= 2 and all(len(_grams(c["title"]) & _grams(p["title"])) < 4 for p in picked):
+        if c["heat"] >= 2 and all(len(_grams(c["title"]) & _grams(p["title"])) < 4
+                                  and not (_themes(c["title"]) & _themes(p["title"])) for p in picked):
             picked.append(c)
         if len(picked) >= n:
             break
