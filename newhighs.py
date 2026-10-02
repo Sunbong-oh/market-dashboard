@@ -18,6 +18,7 @@ from html import escape, unescape
 from pathlib import Path
 
 import dashboard as d
+from company_ko import describe
 
 OUT = Path(__file__).with_name("newhighs.html")
 MIN_CAP = 10e9      # 이 시가총액($) 이상만 검색
@@ -204,12 +205,12 @@ def tile(b):
     return f'''<div class="tile">
 <div class="nm"><a href="https://finance.yahoo.com/quote/{escape(b["sym"])}">{escape(short_name(b["sym"], b["name"]))}</a></div>
 <div class="tk">{escape(b["sym"])} · {escape(sec)}</div>
+<div class="desc">{escape(describe(b["sym"], ind))}</div>
 <div class="px {c}">{d.fnum(last)}</div>
 <div class="dl {c}">{"▲" if day > 0 else "▼" if day < 0 else "–"} {abs(day):.2f}%</div>
 {spark(six, d.cls(ret6))}
 <div class="cap">6개월 <i class="{d.cls(ret6)}">{ret6:+.0f}%</i> · 전고점 <i class="{d.cls(gap)}">{gap:+.1f}%</i></div>
 <div class="rows">{row("시총", _cap_text(b["cap"]))}{row("PER", _mult(b.get("per"), b.get("eps")))}{row("선행 PER", _mult(b.get("fper")))}{row("PBR", _mult(b.get("pbr")))}{arr}{row("매출성장", rg)}{row("목표가 괴리", tgt)}</div>
-<div class="ind">{escape(ind)}</div>
 </div>'''
 
 
@@ -238,7 +239,7 @@ NH_CSS = """
 .cap{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap}.cap i{font-style:normal;font-weight:700}
 .rows{margin-top:6px;border-top:1px solid var(--line);padding-top:4px}
 .r{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;padding:1.5px 0}.r span{color:var(--muted)}.r b{font-weight:700}
-.ind{font-size:10.5px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.desc{font-size:12px;line-height:1.35;color:var(--ink);margin-top:3px;min-height:33px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all}
 .tks{font-size:13px;color:var(--muted);line-height:1.6}
 .foot{font-size:10.5px;color:var(--muted);margin:10px 4px 0;line-height:1.5}
 a{color:inherit;text-decoration:none}
@@ -256,8 +257,12 @@ def build_html(highs, asof, total_scanned, now):
     top, rest = highs[:TOP_N], highs[TOP_N:]
     # 마지막 장만 1~2개로 남지 않게 사진 수를 먼저 정하고 균등하게 나눈다
     n_photo = max(1, -(-len(top) // PER_PHOTO))
-    size = max(1, -(-len(top) // n_photo))
-    groups = [top[i:i + size] for i in range(0, len(top), size)] or [[]]
+    base, extra = divmod(len(top), n_photo)
+    groups, at = [], 0
+    for k in range(n_photo):
+        take = base + (1 if k < extra else 0)
+        groups.append(top[at:at + take])
+        at += take
     secs = {}
     for b in highs[:TOP_N]:
         k = SECTOR_KO.get(b.get("sector"), b.get("sector"))
