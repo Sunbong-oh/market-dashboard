@@ -194,11 +194,11 @@ KR_RECAP = re.compile(r"뉴욕증시|美 ?증시|나스닥|다우|S&P|마감|연
                       r"|코스피.*(\d|하락|상승)|코스닥.*(\d|하락|상승)")
 # 경제정책·대외 경제협력·에너지(신재생/원전) 등 주제별 기사도 후보에 넣는다
 KR_TOPIC_QUERIES = ("경제정책 when:1d", "관세 통상 when:1d", "한미 경제 협력 when:1d", "한중 경제 협력 when:1d",
-                    "신재생에너지 when:1d", "원전 when:1d")
+                    "신재생에너지 when:1d", "원전 when:1d", "국제유가 when:1d", "원자재 when:1d", "수출 통제 when:1d")
 # 경제·주식과 관련된 제목만 통과
 KR_ECON = re.compile(r"정책|정부|관세|통상|무역|수출|대미|한미|미국|美|트럼프|중국|中|한중|미중|협력|협정|투자|신재생|재생에너지"
                      r"|태양광|풍력|수소|원전|원자력|SMR|반도체|배터리|2차전지|조선|방산|금리|환율|한은|물가|추경|예산|세제|규제"
-                     r"|코스피|코스닥|증시|수혜주|관련주|株|실적|공급망|에너지|LNG")
+                     r"|코스피|코스닥|증시|수혜주|관련주|株|실적|공급망|에너지|LNG|유가|석유|원유|정유|원자재|금값|희토류")
 # 부동산, 종목 추천·목표가류, 증권사 리포트 인용('…"-한투')은 뺀다
 KR_EXCLUDE = re.compile(r"부동산|아파트|전세|월세|분양|집값|주택|청약|재건축|재개발|임대|오피스텔|토지|땅값"
                         r"|추천|톱픽|[Tt]op ?[Pp]ick|목표가|목표주가|사야 ?할|살 ?만한|유망주|유망 ?종목|담아라|담을|급등주|대장주 찾기"
@@ -207,7 +207,7 @@ KR_EXCLUDE = re.compile(r"부동산|아파트|전세|월세|분양|집값|주택
                         # 명절·장바구니 등 생활물가 기사
                         r"|추석|명절|연휴|귀성|차례상|성수품|장바구니|밥상|먹거리|선물세트|할인|마트|외식|농산물|과일값|채소값|체감물가"
                         # 인사·동정, 지자체/기관 행사·홍보성 기사
-                        r"|발탁|임명|내정|선임|취임|인사청문|후보자|차관|수석|프로필|부고|별세|후임|인선|개각|정책실장|인사\b|(실장|장관|총재|위원장|원장|회장|대표)에 "
+                        r"|발탁|임명|내정|선임|취임|인사청문|후보자|차관|수석|프로필|부고|별세|후임|인선|개각|정책실장|책사|인사\b|(실장|장관|총재|위원장|원장|회장|대표)에 "
                         r"|견학|벤치마킹|업무협약|MOU|박람회|설명회|간담회|포럼|세미나|토론회|공모|모집|시상|수상|캠페인|교육|개최"
                         r"|[가-힣]{2,4}(시|군|구|도)(청|의회)?,")
 KR_SKIP_SRC = ("simplywall", "초이스스탁", "Investing.com", "네이버 프리미엄", "Hypebeast")
@@ -221,8 +221,15 @@ def _grams(t):
     return {t[i:i + 2] for i in range(len(t) - 1)} - KR_STOP
 
 
-KR_THEME_KEYS = re.compile(r"원전|원자력|SMR|태양광|풍력|신재생|재생에너지|2차전지|이차전지|배터리|반도체|관세|LNG|조선|방산|금리|환율|물가")
-KR_THEME_ALIAS = {"원자력": "원전", "SMR": "원전", "이차전지": "2차전지", "배터리": "2차전지", "재생에너지": "신재생"}
+KR_THEME_KEYS = re.compile(r"원전|원자력|SMR|태양광|풍력|신재생|재생에너지|2차전지|이차전지|배터리|반도체|관세|LNG|조선|방산|금리|환율|물가"
+                           r"|유가|석유|원유|정유|브렌트|WTI|금값|대미투자|대미 투자|전략투자")
+KR_THEME_ALIAS = {"원자력": "원전", "SMR": "원전", "이차전지": "2차전지", "배터리": "2차전지", "재생에너지": "신재생",
+                  "석유": "유가", "원유": "유가", "정유": "유가", "브렌트": "유가", "WTI": "유가",
+                  "대미 투자": "대미투자", "전략투자": "대미투자"}
+# 지표가 하루에 이만큼 움직이면 그 원인 기사를 한 자리에 반드시 싣는다: 티커 -> (기준, 단위, 제목 패턴)
+KR_BIG_MOVES = {"CL=F": (2.5, "pct", r"유가|석유|원유|정유|브렌트|WTI"),
+                "GC=F": (2.5, "pct", r"금값|금 ?가격|금 ?선물|안전자산"),
+                "^TNX": (0.10, "abs", r"국채금리|국채 금리|장기금리|10년물")}
 
 
 def _themes(title):
@@ -230,13 +237,39 @@ def _themes(title):
     return {KR_THEME_ALIAS.get(k, k) for k in KR_THEME_KEYS.findall(title)}
 
 
-def fetch_kr_news(n=2, hours=18):
+def big_move_patterns(quotes):
+    out = []
+    for q in quotes or ():
+        rule = KR_BIG_MOVES.get(q.get("sym")) if q.get("ok") else None
+        if not rule:
+            continue
+        last, prev = q["pts"][-1][1], q["pts"][-2][1]
+        move = abs(last / prev - 1) * 100 if rule[1] == "pct" else abs(last - prev)
+        if move >= rule[0]:
+            out.append(re.compile(rule[2]))
+    return out
+
+
+def last_kr_close(now_ts):
+    """now 이전의 가장 최근 한국 정규장 마감(평일 15:30 KST) 시각. 공휴일은 고려하지 않는다."""
+    t = datetime.fromtimestamp(now_ts, KST).replace(hour=15, minute=30, second=0, microsecond=0)
+    if t.timestamp() > now_ts:
+        t -= timedelta(days=1)
+    while t.weekday() >= 5:
+        t -= timedelta(days=1)
+    return t.timestamp()
+
+
+def fetch_kr_news(n=2, now=None, quotes=None):
     """오늘 한국 증시에 영향이 클 뉴스 n개.
     후보: 국내 테마(수혜주·관련주·특징주) 기사 + Google 뉴스 경제 주요 기사 + 정책·통상·에너지 주제 기사.
     경제·주식 관련 제목만 남기고 부동산과 종목 추천류는 제외한다.
-    중요도: 최근 hours시간 동안 같은 주제를 다룬 기사 수(여러 언론이 크게 다룰수록 영향이 크다고 본다)."""
-    start = datetime.now(timezone.utc).timestamp() - hours * 3600
-    fresh = lambda items: [x for x in items if x["ts"] >= start and not x["src"].startswith(KR_SKIP_SRC)]
+    대상: 직전 한국 장 마감(15:30) 이후에 나온 기사만(장중에 이미 반영된 뉴스 제외).
+    중요도: 그 사이 같은 주제를 다룬 기사 수(여러 언론이 크게 다룰수록 영향이 크다고 본다).
+    유가·금·금리가 크게 움직인 날은 그 원인 기사를 먼저 싣는다(KR_BIG_MOVES)."""
+    end = now or datetime.now(timezone.utc).timestamp()
+    start = last_kr_close(end)  # 한국 장이 아직 반영하지 못한, 마감 이후 뉴스만
+    fresh = lambda items: [x for x in items if start <= x["ts"] <= end and not x["src"].startswith(KR_SKIP_SRC)]
     theme = fresh([x for q in KR_THEME_QUERIES for x in google_news(q) if KR_THEME.search(x["raw"])])
     biz = fresh(google_news_feed(GN_BUSINESS, "경제 주요뉴스"))
     pool = {x["link"]: x for x in theme + biz + fresh([x for q in KR_POOL_QUERIES for x in google_news(q)])}
@@ -250,7 +283,16 @@ def fetch_kr_news(n=2, hours=18):
         c["heat"] = sum(1 for m in pool if m["link"] != c["link"] and len(g & _grams(m["title"])) >= 4)
     cands.sort(key=lambda c: (-c["heat"], -c["ts"]))
     picked = []
+    for pat in big_move_patterns(quotes):  # 크게 움직인 지표의 원인 기사 먼저
+        hit = next((c for c in cands if pat.search(c["title"])
+                    and not any(_themes(c["title"]) & _themes(p["title"]) for p in picked)), None)
+        if hit and len(picked) < n:
+            picked.append(hit)
     for c in cands:
+        if len(picked) >= n:
+            break
+        if c in picked:
+            continue
         if c["heat"] >= 2 and all(len(_grams(c["title"]) & _grams(p["title"])) < 4
                                   and not (_themes(c["title"]) & _themes(p["title"])) for p in picked):
             picked.append(c)
@@ -1022,7 +1064,7 @@ def main():
                    if nas else (datetime.now(KST) - timedelta(days=1)).date())
     news = fetch_news(since)
     earnings = fetch_earnings(session_day)
-    kr = fetch_kr_news()
+    kr = fetch_kr_news(quotes=quotes)
 
     now = datetime.now(KST)
     weekday = "월화수목금토일"[now.weekday()]
