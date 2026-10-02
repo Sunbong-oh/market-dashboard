@@ -107,7 +107,24 @@ def short_name(sym, name):
     return d.KO_NAMES.get(sym) or _NAME_CUT.sub("", name).strip() or sym
 
 
-def card(b):
+def spark(values, color_cls, w=300, h=64):
+    """KB 리포트식 미니 차트: 시작값 기준 점선 위·아래를 옅게 채우고 마지막 점을 찍는다."""
+    lo, hi = min(values), max(values)
+    rng = (hi - lo) or 1
+    n, pad = len(values), 5
+    y = lambda v: pad + (1 - (v - lo) / rng) * (h - 2 * pad)
+    xy = [(i / (n - 1) * w, y(v)) for i, v in enumerate(values)]
+    line = " ".join(f"{x:.1f},{yy:.1f}" for x, yy in xy)
+    base = y(values[0])
+    lx, ly = xy[-1]
+    return (f'<svg class="sp {color_cls}" viewBox="0 0 {w} {h}" preserveAspectRatio="none">'
+            f'<polygon points="0,{base:.1f} {line} {w},{base:.1f}" class="ar"/>'
+            f'<line x1="0" y1="{base:.1f}" x2="{w}" y2="{base:.1f}" class="bl"/>'
+            f'<polyline points="{line}" class="ln" vector-effect="non-scaling-stroke"/>'
+            f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="3.2" class="dt"/></svg>')
+
+
+def tile(b):
     pts = b["pts"]
     last, prev = pts[-1][1], pts[-2][1]
     day = (last / prev - 1) * 100
@@ -119,72 +136,90 @@ def card(b):
     ind = b.get("industry") or ""
     tgt = f'{(b["target"] / last - 1) * 100:+.0f}%' if b.get("target") else "–"
     rg = f'{b["rev_g"] * 100:+.0f}%' if b.get("rev_g") is not None else "–"
-    cell = lambda k, v: f'<div class="nh-c"><span>{k}</span><b>{v}</b></div>'
-    return f'''<article class="card nh">
-<div class="nh-top"><div class="nh-nm"><a href="https://finance.yahoo.com/quote/{escape(b["sym"])}">{escape(short_name(b["sym"], b["name"]))}</a> <span class="sym">{escape(b["sym"])}</span></div>
-<div class="nh-px">${d.fnum(last)} <span class="{d.cls(day)}">{"▲" if day > 0 else "▼" if day < 0 else "–"}{abs(day):.2f}%</span></div></div>
-<div class="nh-ind">{escape(sec)}{" · " if sec and ind else ""}{escape(ind)}</div>
-<div class="nh-mid"><div class="nh-ch">{d.sparkline(six, w=300, h=64, color_cls=d.cls(ret6))}
-<div class="nh-cap">6개월 <i class="{d.cls(ret6)}">{ret6:+.0f}%</i> · 전고점 <i class="{d.cls(gap)}">{gap:+.1f}%</i></div></div>
-<div class="nh-g">{cell("시총", _cap_text(b["cap"]))}{cell("PER", _mult(b.get("per"), b.get("eps")))}{cell("선행 PER", _mult(b.get("fper")))}
-{cell("PBR", _mult(b.get("pbr")))}{cell("매출성장", rg)}{cell("목표가 괴리", tgt)}</div></div>
-</article>'''
+    c = d.cls(day)
+    row = lambda k, v: f'<div class="r"><span>{k}</span><b>{v}</b></div>'
+    return f'''<div class="tile">
+<div class="nm"><a href="https://finance.yahoo.com/quote/{escape(b["sym"])}">{escape(short_name(b["sym"], b["name"]))}</a></div>
+<div class="tk">{escape(b["sym"])} · {escape(sec)}</div>
+<div class="px {c}">{d.fnum(last)}</div>
+<div class="dl {c}">{"▲" if day > 0 else "▼" if day < 0 else "–"} {abs(day):.2f}%</div>
+{spark(six, d.cls(ret6))}
+<div class="cap">6개월 <i class="{d.cls(ret6)}">{ret6:+.0f}%</i> · 전고점 <i class="{d.cls(gap)}">{gap:+.1f}%</i></div>
+<div class="rows">{row("시총", _cap_text(b["cap"]))}{row("PER", _mult(b.get("per"), b.get("eps")))}{row("선행 PER", _mult(b.get("fper")))}{row("PBR", _mult(b.get("pbr")))}{row("매출성장", rg)}{row("목표가 괴리", tgt)}</div>
+<div class="ind">{escape(ind)}</div>
+</div>'''
 
 
 NH_CSS = """
-.nh{margin-top:8px;padding:10px 12px}
-.nh-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.nh-nm{font-size:18px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nh-nm .sym{font-weight:400;font-size:12px}
-.nh-px{font-size:20px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}.nh-px span{font-size:14px;font-weight:700}
-.nh-ind{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.nh-mid{display:grid;grid-template-columns:42% 1fr;gap:8px;margin-top:6px;align-items:center}
-.nh .spark{height:58px;margin-top:0}.nh-cap{font-size:11.5px;color:var(--muted);text-align:center;margin-top:3px;white-space:nowrap}.nh-cap i{font-style:normal;font-weight:700}
-.nh-g{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-.nh-c{background:var(--bg);border-radius:7px;padding:3px 7px;display:flex;justify-content:space-between;align-items:baseline;min-width:0;gap:4px}
-.nh-c span{font-size:11px;color:var(--muted);white-space:nowrap}.nh-c b{font-size:13.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.nh-sum{margin-top:8px}.nh-sum p{margin:6px 0 0;font-size:15px;line-height:1.5}.nh-sum .tks{font-size:14px;color:var(--muted);word-break:keep-all}
-.nh-sum .sec{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.nh-sum .sec span{background:var(--bg);border-radius:99px;padding:3px 10px;font-size:13px;font-weight:700}
-.nh-sum .sec b{color:var(--accent)}
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1b1f24;--muted:#7a828c;--line:#e7e9ec;--tile:#f3f4f6;--up:#d93b3b;--down:#2f6fdb;--flat:#6b7280;--label:#15803d;--kb:#f97316}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 'Pretendard','Malgun Gothic',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.wrap{max-width:460px;margin:0 auto;padding:10px 10px 8px}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--kb);color:#fff;border-radius:14px;padding:13px 16px}
+.hd h1{margin:0;font-size:22px;font-weight:800}.hd .dt{font-size:12.5px;font-weight:700;text-align:right;line-height:1.3}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
+.sh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.sh h2{margin:0;font-size:16px;font-weight:800}.sh span{font-size:11px;color:var(--muted)}
+.sum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.sum div{background:var(--tile);border-radius:10px;padding:8px 10px}.sum span{display:block;font-size:11px;color:var(--muted)}
+.sum b{font-size:22px;font-weight:800}.sum b.up{color:var(--up)}
+.pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.pills span{background:var(--tile);border-radius:99px;padding:3px 10px;font-size:12px;font-weight:700}.pills b{color:var(--kb)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tile{background:var(--tile);border-radius:10px;padding:9px 10px;min-width:0}
+.nm{font-size:16px;font-weight:800;color:var(--label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.px{font-size:25px;font-weight:800;margin-top:4px;line-height:1.1}.dl{font-size:13px;font-weight:600}
+.up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--flat)}
+.sp{width:100%;height:50px;display:block;margin-top:5px}
+.sp .ln{fill:none;stroke:currentColor;stroke-width:1.8}.sp .ar{fill:currentColor;opacity:.13}.sp .dt{fill:currentColor}.sp .bl{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.7;vector-effect:non-scaling-stroke}
+.sp.up{color:var(--up)}.sp.down{color:var(--down)}.sp.flat{color:var(--flat)}
+.cap{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap}.cap i{font-style:normal;font-weight:700}
+.rows{margin-top:6px;border-top:1px solid var(--line);padding-top:4px}
+.r{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;padding:1.5px 0}.r span{color:var(--muted)}.r b{font-weight:700}
+.ind{font-size:10.5px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tks{font-size:13px;color:var(--muted);line-height:1.6}
+.foot{font-size:10.5px;color:var(--muted);margin:10px 4px 0;line-height:1.5}
+a{color:inherit;text-decoration:none}
 """
 
 NH_JS = """
 const h=location.hash.match(/^#shot([0-9]*)(?:-(\\d))?/);
-if(h){document.documentElement.dataset.shot='1';if(h[1])document.documentElement.style.zoom=innerWidth/+h[1];
+if(h){if(h[1])document.documentElement.style.zoom=innerWidth/+h[1];
 if(h[2])document.querySelectorAll('[data-photo]').forEach(e=>{if(e.dataset.photo!==h[2])e.style.display='none'})}
 document.documentElement.dataset.h=Math.ceil(document.querySelector('.wrap').getBoundingClientRect().bottom);
 """
 
 
 def build_html(highs, asof, total_scanned, now):
-    top = highs[:TOP_N]
-    rest = highs[TOP_N:]
-    photos = [top[i:i + PER_PHOTO] for i in range(0, len(top), PER_PHOTO)] or [[]]
-    # 업종별 신고가 개수(상세를 받은 종목 + 나머지는 집계 불가라 상위 종목 기준)
+    top, rest = highs[:TOP_N], highs[TOP_N:]
+    groups = [top[i:i + PER_PHOTO] for i in range(0, len(top), PER_PHOTO)] or [[]]
     secs = {}
-    for b in top:
-        if b.get("sector"):
-            secs[SECTOR_KO.get(b["sector"], b["sector"])] = secs.get(SECTOR_KO.get(b["sector"], b["sector"]), 0) + 1
-    sec_html = "".join(f"<span>{escape(k)} <b>{v}</b></span>" for k, v in sorted(secs.items(), key=lambda x: -x[1]))
-    head = f'''<header class="top"><div><div class="kicker">US 52-WEEK HIGHS</div>
-<h1>미국 52주 신고가 {len(highs)}종목</h1>
-<div class="sub">{asof:%m/%d} 마감 기준 · 시총 ${MIN_CAP / 1e9:.0f}B↑ {total_scanned:,}종목 중</div></div></header>'''
+    for b in highs[:TOP_N]:
+        k = SECTOR_KO.get(b.get("sector"), b.get("sector"))
+        if k:
+            secs[k] = secs.get(k, 0) + 1
+    pills = "".join(f"<span>{escape(k)} <b>{v}</b></span>" for k, v in sorted(secs.items(), key=lambda x: -x[1]))
+    wd = "월화수목금토일"[asof.weekday()]
+    head = (f'<div class="hd"><h1>미국 52주 신고가</h1><div class="dt">{asof:%Y.%m.%d} ({wd}) 마감<br>시총 ${MIN_CAP / 1e9:.0f}B↑ 기준</div></div>'
+            f'<div class="card"><div class="sh"><h2>신고가 요약</h2><span>종가 기준 1년 최고가</span></div>'
+            f'<div class="sum"><div><span>신고가 종목</span><b class="up">{len(highs)}</b></div>'
+            f'<div><span>검색 대상</span><b>{total_scanned:,}</b></div>'
+            f'<div><span>신고가 비율</span><b>{len(highs) / total_scanned * 100:.1f}%</b></div></div>'
+            f'<div class="pills">{pills}</div></div>')
     parts = []
-    for i, grp in enumerate(photos, 1):
-        body = "".join(card(b) for b in grp)
+    for i, grp in enumerate(groups, 1):
+        body = (f'<div class="card"><div class="sh"><h2>시총 상위 신고가{f" ({i}/{len(groups)})" if len(groups) > 1 else ""}</h2>'
+                f'<span>6개월 차트 · 밸류에이션</span></div><div class="grid">{"".join(tile(b) for b in grp)}</div></div>')
         extra = ""
-        if i == 1:
-            extra = f'<section class="panel nh-sum"><span class="tag">시총 상위 {len(top)}종목 업종</span><div class="sec">{sec_html}</div></section>'
-        if i == len(photos) and rest:
-            tk = " · ".join(escape(b["sym"]) for b in rest[:60])
-            more = f" 외 {len(rest) - 60}종목" if len(rest) > 60 else ""
-            extra += f'<section class="panel nh-sum"><span class="tag">그 외 신고가 {len(rest)}종목</span><p class="tks">{tk}{more}</p></section>'
+        if i == len(groups) and rest:
+            tk = " · ".join(escape(b["sym"]) for b in rest[:60]) + (f" 외 {len(rest) - 60}종목" if len(rest) > 60 else "")
+            extra = f'<div class="card"><div class="sh"><h2>그 외 신고가 {len(rest)}종목</h2><span>시총 순</span></div><div class="tks">{tk}</div></div>'
         parts.append(f'<div data-photo="{i}">{head if i == 1 else ""}{body}{extra}</div>')
-    foot = ('<footer>종가 기준 1년 최고가 경신 종목. 출처: 나스닥 스크리너(종목·시총), Yahoo Finance(시세·재무, 지연 가능). '
-            '투자 판단의 근거가 아닌 참고용입니다.</footer>')
+    foot = ('<div class="foot">출처: 나스닥 스크리너(종목·시총), Yahoo Finance(시세·재무, 지연 가능). '
+            '투자 판단의 근거가 아닌 참고용입니다.</div>')
     html = (f'<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f'<title>미국 52주 신고가</title><style>{d.CSS}{NH_CSS}</style></head><body><div class="wrap">'
+            f'<title>미국 52주 신고가</title><style>{NH_CSS}</style></head><body><div class="wrap">'
             f'{"".join(parts)}{foot}</div><script>{NH_JS}</script></body></html>')
-    return html, len(photos)
+    return html, len(groups)
 
 
 def shoot(png, n):
