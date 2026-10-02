@@ -3,3 +3,4 @@
 !/.gitignore
 !/dashboard.py
 !/.github/
+!/trigger/

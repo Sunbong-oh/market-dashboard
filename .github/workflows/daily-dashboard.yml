@@ -1,20 +1,23 @@
 name: Daily Market Dashboard
 
 on:
+  # 주 실행 경로: Claude 루틴이 화~토 06:55 KST에 trigger/ 아래 파일을 커밋해 push로 깨운다.
+  # (GitHub 자체 schedule은 이 저장소에서 1.5~3시간씩 늦게 돌아 7시 발송에 쓸 수 없었다.)
+  push:
+    branches: [main, "claude/**"]
+    paths: ["trigger/**"]
   schedule:
-    # 한국 화~토 아침 = UTC 월~금 밤 (미국 월~금 장 마감 직후). 정각(:00)은 GitHub 서버가 붐벼 누락되기 쉬워 피한다.
-    # 실행에 3~4분 걸리므로 06:48에 시작해 7시 전후 도착을 노린다.
-    - cron: "48 21 * * 1-5"   # 06:48 KST 본 발송
-    # 예약 실행은 가끔 통째로 건너뛰어지므로 예비 2번. 이미 보냈으면 아래 guard가 건너뛴다.
-    - cron: "7 22 * * 1-5"    # 07:07 KST 예비
-    - cron: "27 22 * * 1-5"   # 07:27 KST 예비
-  workflow_dispatch:        # Actions 탭에서 수동 실행
+    # 예비: 루틴이 실패한 날을 위한 GitHub 자체 예약. 한국 화~토 아침 = UTC 월~금 밤.
+    # 이미 보냈으면 아래 gate가 건너뛴다.
+    - cron: "7 22 * * 1-5"    # 07:07 KST
+    - cron: "37 22 * * 1-5"   # 07:37 KST
+  workflow_dispatch:        # Actions 탭에서 수동 실행(항상 발송)
 
 permissions:
   contents: read
   actions: read
 
-# 본 발송이 늦게 시작돼 예비와 겹쳐도 차례로 돌게 해서, 뒤엣것이 "이미 보냄"을 볼 수 있게 한다
+# 여러 실행이 겹쳐도 차례로 돌게 해서, 뒤엣것이 "이미 보냄"을 볼 수 있게 한다
 concurrency:
   group: daily-dashboard
   cancel-in-progress: false
@@ -24,32 +27,46 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
-      - name: Skip if this morning's scheduled send already succeeded
-        id: guard
-        if: github.event_name == 'schedule'
+      - name: Decide whether to send (once per morning)
+        id: gate
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          since=$(date -u -d '3 hours ago' +%Y-%m-%dT%H:%M:%SZ)
-          n=$(gh api "repos/${{ github.repository }}/actions/workflows/daily-dashboard.yml/runs?event=schedule&status=success&created=>$since" --jq '.total_count')
-          echo "already sent in last 3h: $n"
-          echo "sent=$n" >> "$GITHUB_OUTPUT"
+          send=1; why="manual run"
+          if [ "$EVENT" = "push" ] || [ "$EVENT" = "schedule" ]; then
+            hour=$((10#$(date -u +%H)))
+            # 아침 창의 시작: 가장 최근의 05:00 KST(= 20:00 UTC)
+            if [ "$hour" -ge 20 ]; then ws=$(date -u +%Y-%m-%dT20:00:00Z); else ws=$(date -u -d 'yesterday' +%Y-%m-%dT20:00:00Z); fi
+            n=$(gh api "repos/${{ github.repository }}/actions/workflows/daily-dashboard.yml/runs?status=success&created=>$ws&per_page=50" \
+                --jq "[.workflow_runs[] | select(.event==\"schedule\" or .event==\"push\") | select(.id != ${{ github.run_id }})] | length")
+            why="first run since $ws"
+            if [ "$n" != "0" ]; then send=0; why="already sent this morning ($n run since $ws)"; fi
+            # 예비 예약이 정오(KST) 넘어 뒤늦게 돌면 보내지 않는다
+            if [ "$EVENT" = "schedule" ] && [ "$hour" -ge 3 ] && [ "$hour" -lt 20 ]; then send=0; why="scheduled run started too late (UTC hour $hour)"; fi
+            case "$COMMIT_MSG" in *"[test]"*) send=1; why="[test] push";; esac
+          fi
+          echo "send=$send ($why)"
+          echo "send=$send" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
-        if: github.event_name != 'schedule' || steps.guard.outputs.sent == '0'
+        if: steps.gate.outputs.send == '1'
+        with:
+          ref: main   # 트리거 커밋이 어느 브랜치에 오든 최신 main의 dashboard.py로 만든다
       - uses: actions/setup-python@v5
-        if: github.event_name != 'schedule' || steps.guard.outputs.sent == '0'
+        if: steps.gate.outputs.send == '1'
         with:
           python-version: "3.12"
       - name: Build dashboard and send to Telegram
-        if: github.event_name != 'schedule' || steps.guard.outputs.sent == '0'
+        if: steps.gate.outputs.send == '1'
         env:
           PYTHONIOENCODING: utf-8
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python dashboard.py --notify --no-open
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.gate.outputs.send == '1'
         with:
           name: dashboard
           path: |
