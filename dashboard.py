@@ -617,6 +617,14 @@ def kr_block(items):
     return f'<section class="panel kr"><div class="tag">오늘 한국 시장 영향</div>{body}</section>'
 
 
+def cal_block(events):
+    """오늘의 증시 캘린더 패널. 이슈가 없으면 빈 문자열(패널 자체를 넣지 않는다)."""
+    if not events:
+        return ""
+    lis = "".join(f'<li>{"<b class=hot>★</b> " if e.startswith("★") else ""}{escape(e.lstrip("★"))}</li>' for e in events)
+    return f'<section class="panel cal"><div class="tag">오늘의 증시 캘린더</div><ol class="items">{lis}</ol></section>'
+
+
 def _usd(v):
     """매출 표기: 1억 달러 단위(예: 54.23B -> 542.3억 달러)."""
     eok = v / 1e8
@@ -710,12 +718,13 @@ def putcall_block(cnn):
     return f'<section class="panel pc-solo">{putcall_badge(cnn)}</section>'
 
 
-def top_section(cnn, news, earnings, kr, quotes=()):
+def top_section(cnn, news, earnings, kr, quotes=(), cal=()):
     return f'''<section class="fg driver">
   {headline_block(news, quotes)}
 </section>
 {earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
-{kr_block(kr)}'''
+{kr_block(kr)}
+{cal_block(cal)}'''
 
 
 # ---------- 텔레그램 ----------
@@ -934,15 +943,6 @@ def calendar_events(now):
     return [ev] if isinstance(ev, str) else [str(x) for x in ev]
 
 
-def send_calendar(now):
-    events = calendar_events(now)
-    if not events:
-        print("오늘 증시 캘린더 주요 이슈 없음")
-        return
-    head = f"📅 오늘의 증시 캘린더 {now:%m/%d}({'월화수목금토일'[now.weekday()]})"
-    send_telegram("\n".join([head, ""] + [f"• {e}" for e in events]))
-
-
 def notify(quotes, cnn, now):
     png = OUT.with_name("dashboard.png")
     caption = (f"📊 데일리 마켓 {now:%m/%d}({'월화수목금토일'[now.weekday()]}) {now:%H:%M} KST\n"
@@ -960,11 +960,6 @@ def notify(quotes, cnn, now):
     if not sent:
         print("사진 발송 불가/실패 -> 텍스트 요약으로 대체")
         send_telegram(build_summary(quotes, cnn, now))
-    # 그날 주요 이슈가 증시 캘린더에 있으면 첨부. 실패해도 이후 발송에 영향이 없다.
-    try:
-        send_calendar(now)
-    except Exception as e:
-        print("캘린더 섹션 실패:", type(e).__name__, e, file=sys.stderr)
     # 뒤이어 미국 52주 신고가 앨범. 여기서 실패해도 위의 데일리 발송에는 영향이 없다.
     if os.environ.get("NEWHIGHS", "on") != "off":
         try:
@@ -1030,6 +1025,7 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .pcb-a{font-size:13px;font-weight:800;background:#fff;color:#c92a2a;padding:2px 10px;border-radius:99px;white-space:nowrap}
 .pc-solo{display:flex;justify-content:flex-end}
 .wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
+.panel.cal{border-left:6px solid var(--hd2)}.panel.cal .tag{background:var(--hd2)}.panel.cal .items li{font-size:18px}.hot{color:var(--accent)}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
@@ -1124,7 +1120,7 @@ def main():
 <div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, earnings, kr, quotes + extra)}
+{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now))}
 </div>
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>

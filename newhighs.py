@@ -22,7 +22,7 @@ from company_ko import describe
 
 OUT = Path(__file__).with_name("newhighs.html")
 MIN_CAP = 10e9      # 이 시가총액($) 이상만 검색
-TOP_N = 24          # 카드로 보여줄 최대 종목 수(시총 순). 24개 = 앨범 6장. 넘는 종목은 티커만 나열
+TOP_N = 300         # 카드로 보여줄 최대 종목 수(시총 순). 사실상 신고가 종목 전부. 넘는 종목만 티커로 나열
 PER_PHOTO = 4       # 사진 한 장에 담을 카드 수 (폰 한 화면 비율 유지)
 MIN_BARS = 150      # 일봉이 이보다 적은 신규 상장주는 제외(상장 이후 계속 신고가라 의미가 없다)
 SCREENER = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25&download=true"
@@ -333,8 +333,11 @@ def run(now=None, send=False):
         pngs.append(png)
     if send:
         cap = f"🚀 미국 52주 신고가 {len(highs)}종목 · {asof:%m/%d} 마감 (시총 ${MIN_CAP / 1e9:.0f}B↑, 시총 순)"
-        if not d.send_telegram_album(pngs, cap):
-            raise RuntimeError("텔레그램 발송 실패")
+        # 텔레그램 앨범은 한 번에 10장까지라 나눠서 보낸다
+        for k in range(0, len(pngs), 10):
+            part = f"{cap} ({k // 10 + 1}/{-(-len(pngs) // 10)})" if len(pngs) > 10 else cap
+            if not d.send_telegram_album(pngs[k:k + 10], part if k == 0 or len(pngs) > 10 else ""):
+                raise RuntimeError("텔레그램 발송 실패")
 
 
 if __name__ == "__main__":
