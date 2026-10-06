@@ -920,6 +920,29 @@ def save_blog_post(png, now):
     print("블로그 준비물 저장:", title)
 
 
+CALENDAR = Path(__file__).with_name("market_calendar.json")
+
+
+def calendar_events(now):
+    """market_calendar.json({"YYYY-MM-DD": ["이슈", ...]})에서 오늘(KST) 항목을 찾는다. 없으면 빈 리스트."""
+    try:
+        data = json.loads(CALENDAR.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print("증시 캘린더 읽기 실패:", type(e).__name__, file=sys.stderr)
+        return []
+    ev = data.get(f"{now:%Y-%m-%d}") or []
+    return [ev] if isinstance(ev, str) else [str(x) for x in ev]
+
+
+def send_calendar(now):
+    events = calendar_events(now)
+    if not events:
+        print("오늘 증시 캘린더 주요 이슈 없음")
+        return
+    head = f"📅 오늘의 증시 캘린더 {now:%m/%d}({'월화수목금토일'[now.weekday()]})"
+    send_telegram("\n".join([head, ""] + [f"• {e}" for e in events]))
+
+
 def notify(quotes, cnn, now):
     png = OUT.with_name("dashboard.png")
     caption = (f"📊 데일리 마켓 {now:%m/%d}({'월화수목금토일'[now.weekday()]}) {now:%H:%M} KST\n"
@@ -937,6 +960,11 @@ def notify(quotes, cnn, now):
     if not sent:
         print("사진 발송 불가/실패 -> 텍스트 요약으로 대체")
         send_telegram(build_summary(quotes, cnn, now))
+    # 그날 주요 이슈가 증시 캘린더에 있으면 첨부. 실패해도 이후 발송에 영향이 없다.
+    try:
+        send_calendar(now)
+    except Exception as e:
+        print("캘린더 섹션 실패:", type(e).__name__, e, file=sys.stderr)
     # 뒤이어 미국 52주 신고가 앨범. 여기서 실패해도 위의 데일리 발송에는 영향이 없다.
     if os.environ.get("NEWHIGHS", "on") != "off":
         try:
