@@ -211,6 +211,15 @@ KR_EXCLUDE = re.compile(r"부동산|아파트|전세|월세|분양|집값|주택
                         r"|발탁|임명|내정|선임|취임|인사청문|후보자|차관|수석|프로필|부고|별세|후임|인선|개각|정책실장|책사|인사\b|(실장|장관|총재|위원장|원장|회장|대표)에 "
                         r"|견학|벤치마킹|업무협약|MOU|박람회|설명회|간담회|포럼|세미나|토론회|공모|모집|시상|수상|캠페인|교육|개최|연구협력|협약"
                         r"|[가-힣]{2,4}(시|군|구|도)(청|의회)?,")
+# 정치·행정 동정과 소비자 체감 기름값 기사는 주가를 움직이지 않으므로 뺀다
+KR_EXCLUDE_NOISE = re.compile(r"청와대|대통령실|대통령 ?(비서|참모)|여당|야당|국회|국정감사|국감|민주당|국민의힘|특검|검찰|탄핵|지지율"
+                              r"|기름값|휘발유|경유값|주유소|유류세|기름 ?값|리터당|전기요금|가스요금|공공요금")
+# 주가에 직접 영향을 주는 기업·산업 이벤트(수주·신약·발사·보조금·인수·실적·제휴 등)
+KR_CATALYST = re.compile(r"수주|공급 ?계약|계약 ?체결|납품|신약|임상|FDA|허가|승인|출시|공개|발사|상용화|양산|증설|신공장|투자 ?(확대|발표)"
+                         r"|인수|합병|M&A|지분|자사주|배당|흑자|적자|어닝|실적|호실적|서프라이즈|보조금|지원금|세액공제|제재|수출 ?(규제|통제)"
+                         r"|공동 ?개발|동맹|제휴|파트너십|독점|특허|리콜|파업|화재|사고|상한가|급등|급락|수혜|테마")
+KR_CATALYST_QUERIES = ("수주 when:1d", "신약 임상 when:1d", "발사 우주 when:1d", "보조금 지원 기업 when:1d",
+                       "인수 합병 when:1d", "공동 개발 제휴 when:1d", "실적 발표 when:1d", "공급계약 when:1d")
 KR_SKIP_SRC = ("simplywall", "초이스스탁", "Investing.com", "네이버 프리미엄", "Hypebeast")
 KR_STOP = {"증시", "코스", "스피", "주가", "전망", "기대", "강세", "상승", "하락", "오늘", "특징", "징주", "수혜", "혜주",
            "관련", "련주", "국내", "마감", "반등", "급등", "투자", "시장", "종합", "속보", "미국", "한국", "코스닥", "스닥",
@@ -283,15 +292,20 @@ def fetch_kr_news(n=2, now=None, quotes=None):
     pool = {x["link"]: x for x in theme + biz + fresh([x for q in KR_POOL_QUERIES for x in google_news(q)])}
     pool = list(pool.values())
     topic = fresh([x for q in KR_TOPIC_QUERIES for x in google_news(q)])
-    pool = list({x["link"]: x for x in pool + topic}.values())
-    cands = [x for x in {c["link"]: c for c in theme + biz + topic}.values()
-             if KR_ECON.search(x["raw"]) and not KR_RECAP.search(x["raw"]) and not KR_EXCLUDE.search(x["raw"])]
+    catalyst = fresh([x for q in KR_CATALYST_QUERIES for x in google_news(q)])
+    pool = list({x["link"]: x for x in pool + topic + catalyst}.values())
+    cands = [x for x in {c["link"]: c for c in theme + biz + topic + catalyst}.values()
+             if (KR_ECON.search(x["raw"]) or KR_CATALYST.search(x["raw"]))
+             and not KR_RECAP.search(x["raw"]) and not KR_EXCLUDE.search(x["raw"])
+             and not KR_EXCLUDE_NOISE.search(x["raw"])]
     for c in cands:
         g = _grams(c["title"])
         c["heat"] = sum(1 for m in pool if m["link"] != c["link"] and len(g & _grams(m["title"])) >= 4)
         n_shock = min(len({m.group(0) for m in KR_SHOCK.finditer(c["title"])}), 2)
         c["shock"] = n_shock > 0
-        c["score"] = (c["heat"] + 1) * (1 + KR_SHOCK_WEIGHT * n_shock)
+        c["catalyst"] = bool(KR_CATALYST.search(c["title"]))
+        # 주가 이벤트 기사에 가중치(2배): 보도량만 많은 정치·사회 기사보다 앞선다
+        c["score"] = (c["heat"] + 1) * (1 + KR_SHOCK_WEIGHT * n_shock) * (2 if c["catalyst"] else 1)
     cands.sort(key=lambda c: (-c["score"], -c["ts"]))
     picked = []
     for pat in big_move_patterns(quotes):  # 크게 움직인 지표의 원인 기사 먼저
@@ -304,7 +318,7 @@ def fetch_kr_news(n=2, now=None, quotes=None):
             break
         if c in picked:
             continue
-        if (c["heat"] >= 2 or c["shock"]) and all(len(_grams(c["title"]) & _grams(p["title"])) < 4
+        if (c["heat"] >= 2 or c["shock"] or c["catalyst"]) and all(len(_grams(c["title"]) & _grams(p["title"])) < 4
                                   and not (_themes(c["title"]) & _themes(p["title"])) for p in picked):
             picked.append(c)
         if len(picked) >= n:
