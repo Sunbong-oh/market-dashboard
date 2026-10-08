@@ -7,6 +7,11 @@ on:
   pull_request:
     paths: ["dashboard.py", ".github/workflows/preview-dashboard.yml"]
   workflow_dispatch:
+    inputs:
+      send:
+        description: "true면 이 브랜치 코드로 텔레그램에 실제 발송(수동 실행에서만)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -24,7 +29,11 @@ jobs:
         shell: bash
         env:
           PYTHONIOENCODING: utf-8
-        run: python dashboard.py --no-open
+          NEWHIGHS: "off"   # 52주 신고가 앨범은 보내지 않는다
+          TELEGRAM_BOT_TOKEN: ${{ inputs.send && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ inputs.send && secrets.TELEGRAM_CHAT_ID || '' }}
+        run: |
+          if [ "${{ inputs.send }}" = "true" ]; then python dashboard.py --no-open --notify; else python dashboard.py --no-open; fi
       - name: Capture images and list Korea-impact picks
         shell: bash
         env:
