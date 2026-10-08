@@ -1,6 +1,7 @@
 name: Preview Dashboard (no send)
 
-# 텔레그램 발송 없이 대시보드를 만들어 이미지로만 저장한다. 시크릿을 쓰지 않는다.
+# 기본은 텔레그램 발송 없이 대시보드를 만들어 이미지로만 저장한다(시크릿 미사용).
+# 수동 실행에서 send=true를 주면 이 브랜치 코드로 한 번 실제 발송한다.
 # PR에서 dashboard.py를 고치면 자동으로 돌고, Actions 탭에서 수동으로도 돌릴 수 있다.
 # 결과: 실행 페이지의 Artifacts(dashboard-preview)와 Summary의 '오늘 한국 시장 영향' 기사 목록.
 on:
@@ -38,15 +39,17 @@ jobs:
         shell: bash
         env:
           PYTHONIOENCODING: utf-8
+          SENT: ${{ inputs.send }}
         run: |
           python - <<'EOF'
           import os
           from pathlib import Path
           import dashboard as d
-          ok_a = d.screenshot(Path("dashboard_a.png"), part="a")
-          ok_i = d.screenshot(Path("dashboard_i.png"), width=600, layout_w=600, part="i")
-          ok_d = d.screenshot(Path("dashboard.png"), width=900, layout_w=None, scale=2)
-          print("screenshots:", ok_a, ok_i, ok_d)
+          if os.environ.get("SENT") != "true":  # 발송 실행은 이미 이미지를 만들었으므로 다시 찍지 않는다
+              ok_a = d.screenshot(Path("dashboard_a.png"), part="a")
+              ok_i = d.screenshot(Path("dashboard_i.png"), width=600, layout_w=600, part="i")
+              ok_d = d.screenshot(Path("dashboard.png"), width=900, layout_w=None, scale=2)
+              print("screenshots:", ok_a, ok_i, ok_d)
           import re, html
           page = Path("dashboard.html").read_text(encoding="utf-8")
           m = re.search(r'<section class="panel kr">(.*?)</section>', page, re.S)
