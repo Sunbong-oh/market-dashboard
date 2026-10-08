@@ -46,9 +46,9 @@ jobs:
           from pathlib import Path
           import dashboard as d
           if os.environ.get("SENT") != "true":  # 발송 실행은 이미 이미지를 만들었으므로 다시 찍지 않는다
-              ok_a = d.screenshot(Path("dashboard_a.png"), part="a")
-              ok_i = d.screenshot(Path("dashboard_i.png"), width=600, layout_w=600, part="i")
-              ok_d = d.screenshot(Path("dashboard.png"), width=900, layout_w=None, scale=2)
+              ok_a = d.screenshot(d.OUT.with_name("dashboard_a.png"), part="a")
+              ok_i = d.screenshot(d.OUT.with_name("dashboard_i.png"), width=600, layout_w=600, part="i")
+              ok_d = d.screenshot(d.OUT.with_name("dashboard.png"), width=900, layout_w=None, scale=2)
               print("screenshots:", ok_a, ok_i, ok_d)
           import re, html
           page = Path("dashboard.html").read_text(encoding="utf-8")
