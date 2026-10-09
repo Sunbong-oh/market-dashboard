@@ -255,10 +255,56 @@ def report_text(txt):
     return "".join(out)
 
 
+# 차트 리포트에 이미 있는 항목(지수·수급·선물옵션·강세 테마·등락 종목수)은 빼고, 나머지(실적·이슈·일정·한 줄 요약)만 차트 아래에 붙인다
+CHART_HAS = ("지수", "투자자별", "선물", "강세 테마", "등락 종목")
+EXTRA_CSS = """<style>
+.site-extra{max-width:1180px;margin:0 auto 24px;padding:0 16px;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#1c2330}
+.site-extra .box{background:#fff;border:1px solid #e3e6ec;border-radius:14px;padding:16px 18px;margin-top:14px}
+.site-extra h3{font-size:17px;margin:16px 0 6px;color:#e8590c}.site-extra h3:first-child{margin-top:0}
+.site-extra ul{margin:0;padding-left:20px;line-height:1.55}.site-extra p{margin:6px 0;line-height:1.55}
+.site-extra .one{font-size:17px;font-weight:800;background:#fff4e6;border-radius:10px;padding:10px 12px;margin-top:12px}
+.site-extra .dates{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:8px 0 0}
+.site-extra .dates a{display:block;padding:7px 12px;border-radius:10px;border:1px solid #e3e6ec;text-decoration:none;color:#1c2330;font-weight:700}
+.site-extra .dates a.on{background:#f08c00;border-color:#f08c00;color:#fff}
+</style>"""
+
+
+def close_extra_lines(lines):
+    out, keep, one = [], False, ""
+    for ln in lines:
+        t = ln.strip()
+        if t.startswith("■"):
+            keep = not any(k in t for k in CHART_HAS)
+        elif t.startswith("▶"):
+            one = t.lstrip("▶ ").strip()
+            keep = False
+            continue
+        if keep and not t.startswith("(데이터"):
+            out.append(ln)
+    return out, one
+
+
+def close_extra(lines, days, cur, prefix):
+    """차트 리포트 아래에 붙이는 블록: 실적·이슈·일정, 한 줄 요약, 날짜별 리포트 목록."""
+    rest, one = close_extra_lines(lines)
+    one_html = f'<div class="one">▶ {escape(one)}</div>' if one else ""
+    body = f'<div class="box">{report_text(chr(10).join(rest))}{one_html}</div>' if rest or one else ""
+    chips = "".join(f'<li><a href="{prefix}{p.name}/"{" class=on" if p.name == cur else ""}>{label(p.name)}</a></li>'
+                    for p in days)
+    return (f'{EXTRA_CSS}<div class="site-extra">{body}'
+            f'<div class="box"><h3>날짜별 장마감 리포트</h3><ul class="dates">{chips}</ul></div></div>')
+
+
+def with_extra(html, extra):
+    i = html.lower().rfind("</body>")
+    return html[:i] + extra + html[i:] if i >= 0 else html + extra
+
+
 def build_close():
     out = OUT / "close"
     days = dated_dirs(CLOSE)
     first = None
+    latest_html = None
     for p in days:
         dest = out / p.name
         dest.mkdir(parents=True, exist_ok=True)
@@ -282,8 +328,10 @@ def build_close():
         if chart:
             html = (p / "장마감 수급체크.html").read_text(encoding="utf-8")
             (dest / "index.html").write_text(
-                with_nav(html, "../../", "close/", (label(p.name), [("summary.html", "글 요약 보기"), ("../", "지난 리포트")])),
+                with_extra(with_nav(html, "../../", "close/"), close_extra(lines, days, p.name, "../")),
                 encoding="utf-8")
+            if p == days[0]:  # 메뉴 '장마감 리포트'는 목록 대신 최신 리포트를 바로 연다
+                latest_html = with_extra(with_nav(html, "../", "close/"), close_extra(lines, days, p.name, ""))
             (dest / "interactive.html").write_text(  # 예전 주소 호환
                 '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./"><a href="./">이동</a>',
                 encoding="utf-8")
@@ -301,6 +349,9 @@ def build_close():
     body = (f'<section class="panel"><ul class="dates">{rows}</ul></section>' if days
             else '<p class="err">장마감 리포트를 불러오지 못했습니다.</p>')
     out.mkdir(parents=True, exist_ok=True)
+    if latest_html:
+        (out / "index.html").write_text(latest_html, encoding="utf-8")
+        return first
     (out / "index.html").write_text(page("장마감 리포트 지난 리포트", body, "../", "close/", "KOREA MARKET CLOSE",
                                          "평일 오후 4시경, 국내 장마감 수급 체크"), encoding="utf-8")
     return first
