@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent
 OUT = Path(os.environ.get("SITE_OUT", ROOT / "_site"))
 DAILY = ROOT / "archive" / "daily"
 CLOSE = Path(os.environ.get("CLOSE_REPO", ROOT.parent / "kb-market-report")) / "archive"
-SITE_NAME = "나의 주식투자 노트"
+SITE_NAME = "Brian's 투자노트"
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 WD = "월화수목금토일"
 
