@@ -100,10 +100,19 @@ def page(title, body, root, active, kicker="MY STOCK NOTE", sub=""):
 </div></body></html>'''
 
 
-def with_nav(html, root, active):
-    """원본 리포트 HTML의 <body> 바로 뒤에 메뉴를 넣는다."""
+SUB_STYLE = ("display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 12px;background:#2b3444;"
+             "font:600 13px/1.2 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#c9d1de")
+SUB_LINK = "color:#ffd43b;text-decoration:none;padding:4px 8px;border-radius:6px;border:1px solid #4a5568"
+
+
+def with_nav(html, root, active, sub=None):
+    """원본 리포트 HTML의 <body> 바로 뒤에 메뉴를 넣는다. sub=(설명, [(href, 이름)...])이면 보조 막대도."""
     m = re.search(r"<body[^>]*>", html, re.I)
     bar = nav(root, active)
+    if sub:
+        text, links = sub
+        bar += (f'<div style="{SUB_STYLE}"><span style="margin-right:4px">{escape(text)}</span>'
+                + "".join(f'<a href="{h}" style="{SUB_LINK}">{escape(t)}</a>' for h, t in links) + "</div>")
     return html[:m.end()] + bar + html[m.end():] if m else bar + html
 
 
@@ -245,17 +254,24 @@ def build_close():
                 imgs.append(name)
             if name == "3_강세테마" and imgs and imgs[-1] == name:
                 break  # 예전 이름(3_강세업종)은 새 이름이 없을 때만
-        btn = ""
-        if (p / "장마감 수급체크.html").exists():
+        # 기본 화면은 차트(인터랙티브) 리포트, 글 요약은 summary.html
+        chart = (p / "장마감 수급체크.html").exists()
+        text_page = "summary.html" if chart else "index.html"
+        btn = '<a class="btn" href="./">차트로 보기</a>' if chart else ""
+        if chart:
             html = (p / "장마감 수급체크.html").read_text(encoding="utf-8")
-            (dest / "interactive.html").write_text(with_nav(html, "../../", "close/"), encoding="utf-8")
-            btn = '<a class="btn" href="interactive.html">차트 크게 보기 (인터랙티브)</a>'
+            (dest / "index.html").write_text(
+                with_nav(html, "../../", "close/", (label(p.name), [("summary.html", "글 요약 보기"), ("../", "지난 리포트")])),
+                encoding="utf-8")
+            (dest / "interactive.html").write_text(  # 예전 주소 호환
+                '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./"><a href="./">이동</a>',
+                encoding="utf-8")
         summary = next((ln.split(":", 1)[1].strip() for ln in lines if "한 줄 요약" in ln and ":" in ln), "")
         shots = "".join(f'<img src="{n}.jpg" alt="{n.split("_", 1)[1]}" loading="lazy">' for n in imgs)
         body = (f'<section class="panel report">{btn}<a class="btn ghost" href="../">지난 리포트</a>'
                 f'<div style="margin-top:14px">{report_text(chr(10).join(lines))}</div></section>'
                 f'<div class="shots">{shots}</div>')
-        (dest / "index.html").write_text(page(title, body, "../../", "close/", "KOREA MARKET CLOSE",
+        (dest / text_page).write_text(page(title, body, "../../", "close/", "KOREA MARKET CLOSE",
                                               f"{label(p.name)} 장 마감 후 자동 작성 · 데이터: KB증권 OpenAPI"),
                                          encoding="utf-8")
         if first is None:
