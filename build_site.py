@@ -168,13 +168,34 @@ def build_daily():
 
 
 # ---------- 돈이 되는 뉴스 ----------
+# 주가와 직접 연결되는 말이 제목에 있어야 싣는다 (트럼프·정부·제재 같은 말만으로는 통과 못 함)
+MARKET = re.compile(
+    r"증시|주가|주식|코스피|코스닥|나스닥|다우|S&P|상장|IPO|공매도|자사주|배당|시총|시가총액|외국인 ?(매수|매도|순매)"
+    r"|실적|영업이익|순이익|매출|어닝|가이던스|수주|계약 체결|공급 ?계약|인수|합병|M&A|증설|투자 ?(확대|계획|발표)"
+    r"|금리|기준금리|FOMC|연준|Fed|파월|한은|국채|채권|물가|CPI|PCE|고용|GDP|성장률|경기 ?(침체|둔화|회복)"
+    r"|환율|달러|원화|엔화|위안|유가|원유|WTI|브렌트|OPEC|금값|구리|원자재|희토류|리튬"
+    r"|관세|수출|수입|무역|통상|공급망|반도체|HBM|메모리|D램|낸드|파운드리|AI|데이터센터|GPU"
+    r"|배터리|2차전지|이차전지|전기차|자동차|조선|방산|원전|SMR|바이오|신약|임상|FDA|철강|석유화학|정유|해운|항공"
+    r"|삼성|하이닉스|SK|LG|현대차|기아|엔비디아|테슬라|애플|TSMC|마이크론|포스코|한화|셀트리온|네이버|카카오")
+# 주가와 무관한 정치·사회 기사
+NOT_MARKET = re.compile(r"지지율|여론조사|노벨|평화상|선거|총선|대선|탄핵|국정감사|국감|민주당|국민의힘|야당|여당"
+                        r"|의원|검찰|재판|구속|기소|ICC|형사|살인|사고|날씨|연예")
+# 기계 번역된 해외 매체(베트남·인도 등)
+FOREIGN_SRC = re.compile(r"\.(vn|in|ph|id|my|cn)$|IndexBox|Laodong|VnExpress|Vietnam|Vietnamplus|Tuoi ?Tre", re.I)
+
+
+def market_news(items):
+    return [x for x in items if MARKET.search(x["title"]) and not NOT_MARKET.search(x["title"])
+            and not FOREIGN_SRC.search(x["src"])]
+
+
 def theme_news(limit=10):
     """국내 수혜주·관련주·특징주 기사 (종목 추천·부동산 등은 뺀다), 최근 24시간."""
     since = datetime.now(d.KST).timestamp() - 86400
     items = [x for q in d.KR_THEME_QUERIES for x in d.google_news(q)
              if d.KR_THEME.search(x["raw"]) and not d.KR_EXCLUDE.search(x["raw"])
              and x["ts"] >= since and not x["src"].startswith(d.KR_SKIP_SRC)]
-    return d.rank(items, limit=limit)
+    return d.rank(market_news(items), limit=limit)
 
 
 def build_news(now):
@@ -184,7 +205,7 @@ def build_news(now):
         except Exception as e:  # 뉴스 하나가 실패해도 사이트는 만든다
             print("뉴스 수집 실패:", fn.__name__, type(e).__name__, e, file=sys.stderr)
             return []
-    kr = safe(d.fetch_kr_news, n=6)
+    kr = market_news(safe(d.fetch_kr_news, n=20))[:6]  # 후보를 넉넉히 뽑아 주가 관련만 남긴다
     us = safe(d.fetch_news)
     theme = safe(theme_news)
     cal = d.calendar_events(now)
@@ -194,8 +215,8 @@ def build_news(now):
         cal_html = f'<section class="panel"><div class="tag c">오늘의 증시 캘린더</div><ol class="items">{lis}</ol></section>'
     body = (f'{cal_html}'
             f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스</div>'
-            f'<p class="meta">직전 한국 장 마감(15:30) 이후 나온 경제·정책·통상·에너지 뉴스 중 여러 언론이 크게 다룬 순'
-            f' (수출 통제·제재·관세 같은 공급 충격 뉴스 가중)</p>{news_items(kr)}</section>'
+            f'<p class="meta">직전 한국 장 마감(15:30) 이후 뉴스 중 주가·실적·금리·환율·유가·관세·업종과 직접 관련된 것만,'
+            f' 여러 언론이 크게 다룬 순 (정치·사회 기사 제외)</p>{news_items(kr)}</section>'
             f'<section class="panel"><div class="tag n">수혜주 · 관련주 · 특징주</div>'
             f'<p class="meta">최근 24시간, 비슷한 기사는 하나만</p>{news_items(theme)}</section>'
             f'<section class="panel"><div class="tag c">뉴욕증시 헤드라인</div>{news_items(us)}</section>')
