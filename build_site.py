@@ -139,7 +139,8 @@ def with_nav(html, root, active, sub=None):
 
 
 # 데일리의 '주요 지표' 12개를 폰에서도 텔레그램처럼 3열 4줄로: 600px 폭 3열로 배치한 뒤 화면 폭에 맞게 축소
-GRID3 = """<style>@media (max-width:640px){
+GRID3 = """<style>.panel.kr{display:none!important}  /* 사이트에서는 '돈이 되는 뉴스'와 겹쳐 뺀다 */
+@media (max-width:640px){
 .grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
 .g3 .card{padding:11px 11px 10px!important;border-radius:12px}
 .g3 .card header{flex-direction:column;align-items:flex-start;gap:0}
@@ -451,10 +452,8 @@ def build_close():
 # 홈 한 페이지에서 스크롤만으로 오전 데일리 → 돈이 되는 뉴스 → 장마감 수급을 모두 본다.
 # 데일리·장마감은 원본 HTML을 iframe에 넣고 내용 높이만큼 늘려 안쪽 스크롤이 생기지 않게 한다.
 HOME_CSS = """
-.jump{position:sticky;top:0;z-index:50;display:flex;gap:6px;padding:8px 0;background:var(--bg)}
-.jump a{flex:1;text-align:center;padding:8px 6px;border-radius:10px;background:var(--card);border:1px solid var(--line);
-  text-decoration:none;font-weight:800;font-size:14px}
 .sec{scroll-margin-top:56px;margin-top:22px}
+#daily{margin-top:0}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 10px}
 .sec-h h2{margin:0}.sec-h a{font-size:13px;color:var(--muted)}
 iframe.embed{display:block;width:100%;border:0;border-radius:14px;background:var(--card);min-height:400px}
@@ -482,7 +481,6 @@ def build_home(now, daily, news, close, live=None):
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}</style>'
-            '<nav class="jump"><a href="#daily">오전 데일리</a><a href="#news">돈이 되는 뉴스</a><a href="#close">장마감 수급</a></nav>'
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
