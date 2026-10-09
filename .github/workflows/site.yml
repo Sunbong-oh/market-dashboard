@@ -3,7 +3,7 @@ name: Website
 # 나만의 주식투자 사이트(GitHub Pages) 빌드·배포.
 #   - 오전 데일리: daily-dashboard.yml이 끝나면(workflow_run) 바로 다시 배포
 #   - 돈이 되는 뉴스: 아래 schedule마다 새로 수집 (KST 08:20 ~ 22:20, 2시간 간격)
-#   - 장마감 리포트: kb-market-report 저장소의 archive/ 를 읽는다 (Secret CLOSE_REPO_TOKEN 필요).
+#   - 장마감 리포트: kb-market-report 저장소의 archive/ 를 읽는다 (비공개면 Secret CLOSE_REPO_TOKEN 필요).
 #     장마감(15:50~16:10 발송)은 16:20·18:20 예약 실행에서 반영된다.
 on:
   workflow_run:
@@ -31,18 +31,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      HAS_CLOSE_TOKEN: ${{ secrets.CLOSE_REPO_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main   # 방금 저장된 archive/daily 까지 포함한 최신 main
       - name: 장마감 리포트 저장소(kb-market-report) 가져오기
-        if: env.HAS_CLOSE_TOKEN == 'true'
+        # 비공개 저장소면 Secret CLOSE_REPO_TOKEN 필요. 공개 저장소면 토큰 없이도 읽힌다.
+        # 실패해도 나머지 메뉴(데일리·뉴스)는 배포한다.
+        continue-on-error: true
         uses: actions/checkout@v4
         with:
           repository: Sunbong-oh/kb-market-report
-          token: ${{ secrets.CLOSE_REPO_TOKEN }}
+          token: ${{ secrets.CLOSE_REPO_TOKEN || github.token }}
           path: _close
           sparse-checkout: archive
       - uses: actions/setup-python@v5
