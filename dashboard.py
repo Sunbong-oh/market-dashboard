@@ -937,9 +937,13 @@ THEME_CARD_W = 540  # 모바일판 카드 폭(px)
 
 
 def theme_news_page(now):
-    """theme_news/YYYY-MM-DD.html(오늘 KST). Claude 루틴이 발송 전에 커밋해 둔 '관심 테마 뉴스' 한 장. 없으면 None."""
-    src = THEME_DIR / f"{now:%Y-%m-%d}.html"
-    return src if src.exists() else None
+    """Claude 루틴이 전날 밤 21:00 KST에 커밋해 두는 '관심 테마 뉴스'(theme_news/YYYY-MM-DD.html).
+    파일 날짜가 작성일(전날)이든 발송일(오늘)이든 찾도록 오늘 → 어제 순으로 본다. 없으면 None."""
+    for day in (now, now - timedelta(days=1)):
+        src = THEME_DIR / f"{day:%Y-%m-%d}.html"
+        if src.exists():
+            return src
+    return None
 
 
 def theme_news_pngs(src):
