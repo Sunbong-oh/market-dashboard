@@ -832,7 +832,7 @@ SHOT_W = 480  # 헤드리스 크롬은 이보다 좁은 창을 못 만든다(약
 SHOT_LAYOUT_W = 420  # 폰 화면 폭. 캡처 때는 이 폭 기준 레이아웃을 SHOT_W에 맞게 확대한다
 
 
-def screenshot(png_path, width=SHOT_W, layout_w=SHOT_LAYOUT_W, part=None, scale=3, attempts=3, timeout=150):
+def screenshot(png_path, width=SHOT_W, layout_w=SHOT_LAYOUT_W, part=None, scale=3, attempts=3, timeout=150, page=None):
     """헤드리스 Edge/Chrome으로 dashboard.html을 PNG로 저장. 실패하면 False.
     기본은 폰 폭 레이아웃. part('a'=요약, 'b'·'c'=지표 앞/뒤 절반, 'i'=지표 전체)를 주면 그 부분만 찍는다.
     layout_w=None, width=900이면 PC 폭 전체 화면(블로그용).
@@ -841,7 +841,7 @@ def screenshot(png_path, width=SHOT_W, layout_w=SHOT_LAYOUT_W, part=None, scale=
     exes = find_browsers()
     if not exes:
         return False
-    uri = OUT.as_uri() + f"#shot{layout_w or ''}" + (f"-{part}" if part else "")
+    uri = (page or OUT).as_uri() + f"#shot{layout_w or ''}" + (f"-{part}" if part else "")
     for exe in exes:
         for i in range(1, attempts + 1):
             try:
@@ -931,6 +931,27 @@ def save_blog_post(png, now):
 
 
 CALENDAR = Path(__file__).with_name("market_calendar.json")
+THEME_DIR = Path(__file__).with_name("theme_news")
+THEME_W = 1123  # A4 가로 폭(px). 테마 뉴스 한 장은 이 폭 그대로 찍는다
+
+
+def theme_news_page(now):
+    """theme_news/YYYY-MM-DD.html(오늘 KST). Claude 루틴이 발송 전에 커밋해 둔 '관심 테마 뉴스' 한 장. 없으면 None."""
+    src = THEME_DIR / f"{now:%Y-%m-%d}.html"
+    return src if src.exists() else None
+
+
+def theme_news_png(src):
+    """테마 뉴스 HTML을 화면용으로 감싸(여백·흰 배경·높이 표시) PNG로 찍는다. 실패하면 None."""
+    html = src.read_text(encoding="utf-8")
+    extra = ('<style>@media screen{body{padding:18px 22px;background:#fff}.page{height:auto!important}.cols{margin-bottom:14px}}</style>'
+             "<script>addEventListener('load',()=>{document.documentElement.dataset.h="
+             "Math.ceil(document.documentElement.scrollHeight)})</script>")
+    html = html.replace("</head>", extra + "</head>", 1) if "</head>" in html else extra + html
+    page = OUT.with_name("theme_news.html")
+    page.write_text(html, encoding="utf-8")
+    png = OUT.with_name("dashboard_theme.png")
+    return png if screenshot(png, width=THEME_W, layout_w=None, scale=2, page=page) else None
 
 
 def calendar_events(now):
@@ -953,8 +974,15 @@ def notify(quotes, cnn, now):
     if desktop_ok:
         save_blog_post(png, now)
     shots = [OUT.with_name("dashboard_a.png"), OUT.with_name("dashboard_i.png")]
-    sent = (screenshot(shots[0], part="a") and screenshot(shots[1], width=600, layout_w=600, part="i")
-            and send_telegram_album(shots, caption))
+    ok = screenshot(shots[0], part="a") and screenshot(shots[1], width=600, layout_w=600, part="i")
+    theme = theme_news_page(now)
+    if ok and theme:  # 오늘의 관심 테마 뉴스 한 장이 있으면 앨범 세 번째 장으로 붙인다
+        tpng = theme_news_png(theme)
+        if tpng:
+            shots.append(tpng)
+        else:
+            print("테마 뉴스 캡처 실패 -> 2장만 발송", file=sys.stderr)
+    sent = ok and send_telegram_album(shots, caption)
     if not sent and desktop_ok:
         print("앨범 발송 불가/실패 -> 한 장짜리 사진으로 대체")
         sent = send_telegram_photo(png, caption)
@@ -1118,8 +1146,10 @@ def main():
     news = fetch_news(since)
     earnings = fetch_earnings(session_day)
     kr = fetch_kr_news(quotes=quotes)
-    import newsimpact  # 글로벌 뉴스·종목 영향 패널. 실패해도 빈 칸으로 넘어간다
-    impact = newsimpact.build(quotes + extra, exclude=kr)
+    impact = ""
+    if not theme_news_page(datetime.now(KST)):  # 테마 뉴스 한 장이 있는 날은 겹치므로 패널을 뺀다
+        import newsimpact  # 글로벌 뉴스·종목 영향 패널. 실패해도 빈 칸으로 넘어간다
+        impact = newsimpact.build(quotes + extra, exclude=kr)
 
     now = datetime.now(KST)
     weekday = "월화수목금토일"[now.weekday()]

@@ -75,6 +75,7 @@ jobs:
             dashboard.html
             dashboard.png
             dashboard_*.png
+            theme_news.html
             newhighs*.html
             newhighs_*.png
           if-no-files-found: ignore
