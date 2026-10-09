@@ -138,6 +138,28 @@ def with_nav(html, root, active, sub=None):
     return html[:m.end()] + bar + html[m.end():] if m else bar + html
 
 
+# 데일리의 '주요 지표' 12개를 폰에서도 텔레그램처럼 3열 4줄로: 600px 폭 3열로 배치한 뒤 화면 폭에 맞게 축소
+GRID3 = """<style>@media (max-width:640px){
+.grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+.g3 .card{padding:11px 11px 10px!important;border-radius:12px}
+.g3 .card header{flex-direction:column;align-items:flex-start;gap:0}
+.g3 .card h3{font-size:18px!important}.g3 .sym{font-size:12px!important}
+.g3 .price{font-size:27px!important;margin-top:4px}.g3 .price small{font-size:15px!important}
+.g3 .badge{font-size:12px!important;padding:1px 6px!important}.g3 .delta{font-size:15px!important}
+.g3 .spark{height:46px!important;margin-top:6px}
+.g3 .range,.g3 .range-cap{display:none!important}
+.g3 .chips{gap:2px!important;margin-top:8px}.g3 .chip{padding:4px 3px!important;font-size:12px!important;border-radius:6px;overflow:hidden}
+.g3 .chip b{font-size:13px!important;letter-spacing:-.04em}.g3 .chip small{display:none!important}}</style>
+<script>(function(){function f(){var g=document.querySelector('.grid');if(!g)return;g.classList.add('g3');
+if(innerWidth<=640){g.style.width='600px';g.style.zoom=(g.parentElement.clientWidth/600)}else{g.style.width='';g.style.zoom=''}}
+addEventListener('DOMContentLoaded',f);addEventListener('resize',f)})()</script>"""
+
+
+def daily_grid3(html):
+    i = html.lower().rfind("</body>")
+    return html[:i] + GRID3 + html[i:] if i >= 0 else html + GRID3
+
+
 def embed_html(html):
     """홈 화면에 통째로 끼워 넣을 원본 리포트 (메뉴 없이, 링크는 바깥 창에서 열림)."""
     tag = '<base target="_top">'
@@ -174,7 +196,7 @@ def build_daily():
         dest.mkdir(parents=True, exist_ok=True)
         for f in p.iterdir():
             if f.suffix == ".html":
-                dest.joinpath(f.name).write_text(with_nav(f.read_text(encoding="utf-8"), "../../", "daily/"),
+                dest.joinpath(f.name).write_text(with_nav(daily_grid3(f.read_text(encoding="utf-8")), "../../", "daily/"),
                                                  encoding="utf-8")
             elif f.is_file():
                 shutil.copy(f, dest / f.name)
@@ -193,7 +215,7 @@ def build_daily():
     kr = re.findall(r'<section class="panel kr">.*?</section>', html, re.S)
     kr_titles = re.findall(r'<li><a [^>]*>(.*?)</a>', kr[0], re.S) if kr else []
     if html:
-        (out / p.name / "embed.html").write_text(embed_html(html), encoding="utf-8")
+        (out / p.name / "embed.html").write_text(embed_html(daily_grid3(html)), encoding="utf-8")
     return dict(day=p.name, headline=unescape(m.group(1)) if m else "", kr=[unescape(t) for t in kr_titles],
                 embed=f"daily/{p.name}/embed.html" if html else "",
                 newhighs=(p / "newhighs.html").exists())
@@ -219,6 +241,7 @@ def build_live(now):
         return None
     dest = OUT / "daily" / "live"
     dest.mkdir(parents=True, exist_ok=True)
+    html = daily_grid3(html)
     (dest / "index.html").write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
     (dest / "embed.html").write_text(embed_html(html), encoding="utf-8")
     return dict(at=now, embed="daily/live/embed.html")
