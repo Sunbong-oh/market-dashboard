@@ -223,14 +223,28 @@ MARKET = re.compile(
     r"|삼성|하이닉스|SK|LG|현대차|기아|엔비디아|테슬라|애플|TSMC|마이크론|포스코|한화|셀트리온|네이버|카카오")
 # 주가와 무관한 정치·사회 기사
 NOT_MARKET = re.compile(r"지지율|여론조사|노벨|평화상|선거|총선|대선|탄핵|국정감사|국감|민주당|국민의힘|야당|여당"
-                        r"|의원|검찰|재판|구속|기소|ICC|형사|살인|사고|날씨|연예")
+                        r"|의원|검찰|재판|구속|기소|ICC|형사|살인|사고|날씨|연예|카지노|코인 ?추천")
+# 단순 등락 기사: '상승 출발', '나스닥 0.3%↑', '관련주 하락', '폭삭', 특징주·프리뷰
+PRICE_MOVE = re.compile(r"(관련주|수혜주|테마주|株|주가|지수|증시|선물|나스닥|다우|S&P|코스피|코스닥)[^…]{0,24}"
+                        r"(상승|하락|급등|급락|폭락|폭삭|반등|약세|강세|출발|마감|혼조|보합|↑|↓)"
+                        r"|특징주|프리뷰|\d+(\.\d+)?%\s*[↑↓]|[↑↓]\s*$|움직임$")
+# 낚시·칼럼·종목 나열형: '진짜 수혜주는 따로 있다', '투자전략은', 'N단계', '8개 상장사', '체크포인트'
+CLICKBAIT = re.compile(r"따로 있다|진짜 수혜|투자 ?전략|전망 ?및|체크 ?포인트|\d+ ?단계|\d+ ?개 ?(상장사|종목|기업)|주목한"
+                       r"|끝나지 않았|시대는|보여 ?주는|확인하는|살펴보|알아보|총정리|핵심 정리|TOP ?\d|\?$|[가-힣]은\?")
 # 기계 번역된 해외 매체(베트남·인도 등)
 FOREIGN_SRC = re.compile(r"\.(vn|in|ph|id|my|cn)$|IndexBox|Laodong|VnExpress|Vietnam|Vietnamplus|Tuoi ?Tre", re.I)
+# 한글 이름이 아닌 매체는 국내 언론으로 알려진 곳만 (Simply Wall St, 해외 스팸 사이트 등 제외)
+KR_LATIN_SRC = re.compile(r"\.kr$|Chosunbiz|ZDNet|Guru|Newsis|Yonhap|KBS|MBC|SBS|JTBC|YTN|MBN|TV ?Chosun|Edaily|Hankyung"
+                          r"|Maeil|Bloter|Byline|IT ?Chosun|Digital ?Daily|DealSite|thebell|Newspim|EBN|Business ?Korea"
+                          r"|Korea ?(Times|Herald|JoongAng)|Pulse|inews24|Asiae|fnnews|MTN|Seoul|Hankyoreh|Kyunghyang|Donga"
+                          r"|Joongang|Tokenpost|Blockmedia|Etoday|Herald|Money ?Today|Biz", re.I)
 
 
 def market_news(items):
     """주가와 직접 관련된 기사만 (사이트 '돈이 되는 뉴스'와 아침 데일리 '오늘 한국 시장 영향' 공용)."""
     return [x for x in items if MARKET.search(x["title"]) and not NOT_MARKET.search(x["title"])
+            and not PRICE_MOVE.search(x["title"]) and not CLICKBAIT.search(x["title"])
+            and (re.search(r"[가-힣]", x["src"]) or KR_LATIN_SRC.search(x["src"]))
             and not FOREIGN_SRC.search(x["src"])]
 
 
