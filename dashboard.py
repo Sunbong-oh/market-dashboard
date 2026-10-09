@@ -718,12 +718,13 @@ def putcall_block(cnn):
     return f'<section class="panel pc-solo">{putcall_badge(cnn)}</section>'
 
 
-def top_section(cnn, news, earnings, kr, quotes=(), cal=()):
+def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact=""):
     return f'''<section class="fg driver">
   {headline_block(news, quotes)}
 </section>
 {earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
 {kr_block(kr)}
+{impact}
 {cal_block(cal)}'''
 
 
@@ -831,7 +832,7 @@ SHOT_W = 480  # 헤드리스 크롬은 이보다 좁은 창을 못 만든다(약
 SHOT_LAYOUT_W = 420  # 폰 화면 폭. 캡처 때는 이 폭 기준 레이아웃을 SHOT_W에 맞게 확대한다
 
 
-def screenshot(png_path, width=SHOT_W, layout_w=SHOT_LAYOUT_W, part=None, scale=3, attempts=3, timeout=150):
+def screenshot(png_path, width=SHOT_W, layout_w=SHOT_LAYOUT_W, part=None, scale=3, attempts=3, timeout=150, page=None):
     """헤드리스 Edge/Chrome으로 dashboard.html을 PNG로 저장. 실패하면 False.
     기본은 폰 폭 레이아웃. part('a'=요약, 'b'·'c'=지표 앞/뒤 절반, 'i'=지표 전체)를 주면 그 부분만 찍는다.
     layout_w=None, width=900이면 PC 폭 전체 화면(블로그용).
@@ -840,7 +841,7 @@ def screenshot(png_path, width=SHOT_W, layout_w=SHOT_LAYOUT_W, part=None, scale=
     exes = find_browsers()
     if not exes:
         return False
-    uri = OUT.as_uri() + f"#shot{layout_w or ''}" + (f"-{part}" if part else "")
+    uri = (page or OUT).as_uri() + f"#shot{layout_w or ''}" + (f"-{part}" if part else "")
     for exe in exes:
         for i in range(1, attempts + 1):
             try:
@@ -930,6 +931,51 @@ def save_blog_post(png, now):
 
 
 CALENDAR = Path(__file__).with_name("market_calendar.json")
+THEME_DIR = Path(__file__).with_name("theme_news")
+THEME_W = 1123  # A4 가로 폭(px). 테마 뉴스 한 장(A4판)은 이 폭 그대로 찍는다
+THEME_CARD_W = 540  # 모바일판 카드 폭(px)
+
+
+def theme_news_page(now):
+    """Claude 루틴이 전날 밤 21:00 KST에 커밋해 두는 '관심 테마 뉴스'(theme_news/YYYY-MM-DD.html).
+    파일 날짜가 작성일(전날)이든 발송일(오늘)이든 찾도록 오늘 → 어제 순으로 본다. 없으면 None."""
+    for day in (now, now - timedelta(days=1)):
+        src = THEME_DIR / f"{day:%Y-%m-%d}.html"
+        if src.exists():
+            return src
+    return None
+
+
+def theme_news_pngs(src):
+    """테마 뉴스 HTML을 PNG로 찍는다. 실패하면 빈 리스트.
+    모바일판(class="card" 카드 여러 장)이면 카드마다 한 장씩(폰에서 글씨가 읽히는 540px 폭),
+    아니면 A4 가로 한 장 전체를 THEME_W 폭으로 찍는다."""
+    html = src.read_text(encoding="utf-8")
+    n_cards = len(re.findall(r'class="card"', html))
+    if n_cards:
+        # #shot-<번호>로 열면 그 카드만 남기고 여백 없이 보여 준다
+        extra = ('<style>@media screen{body{margin:0!important;padding:0!important;background:#fff}'
+                 '.card{margin:0!important}}</style>'
+                 "<script>addEventListener('load',()=>{const m=location.hash.match(/-(\\d+)$/),"
+                 "cs=[...document.querySelectorAll('.card')];if(m)cs.forEach((c,i)=>{if(i+1!=+m[1])c.style.display='none'});"
+                 "document.documentElement.dataset.h=Math.ceil(document.body.getBoundingClientRect().bottom)})</script>")
+    else:
+        extra = ('<style>@media screen{body{padding:18px 22px;background:#fff}.page{height:auto!important}.cols{margin-bottom:14px}}</style>'
+                 "<script>addEventListener('load',()=>{document.documentElement.dataset.h="
+                 "Math.ceil(document.body.getBoundingClientRect().bottom)})</script>")
+    html = html.replace("</head>", extra + "</head>", 1) if "</head>" in html else extra + html
+    page = OUT.with_name("theme_news.html")
+    page.write_text(html, encoding="utf-8")
+    if not n_cards:
+        png = OUT.with_name("dashboard_theme.png")
+        return [png] if screenshot(png, width=THEME_W, layout_w=None, scale=2, page=page) else []
+    pngs = []
+    for k in range(1, n_cards + 1):
+        png = OUT.with_name(f"dashboard_theme{k}.png")
+        if not screenshot(png, width=THEME_CARD_W, layout_w=None, part=str(k), scale=2, page=page):
+            return []  # 한 장이라도 빠지면 순서가 어긋나므로 테마 뉴스는 통째로 뺀다
+        pngs.append(png)
+    return pngs
 
 
 def calendar_events(now):
@@ -952,8 +998,15 @@ def notify(quotes, cnn, now):
     if desktop_ok:
         save_blog_post(png, now)
     shots = [OUT.with_name("dashboard_a.png"), OUT.with_name("dashboard_i.png")]
-    sent = (screenshot(shots[0], part="a") and screenshot(shots[1], width=600, layout_w=600, part="i")
-            and send_telegram_album(shots, caption))
+    ok = screenshot(shots[0], part="a") and screenshot(shots[1], width=600, layout_w=600, part="i")
+    theme = theme_news_page(now)
+    if ok and theme:  # 오늘의 관심 테마 뉴스가 있으면 앨범 뒤에 붙인다(모바일판은 카드 4장)
+        tpngs = theme_news_pngs(theme)
+        if tpngs:
+            shots += tpngs[:10 - len(shots)]  # 텔레그램 앨범은 최대 10장
+        else:
+            print("테마 뉴스 캡처 실패 -> 2장만 발송", file=sys.stderr)
+    sent = ok and send_telegram_album(shots, caption)
     if not sent and desktop_ok:
         print("앨범 발송 불가/실패 -> 한 장짜리 사진으로 대체")
         sent = send_telegram_photo(png, caption)
@@ -1027,6 +1080,15 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
 .panel.cal{border-left:6px solid var(--hd2)}.panel.cal .tag{background:var(--hd2)}.panel.cal .items li{font-size:18px}.hot{color:var(--accent)}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
+.panel.ni{border-left:6px solid var(--accent);padding-bottom:10px}.panel.ni .tag{background:var(--accent);color:#fff;margin-bottom:4px}
+.ni-list{list-style:none;margin:0;padding:0}.ni-list li{padding:7px 0}.ni-list li+li{border-top:1px solid var(--line)}
+.ni-h{display:flex;align-items:center;gap:6px;min-width:0}
+.ni-h a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px;font-weight:700}
+.ni-th{flex:none;background:var(--hd1);color:var(--hd-text);border-radius:6px;padding:1px 7px;font-size:12px;font-weight:800}
+.ni-sts{display:flex;align-items:center;gap:7px;margin-top:3px;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
+.ni-px{background:var(--bg);border-radius:6px;padding:0 7px;white-space:nowrap}
+.ni-st{white-space:nowrap}.ni-st b{margin-left:1px}
+.ni-note{font-size:11px;color:var(--muted);margin-top:2px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
   padding:3px 12px;border-radius:99px;margin-bottom:8px}
@@ -1108,6 +1170,10 @@ def main():
     news = fetch_news(since)
     earnings = fetch_earnings(session_day)
     kr = fetch_kr_news(quotes=quotes)
+    impact = ""
+    if not theme_news_page(datetime.now(KST)):  # 테마 뉴스 한 장이 있는 날은 겹치므로 패널을 뺀다
+        import newsimpact  # 글로벌 뉴스·종목 영향 패널. 실패해도 빈 칸으로 넘어간다
+        impact = newsimpact.build(quotes + extra, exclude=kr)
 
     now = datetime.now(KST)
     weekday = "월화수목금토일"[now.weekday()]
@@ -1120,11 +1186,11 @@ def main():
 <div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now))}
+{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now), impact)}
 </div>
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
-<footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
+<footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 기사 제목). 글로벌 뉴스 · 종목 영향의 ▲▼는 추정치입니다. 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
 SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
 투자 판단의 근거가 아닌 참고용입니다.{"<br>수집 실패: " + ", ".join(failed) if failed else ""}</footer>
 </div><script>{JS}</script>

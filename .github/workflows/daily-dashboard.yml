@@ -53,7 +53,9 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.gate.outputs.send == '1'
         with:
-          ref: main   # 트리거 커밋이 어느 브랜치에 오든 최신 main의 dashboard.py로 만든다
+          # 트리거 커밋이 어느 브랜치에 오든 최신 main의 dashboard.py로 만든다.
+          # 단, 커밋 메시지에 [test]가 있으면 그 커밋의 코드로 만든다(PR 브랜치 변경을 실제 발송으로 확인할 때).
+          ref: ${{ contains(github.event.head_commit.message, '[test]') && github.sha || 'main' }}
       - uses: actions/setup-python@v5
         if: steps.gate.outputs.send == '1'
         with:
@@ -94,6 +96,7 @@ jobs:
             dashboard.html
             dashboard.png
             dashboard_*.png
+            theme_news.html
             newhighs*.html
             newhighs_*.png
           if-no-files-found: ignore
