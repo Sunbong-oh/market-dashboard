@@ -718,12 +718,13 @@ def putcall_block(cnn):
     return f'<section class="panel pc-solo">{putcall_badge(cnn)}</section>'
 
 
-def top_section(cnn, news, earnings, kr, quotes=(), cal=()):
+def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact=""):
     return f'''<section class="fg driver">
   {headline_block(news, quotes)}
 </section>
 {earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
 {kr_block(kr)}
+{impact}
 {cal_block(cal)}'''
 
 
@@ -1027,6 +1028,15 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
 .panel.cal{border-left:6px solid var(--hd2)}.panel.cal .tag{background:var(--hd2)}.panel.cal .items li{font-size:18px}.hot{color:var(--accent)}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
+.panel.ni{border-left:6px solid var(--accent)}.panel.ni .tag{background:var(--accent);color:#fff}
+.ni-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;font-size:14px;font-weight:700}
+.ni-th{background:var(--hd1);color:var(--hd-text);border-radius:6px;padding:1px 8px;font-size:13px;font-weight:800}
+.ni-px{background:var(--bg);border-radius:6px;padding:1px 8px;white-space:nowrap}.ni-meta small{color:var(--muted);font-weight:400;font-size:12px}
+.ni-sts{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.ni-st{border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap}
+.ni-st.up{border-color:var(--up);background:color-mix(in srgb,var(--up) 10%,transparent)}
+.ni-st.down{border-color:var(--down);background:color-mix(in srgb,var(--down) 10%,transparent)}
+.ni-note{font-size:12px;color:var(--muted);margin-top:6px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
   padding:3px 12px;border-radius:99px;margin-bottom:8px}
@@ -1108,6 +1118,8 @@ def main():
     news = fetch_news(since)
     earnings = fetch_earnings(session_day)
     kr = fetch_kr_news(quotes=quotes)
+    import newsimpact  # 글로벌 뉴스·종목 영향 패널. 실패해도 빈 칸으로 넘어간다
+    impact = newsimpact.build(quotes + extra, exclude=kr)
 
     now = datetime.now(KST)
     weekday = "월화수목금토일"[now.weekday()]
@@ -1120,11 +1132,11 @@ def main():
 <div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now))}
+{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now), impact)}
 </div>
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
-<footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 뉴욕증시 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
+<footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 기사 제목). 글로벌 뉴스 · 종목 영향의 ▲▼는 추정치입니다. 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
 SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
 투자 판단의 근거가 아닌 참고용입니다.{"<br>수집 실패: " + ", ".join(failed) if failed else ""}</footer>
 </div><script>{JS}</script>
