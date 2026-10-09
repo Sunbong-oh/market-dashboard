@@ -137,6 +137,13 @@ def with_nav(html, root, active, sub=None):
     return html[:m.end()] + bar + html[m.end():] if m else bar + html
 
 
+def embed_html(html):
+    """홈 화면에 통째로 끼워 넣을 원본 리포트 (메뉴 없이, 링크는 바깥 창에서 열림)."""
+    tag = '<base target="_top">'
+    m = re.search(r"<head[^>]*>", html, re.I)
+    return html[:m.end()] + tag + html[m.end():] if m else tag + html
+
+
 def label(day):
     dt = datetime.strptime(day, "%Y-%m-%d")
     return f"{dt:%Y-%m-%d}({WD[dt.weekday()]})"
@@ -184,7 +191,10 @@ def build_daily():
     m = re.search(r'<a class="headline"[^>]*>(.*?)</a>', html, re.S)
     kr = re.findall(r'<section class="panel kr">.*?</section>', html, re.S)
     kr_titles = re.findall(r'<li><a [^>]*>(.*?)</a>', kr[0], re.S) if kr else []
+    if html:
+        (out / p.name / "embed.html").write_text(embed_html(html), encoding="utf-8")
     return dict(day=p.name, headline=unescape(m.group(1)) if m else "", kr=[unescape(t) for t in kr_titles],
+                embed=f"daily/{p.name}/embed.html" if html else "",
                 newhighs=(p / "newhighs.html").exists())
 
 
@@ -224,7 +234,7 @@ def build_news(now):
     (OUT / "news" / "index.html").write_text(
         page("돈이 되는 뉴스", body, "../", "news/", "MONEY NEWS",
              f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 하루 여러 번 자동 갱신"), encoding="utf-8")
-    return dict(kr=kr, theme=theme, at=now)
+    return dict(kr=kr, theme=theme, at=now, body=body)
 
 
 # ---------- 장마감 리포트 ----------
@@ -332,6 +342,8 @@ def build_close():
                 encoding="utf-8")
             if p == days[0]:  # 메뉴 '장마감 리포트'는 목록 대신 최신 리포트를 바로 연다
                 latest_html = with_extra(with_nav(html, "../", "close/"), close_extra(lines, days, p.name, ""))
+                (out / "embed.html").write_text(with_extra(embed_html(html), close_extra(lines, days, p.name, "")),
+                                                encoding="utf-8")
             (dest / "interactive.html").write_text(  # 예전 주소 호환
                 '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./"><a href="./">이동</a>',
                 encoding="utf-8")
@@ -344,7 +356,8 @@ def build_close():
                                               f"{label(p.name)} 장 마감 후 자동 작성 · 데이터: KB증권 OpenAPI"),
                                          encoding="utf-8")
         if first is None:
-            first = dict(day=p.name, title=title, summary=summary, img=f"close/{p.name}/{imgs[0]}.jpg" if imgs else "")
+            first = dict(day=p.name, title=title, summary=summary, img=f"close/{p.name}/{imgs[0]}.jpg" if imgs else "",
+                         embed="close/embed.html" if chart else "")
     rows = "".join(f'<li><a href="{p.name}/">{label(p.name)}</a></li>' for p in days)
     body = (f'<section class="panel"><ul class="dates">{rows}</ul></section>' if days
             else '<p class="err">장마감 리포트를 불러오지 못했습니다.</p>')
@@ -358,30 +371,45 @@ def build_close():
 
 
 # ---------- 홈 ----------
+# 홈 한 페이지에서 스크롤만으로 오전 데일리 → 돈이 되는 뉴스 → 장마감 수급을 모두 본다.
+# 데일리·장마감은 원본 HTML을 iframe에 넣고 내용 높이만큼 늘려 안쪽 스크롤이 생기지 않게 한다.
+HOME_CSS = """
+.jump{position:sticky;top:0;z-index:50;display:flex;gap:6px;padding:8px 0;background:var(--bg)}
+.jump a{flex:1;text-align:center;padding:8px 6px;border-radius:10px;background:var(--card);border:1px solid var(--line);
+  text-decoration:none;font-weight:800;font-size:14px}
+.sec{scroll-margin-top:56px;margin-top:22px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 10px}
+.sec-h h2{margin:0}.sec-h a{font-size:13px;color:var(--muted)}
+iframe.embed{display:block;width:100%;border:0;border-radius:14px;background:var(--card);min-height:400px}
+@media (max-width:520px){iframe.embed{width:calc(100% + 32px);margin:0 -16px;border-radius:0}}
+"""
+FIT_JS = """<script>
+function fit(f){try{var d=f.contentDocument;f.style.height=Math.max(d.documentElement.scrollHeight,d.body.scrollHeight)+'px'}catch(e){}}
+document.querySelectorAll('iframe.embed').forEach(function(f){f.addEventListener('load',function(){fit(f);
+try{new ResizeObserver(function(){fit(f)}).observe(f.contentDocument.body)}catch(e){}
+setTimeout(function(){fit(f)},800);setTimeout(function(){fit(f)},2500)})});
+addEventListener('resize',function(){document.querySelectorAll('iframe.embed').forEach(fit)});
+</script>"""
+
+
 def build_home(now, daily, news, close):
-    if daily:
-        kr = "".join(f"<li>{escape(t)}</li>" for t in daily["kr"][:2])
-        c1 = (f'<a class="card" href="daily/{daily["day"]}/"><span class="tag">오전 데일리</span>'
-              f'<h3>{escape(daily["headline"] or "미국 데일리 마켓")}</h3><div class="meta">{label(daily["day"])} 아침 7시'
-              f'{" · 52주 신고가 포함" if daily["newhighs"] else ""}</div>'
-              f'{f"<ol class=items>{kr}</ol>" if kr else ""}<span class="more">리포트 보기 →</span></a>')
+    if daily and daily.get("embed"):
+        s1 = (f'<iframe class="embed" src="{daily["embed"]}" title="오전 데일리" loading="eager"></iframe>')
+        more1 = f'<a href="daily/">{label(daily["day"])} · 지난 리포트</a>'
     else:
-        c1 = ('<a class="card" href="daily/"><span class="tag">오전 데일리</span><h3>미국 데일리 마켓</h3>'
-              '<div class="meta">다음 아침 발송부터 표시됩니다.</div><span class="more">지난 리포트 →</span></a>')
-    top = "".join(f"<li>{escape(n['title'])}</li>" for n in (news["kr"] or news["theme"])[:3])
-    c2 = (f'<a class="card" href="news/"><span class="tag n">돈이 되는 뉴스</span><h3>지금 시장을 움직이는 뉴스</h3>'
-          f'<div class="meta">{news["at"]:%m/%d %H:%M} 수집</div>'
-          f'<ol class="items">{top or "<li>뉴스 없음</li>"}</ol>'
-          f'<span class="more">뉴스 전체 보기 →</span></a>')
-    if close:
-        img = f'<img src="{close["img"]}" alt="장마감 시장 요약" loading="lazy">' if close["img"] else ""
-        c3 = (f'<a class="card" href="close/{close["day"]}/"><span class="tag c">장마감 리포트</span>'
-              f'<h3>{escape(close["summary"] or close["title"])}</h3><div class="meta">{escape(close["title"])}</div>'
-              f'{img}<span class="more">리포트 보기 →</span></a>')
+        s1, more1 = '<section class="panel"><p class="err">오전 데일리는 다음 아침 7시 발송분부터 표시됩니다.</p></section>', ""
+    if close and close.get("embed"):
+        s3 = f'<iframe class="embed" src="{close["embed"]}" title="장마감 수급" loading="lazy"></iframe>'
+        more3 = f'<a href="close/">{label(close["day"])}</a>'
     else:
-        c3 = ('<a class="card" href="close/"><span class="tag c">장마감 리포트</span><h3>국내 장마감 수급 체크</h3>'
-              '<div class="meta">리포트를 불러오지 못했습니다.</div><span class="more">지난 리포트 →</span></a>')
-    body = f'<div class="grid">{c1}{c2}{c3}</div>'
+        s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
+    body = (f'<style>{HOME_CSS}</style>'
+            '<nav class="jump"><a href="#daily">오전 데일리</a><a href="#news">돈이 되는 뉴스</a><a href="#close">장마감 수급</a></nav>'
+            f'<section class="sec" id="daily"><div class="sec-h"><h2>🌅 오전 데일리</h2>{more1}</div>{s1}</section>'
+            f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
+            f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
+            f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
+            f'{FIT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", "MY STOCK NOTE",
                                          f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 업데이트"),
                                     encoding="utf-8")
