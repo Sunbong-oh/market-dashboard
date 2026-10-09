@@ -89,10 +89,30 @@ def nav(root, active):
     return f'<nav style="{NAV_STYLE}"><b style="color:#ffd43b;margin-right:8px">📈 {SITE_NAME}</b>{links}</nav>'
 
 
+APP_NAME = "주식노트"  # 홈 화면 아이콘 아래 이름
+
+
+def head_tags(root):
+    """홈 화면에 앱처럼 설치되도록 하는 manifest·아이콘 태그."""
+    return (f'<link rel="manifest" href="{root}manifest.webmanifest"><meta name="theme-color" content="#1c2330">'
+            f'<link rel="icon" href="{root}assets/icon-192.png"><link rel="apple-touch-icon" href="{root}assets/apple-touch-icon.png">'
+            f'<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">'
+            f'<meta name="apple-mobile-web-app-title" content="{APP_NAME}">')
+
+
+def write_app_files():
+    shutil.copytree(ROOT / "assets", OUT / "assets")
+    manifest = {"name": SITE_NAME, "short_name": APP_NAME, "lang": "ko", "start_url": "./", "scope": "./",
+                "display": "standalone", "background_color": "#f4f5f7", "theme_color": "#1c2330",
+                "icons": [{"src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+                          {"src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}]}
+    (OUT / "manifest.webmanifest").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+
+
 def page(title, body, root, active, kicker="MY STOCK NOTE", sub=""):
     return f'''<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{escape(title)}</title><meta name="robots" content="noindex"><style>{CSS}</style></head><body>
+<title>{escape(title)}</title><meta name="robots" content="noindex">{head_tags(root)}<style>{CSS}</style></head><body>
 {nav(root, active)}<div class="wrap">
 <header class="top"><div class="kicker">{kicker}</div><h1>{escape(title)}</h1>{f'<div class="sub">{sub}</div>' if sub else ""}</header>
 {body}
@@ -107,6 +127,7 @@ SUB_LINK = "color:#ffd43b;text-decoration:none;padding:4px 8px;border-radius:6px
 
 def with_nav(html, root, active, sub=None):
     """원본 리포트 HTML의 <body> 바로 뒤에 메뉴를 넣는다. sub=(설명, [(href, 이름)...])이면 보조 막대도."""
+    html = re.sub(r"</head>", lambda _: head_tags(root) + "</head>", html, count=1, flags=re.I)
     m = re.search(r"<body[^>]*>", html, re.I)
     bar = nav(root, active)
     if sub:
@@ -321,6 +342,7 @@ def main():
         shutil.rmtree(OUT)
     OUT.mkdir(parents=True)
     (OUT / ".nojekyll").write_text("")
+    write_app_files()
     daily = build_daily()
     news = build_news(now)
     close = build_close()
