@@ -761,7 +761,6 @@ def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact=""):
   {headline_block(news, quotes)}
 </section>
 {earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
-{kr_block(kr)}
 {impact}
 {cal_block(cal)}'''
 
