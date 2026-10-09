@@ -234,7 +234,40 @@ def theme_news(limit=10):
     return d.rank(d.market_news(items), limit=limit)
 
 
-def build_news(now):
+# ---------- 관심 테마 뉴스 (Claude 루틴이 일~목 21:00에 theme_news/<발송일>.html 커밋) ----------
+THEME_ARCHIVE = ROOT / "archive" / "theme"
+
+
+def build_theme():
+    """가장 최근 테마 뉴스 카드(4장)를 사이트에 넣는다. theme_news/ 와 archive/theme/ 중 최신 날짜."""
+    files = {}
+    for folder in (THEME_ARCHIVE, d.THEME_DIR):
+        if folder.is_dir():
+            for f in folder.glob("*.html"):
+                if DATE_RE.match(f.stem):
+                    files[f.stem] = f
+    if not files:
+        return None
+    day = max(files)
+    (OUT / "theme").mkdir(parents=True, exist_ok=True)
+    html = files[day].read_text(encoding="utf-8")
+    # 카드는 540px 고정 폭이라 폰에서는 화면 폭에 맞게 줄인다
+    fit = ("<style>body{margin:0!important}</style><script>(function(){function z(){var w=document.documentElement.clientWidth;"
+           "document.documentElement.style.zoom=w<560?(w/560):1}z();addEventListener('resize',z)})()</script>")
+    html = html.replace("</head>", fit + "</head>", 1) if "</head>" in html else fit + html
+    (OUT / "theme" / f"{day}.html").write_text(embed_html(html), encoding="utf-8")
+    return dict(day=day, path=f"theme/{day}.html")
+
+
+def theme_block(theme, root):
+    if not theme:
+        return ""
+    return (f'<section class="panel"><div class="tag">관심 테마 뉴스</div>'
+            f'<p class="meta">AI 밸류체인 · 메가테크 · 모빌리티·에너지 — 전날 밤 21시 작성 ({label(theme["day"])})</p>'
+            f'<iframe class="embed" src="{root}{theme["path"]}" title="관심 테마 뉴스" loading="lazy"></iframe></section>')
+
+
+def build_news(now, theme_doc=None):
     def safe(fn, *a, **k):
         try:
             return fn(*a, **k)
@@ -249,7 +282,7 @@ def build_news(now):
     if cal:
         lis = "".join(f'<li>{escape(e)}</li>' for e in cal)
         cal_html = f'<section class="panel"><div class="tag c">오늘의 증시 캘린더</div><ol class="items">{lis}</ol></section>'
-    body = (f'{cal_html}'
+    body = (f'{theme_block(theme_doc, "")}{cal_html}'
             f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스</div>'
             f'<p class="meta">직전 한국 장 마감(15:30) 이후 뉴스 중 주가·실적·금리·환율·유가·관세·업종과 직접 관련된 것만,'
             f' 여러 언론이 크게 다룬 순 (정치·사회 기사 제외)</p>{news_items(kr)}</section>'
@@ -257,8 +290,10 @@ def build_news(now):
             f'<p class="meta">최근 24시간 · 주가 등락 나열, 칼럼·종목 추천성 기사 제외</p>{news_items(theme)}</section>'
             f'<section class="panel"><div class="tag c">뉴욕증시 이슈</div><p class="meta">단순 등락 기사는 빼고 원인·영향이 담긴 기사만</p>{news_items(us)}</section>')
     (OUT / "news").mkdir(parents=True, exist_ok=True)
+    news_page_body = (body.replace(f'src="{theme_doc["path"]}"', f'src="../{theme_doc["path"]}"')
+                      if theme_doc else body)
     (OUT / "news" / "index.html").write_text(
-        page("돈이 되는 뉴스", body, "../", "news/", "MONEY NEWS",
+        page("돈이 되는 뉴스", f'<style>{HOME_CSS}</style>' + news_page_body + FIT_JS, "../", "news/", "MONEY NEWS",
              f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 하루 여러 번 자동 갱신"), encoding="utf-8")
     return dict(kr=kr, theme=theme, at=now, body=body)
 
@@ -410,7 +445,7 @@ iframe.embed{display:block;width:100%;border:0;border-radius:14px;background:var
 @media (max-width:520px){iframe.embed{width:calc(100% + 32px);margin:0 -16px;border-radius:0}}
 """
 FIT_JS = """<script>
-function fit(f){try{var d=f.contentDocument;f.style.height=Math.max(d.documentElement.scrollHeight,d.body.scrollHeight)+'px'}catch(e){}}
+function fit(f){try{var d=f.contentDocument,z=parseFloat(d.documentElement.style.zoom)||1;f.style.height=Math.ceil(Math.max(d.documentElement.scrollHeight,d.body.scrollHeight)*z)+'px'}catch(e){}}
 document.querySelectorAll('iframe.embed').forEach(function(f){f.addEventListener('load',function(){fit(f);
 try{new ResizeObserver(function(){fit(f)}).observe(f.contentDocument.body)}catch(e){}
 setTimeout(function(){fit(f)},800);setTimeout(function(){fit(f)},2500)})});
@@ -452,7 +487,8 @@ def main():
     (OUT / ".nojekyll").write_text("")
     write_app_files()
     daily = build_daily()
-    news = build_news(now)
+    theme_doc = build_theme()
+    news = build_news(now, theme_doc)
     close = build_close()
     live = build_live(now)
     build_home(now, daily, news, close, live)
