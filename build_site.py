@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 from datetime import datetime
 from html import escape, unescape
@@ -196,6 +197,31 @@ def build_daily():
     return dict(day=p.name, headline=unescape(m.group(1)) if m else "", kr=[unescape(t) for t in kr_titles],
                 embed=f"daily/{p.name}/embed.html" if html else "",
                 newhighs=(p / "newhighs.html").exists())
+
+
+# ---------- 실시간 시세 (밤 22:00~02:00 KST, 10분마다) ----------
+LIVE_START, LIVE_END = 22, 2  # KST 시
+
+
+def live_window(now):
+    return now.hour >= LIVE_START or now.hour < LIVE_END or (now.hour == LIVE_END and now.minute <= 10)
+
+
+def build_live(now):
+    """미국 장중에는 데일리 대시보드를 지금 시세로 새로 만든다 (live-prices.yml이 10분마다 호출)."""
+    if os.environ.get("LIVE") != "1" and not live_window(now):
+        return None
+    try:
+        subprocess.run([sys.executable, "dashboard.py", "--no-open"], cwd=ROOT, check=True, timeout=600)
+        html = (ROOT / "dashboard.html").read_text(encoding="utf-8")
+    except Exception as e:
+        print("실시간 시세 생성 실패:", type(e).__name__, e, file=sys.stderr)
+        return None
+    dest = OUT / "daily" / "live"
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "index.html").write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
+    (dest / "embed.html").write_text(embed_html(html), encoding="utf-8")
+    return dict(at=now, embed="daily/live/embed.html")
 
 
 # ---------- 돈이 되는 뉴스 ----------
@@ -392,8 +418,11 @@ addEventListener('resize',function(){document.querySelectorAll('iframe.embed').f
 </script>"""
 
 
-def build_home(now, daily, news, close):
-    if daily and daily.get("embed"):
+def build_home(now, daily, news, close, live=None):
+    if live:
+        s1 = f'<iframe class="embed" src="{live["embed"]}" title="실시간 시세" loading="eager"></iframe>'
+        more1 = f'<a href="daily/">실시간 · {live["at"]:%H:%M} 기준 (22~02시 10분마다)</a>'
+    elif daily and daily.get("embed"):
         s1 = (f'<iframe class="embed" src="{daily["embed"]}" title="오전 데일리" loading="eager"></iframe>')
         more1 = f'<a href="daily/">{label(daily["day"])} · 지난 리포트</a>'
     else:
@@ -425,8 +454,10 @@ def main():
     daily = build_daily()
     news = build_news(now)
     close = build_close()
-    build_home(now, daily, news, close)
+    live = build_live(now)
+    build_home(now, daily, news, close, live)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"],
+                      "live": bool(live),
                       "news": [len(news["kr"]), len(news["theme"])]}, ensure_ascii=False))
 
 
