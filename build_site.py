@@ -260,6 +260,7 @@ def theme_news(limit=10):
 
 # ---------- 관심 테마 뉴스 (Claude 루틴이 일~목 21:00에 theme_news/<발송일>.html 커밋) ----------
 THEME_ARCHIVE = ROOT / "archive" / "theme"
+INDEX_KPI = re.compile(r"나스닥|다우|S&P|코스피|코스닥|러셀|SOX|필라델피아|반도체지수|지수")
 
 
 def build_theme():
@@ -275,10 +276,13 @@ def build_theme():
     day = max(files)
     (OUT / "theme").mkdir(parents=True, exist_ok=True)
     html = files[day].read_text(encoding="utf-8")
-    # 카드는 540px 고정 폭이라 폰에서는 화면 폭에 맞게 줄인다
-    fit = ("<style>body{margin:0!important}</style><script>(function(){function z(){var w=document.documentElement.clientWidth;"
-           "document.documentElement.style.zoom=w<560?(w/560):1}z();addEventListener('resize',z)})()</script>")
+    # 카드는 540px 고정 폭이라 화면 폭에 맞춰 늘고 줄게 바꾸고, 지수 등락 박스(나스닥 등)는 뺀다
+    fit = ("<style>html,body{margin:0!important;overflow:hidden}.card{width:auto!important;max-width:540px;margin:0 auto 12px!important}"
+           "@media (max-width:420px){.card{padding:16px 14px 12px!important}h1{font-size:23px!important}.t{font-size:17px!important}"
+           ".p{font-size:17px!important}.w{font-size:15px!important}.kpi .v{font-size:24px!important}}</style>")
     html = html.replace("</head>", fit + "</head>", 1) if "</head>" in html else fit + html
+    html = re.sub(r'<div class="kpi"><div><div class="n">([^<]*)</div>.*?<div class="v[^"]*">[^<]*</div></div>',
+                  lambda m: "" if INDEX_KPI.search(m.group(1)) else m.group(0), html)
     (OUT / "theme" / f"{day}.html").write_text(embed_html(html), encoding="utf-8")
     return dict(day=day, path=f"theme/{day}.html")
 
@@ -288,7 +292,7 @@ def theme_block(theme, root):
         return ""
     return (f'<section class="panel"><div class="tag">관심 테마 뉴스</div>'
             f'<p class="meta">AI 밸류체인 · 메가테크 · 모빌리티·에너지 — 전날 밤 21시 작성 ({label(theme["day"])})</p>'
-            f'<iframe class="embed" src="{root}{theme["path"]}" title="관심 테마 뉴스" loading="lazy"></iframe></section>')
+            f'<iframe class="embed" scrolling="no" src="{root}{theme["path"]}" title="관심 테마 뉴스" loading="lazy"></iframe></section>')
 
 
 def build_news(now, theme_doc=None):
@@ -470,13 +474,13 @@ addEventListener('resize',function(){document.querySelectorAll('iframe.embed').f
 
 def build_home(now, daily, news, close, live=None):
     if live:
-        s1 = f'<iframe class="embed" src="{live["embed"]}" title="실시간 시세" loading="eager"></iframe>'
+        s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
-        s1 = f'<iframe class="embed" src="{daily["embed"]}" title="오전 데일리" loading="eager"></iframe>'
+        s1 = f'<iframe class="embed" scrolling="no" src="{daily["embed"]}" title="오전 데일리" loading="eager"></iframe>'
     else:
         s1 = '<section class="panel"><p class="err">오전 데일리는 다음 아침 7시 발송분부터 표시됩니다.</p></section>'
     if close and close.get("embed"):
-        s3 = f'<iframe class="embed" src="{close["embed"]}" title="장마감 수급" loading="lazy"></iframe>'
+        s3 = f'<iframe class="embed" scrolling="no" src="{close["embed"]}" title="장마감 수급" loading="lazy"></iframe>'
         more3 = f'<a href="close/">{label(close["day"])}</a>'
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
