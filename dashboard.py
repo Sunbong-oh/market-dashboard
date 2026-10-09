@@ -212,6 +212,28 @@ KR_EXCLUDE = re.compile(r"부동산|아파트|전세|월세|분양|집값|주택
                         r"|견학|벤치마킹|업무협약|MOU|박람회|설명회|간담회|포럼|세미나|토론회|공모|모집|시상|수상|캠페인|교육|개최|연구협력|협약"
                         r"|[가-힣]{2,4}(시|군|구|도)(청|의회)?,")
 KR_SKIP_SRC = ("simplywall", "초이스스탁", "Investing.com", "네이버 프리미엄", "Hypebeast")
+# 주가와 직접 연결되는 말이 제목에 있어야 싣는다 (트럼프·정부·제재 같은 말만으로는 통과 못 함)
+MARKET = re.compile(
+    r"증시|주가|주식|코스피|코스닥|나스닥|다우|S&P|상장|IPO|공매도|자사주|배당|시총|시가총액|외국인 ?(매수|매도|순매)"
+    r"|실적|영업이익|순이익|매출|어닝|가이던스|수주|계약 체결|공급 ?계약|인수|합병|M&A|증설|투자 ?(확대|계획|발표)"
+    r"|금리|기준금리|FOMC|연준|Fed|파월|한은|국채|채권|물가|CPI|PCE|고용|GDP|성장률|경기 ?(침체|둔화|회복)"
+    r"|환율|달러|원화|엔화|위안|유가|원유|WTI|브렌트|OPEC|금값|구리|원자재|희토류|리튬"
+    r"|관세|수출|수입|무역|통상|공급망|반도체|HBM|메모리|D램|낸드|파운드리|AI|데이터센터|GPU"
+    r"|배터리|2차전지|이차전지|전기차|자동차|조선|방산|원전|SMR|바이오|신약|임상|FDA|철강|석유화학|정유|해운|항공"
+    r"|삼성|하이닉스|SK|LG|현대차|기아|엔비디아|테슬라|애플|TSMC|마이크론|포스코|한화|셀트리온|네이버|카카오")
+# 주가와 무관한 정치·사회 기사
+NOT_MARKET = re.compile(r"지지율|여론조사|노벨|평화상|선거|총선|대선|탄핵|국정감사|국감|민주당|국민의힘|야당|여당"
+                        r"|의원|검찰|재판|구속|기소|ICC|형사|살인|사고|날씨|연예")
+# 기계 번역된 해외 매체(베트남·인도 등)
+FOREIGN_SRC = re.compile(r"\.(vn|in|ph|id|my|cn)$|IndexBox|Laodong|VnExpress|Vietnam|Vietnamplus|Tuoi ?Tre", re.I)
+
+
+def market_news(items):
+    """주가와 직접 관련된 기사만 (사이트 '돈이 되는 뉴스'와 아침 데일리 '오늘 한국 시장 영향' 공용)."""
+    return [x for x in items if MARKET.search(x["title"]) and not NOT_MARKET.search(x["title"])
+            and not FOREIGN_SRC.search(x["src"])]
+
+
 KR_STOP = {"증시", "코스", "스피", "주가", "전망", "기대", "강세", "상승", "하락", "오늘", "특징", "징주", "수혜", "혜주",
            "관련", "련주", "국내", "마감", "반등", "급등", "투자", "시장", "종합", "속보", "미국", "한국", "코스닥", "스닥",
            "경제", "정책", "정부", "산업", "발표", "협력", "강화", "추진", "글로", "로벌", "기업", "에너", "너지"}
@@ -286,6 +308,7 @@ def fetch_kr_news(n=2, now=None, quotes=None):
     pool = list({x["link"]: x for x in pool + topic}.values())
     cands = [x for x in {c["link"]: c for c in theme + biz + topic}.values()
              if KR_ECON.search(x["raw"]) and not KR_RECAP.search(x["raw"]) and not KR_EXCLUDE.search(x["raw"])]
+    cands = market_news(cands)  # 정치·사회 기사, 기계 번역 해외 매체 제외
     for c in cands:
         g = _grams(c["title"])
         c["heat"] = sum(1 for m in pool if m["link"] != c["link"] and len(g & _grams(m["title"])) >= 4)
