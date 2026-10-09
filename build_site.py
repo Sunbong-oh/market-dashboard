@@ -216,7 +216,7 @@ def build_news(now):
             print("뉴스 수집 실패:", fn.__name__, type(e).__name__, e, file=sys.stderr)
             return []
     kr = safe(d.fetch_kr_news, n=6)  # dashboard.market_news로 주가 관련 기사만 후보에 들어간다
-    us = safe(d.fetch_news)
+    us = d.market_news(safe(d.fetch_news))  # '상승 출발' 같은 단순 등락 기사는 뺀다
     theme = safe(theme_news)
     cal = d.calendar_events(now)
     cal_html = ""
@@ -228,8 +228,8 @@ def build_news(now):
             f'<p class="meta">직전 한국 장 마감(15:30) 이후 뉴스 중 주가·실적·금리·환율·유가·관세·업종과 직접 관련된 것만,'
             f' 여러 언론이 크게 다룬 순 (정치·사회 기사 제외)</p>{news_items(kr)}</section>'
             f'<section class="panel"><div class="tag n">수혜주 · 관련주 · 특징주</div>'
-            f'<p class="meta">최근 24시간, 비슷한 기사는 하나만</p>{news_items(theme)}</section>'
-            f'<section class="panel"><div class="tag c">뉴욕증시 헤드라인</div>{news_items(us)}</section>')
+            f'<p class="meta">최근 24시간 · 주가 등락 나열, 칼럼·종목 추천성 기사 제외</p>{news_items(theme)}</section>'
+            f'<section class="panel"><div class="tag c">뉴욕증시 이슈</div><p class="meta">단순 등락 기사는 빼고 원인·영향이 담긴 기사만</p>{news_items(us)}</section>')
     (OUT / "news").mkdir(parents=True, exist_ok=True)
     (OUT / "news" / "index.html").write_text(
         page("돈이 되는 뉴스", body, "../", "news/", "MONEY NEWS",
