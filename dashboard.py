@@ -1028,15 +1028,15 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
 .panel.cal{border-left:6px solid var(--hd2)}.panel.cal .tag{background:var(--hd2)}.panel.cal .items li{font-size:18px}.hot{color:var(--accent)}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
-.panel.ni{border-left:6px solid var(--accent)}.panel.ni .tag{background:var(--accent);color:#fff}
-.ni-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;font-size:14px;font-weight:700}
-.ni-th{background:var(--hd1);color:var(--hd-text);border-radius:6px;padding:1px 8px;font-size:13px;font-weight:800}
-.ni-px{background:var(--bg);border-radius:6px;padding:1px 8px;white-space:nowrap}.ni-meta small{color:var(--muted);font-weight:400;font-size:12px}
-.ni-sts{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
-.ni-st{border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap}
-.ni-st.up{border-color:var(--up);background:color-mix(in srgb,var(--up) 10%,transparent)}
-.ni-st.down{border-color:var(--down);background:color-mix(in srgb,var(--down) 10%,transparent)}
-.ni-note{font-size:12px;color:var(--muted);margin-top:6px}
+.panel.ni{border-left:6px solid var(--accent);padding-bottom:10px}.panel.ni .tag{background:var(--accent);color:#fff;margin-bottom:4px}
+.ni-list{list-style:none;margin:0;padding:0}.ni-list li{padding:7px 0}.ni-list li+li{border-top:1px solid var(--line)}
+.ni-h{display:flex;align-items:center;gap:6px;min-width:0}
+.ni-h a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px;font-weight:700}
+.ni-th{flex:none;background:var(--hd1);color:var(--hd-text);border-radius:6px;padding:1px 7px;font-size:12px;font-weight:800}
+.ni-sts{display:flex;align-items:center;gap:7px;margin-top:3px;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
+.ni-px{background:var(--bg);border-radius:6px;padding:0 7px;white-space:nowrap}
+.ni-st{white-space:nowrap}.ni-st b{margin-left:1px}
+.ni-note{font-size:11px;color:var(--muted);margin-top:2px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
   padding:3px 12px;border-radius:99px;margin-bottom:8px}

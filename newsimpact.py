@@ -15,7 +15,7 @@ from html import escape
 
 import dashboard as d
 
-N_NEWS = 4          # 패널에 싣는 기사 수
+N_NEWS = 3          # 패널에 싣는 기사 수(요약 이미지가 길어지지 않게 3건, 한 건당 두 줄)
 FLAT_MOVE = 0.3     # 연관 지표가 이보다 적게(%) 움직이면 '보합'으로 보고 기사 논조로 방향을 정한다
 
 GLOBAL_QUERIES = ("해외증시 when:1d", "월가 when:1d", "글로벌 경제 when:1d", "미국 경제 when:1d", "중국 경제 when:1d",
@@ -26,31 +26,31 @@ GLOBAL_QUERIES = ("해외증시 when:1d", "월가 when:1d", "글로벌 경제 wh
 # 관계 +1: 지표(또는 기사 논조)와 같은 방향, -1: 반대 방향. 위에 있는 테마가 먼저 걸린다.
 THEMES = (
     ("반도체", r"반도체|HBM|메모리|D램|디램|낸드|마이크론|TSMC|파운드리|AI ?칩|엔비디아",
-     ("^SOX", "필라델피아 반도체"), (("삼성전자", 1), ("SK하이닉스", 1), ("한미반도체", 1))),
+     ("^SOX", "SOX"), (("삼성전자", 1), ("SK하이닉스", 1), ("한미반도체", 1))),
     ("유가", r"유가|원유|석유|정유|브렌트|WTI|OPEC|산유국",
-     ("CL=F", "WTI"), (("S-Oil", 1), ("SK이노베이션", 1), ("대한항공", -1))),
+     ("CL=F", "WTI"), (("S-Oil", 1), ("SK이노", 1), ("대한항공", -1))),
     ("금리", r"국채 ?금리|연준|Fed|FOMC|파월|기준금리|금리 ?(인하|인상|동결)",
-     ("^TNX", "미 10년물"), (("KB금융", 1), ("신한지주", 1), ("NAVER", -1))),
+     ("^TNX", "美10년"), (("KB금융", 1), ("신한지주", 1), ("NAVER", -1))),
     ("환율", r"환율|원·?달러|원화|강달러|약달러|달러 ?(강세|약세)",
      ("KRW=X", "원/달러"), (("현대차", 1), ("기아", 1), ("대한항공", -1))),
     ("2차전지", r"2차전지|이차전지|배터리|리튬|전기차",
-     ("LIT", "리튬·배터리 ETF"), (("LG에너지솔루션", 1), ("삼성SDI", 1), ("에코프로비엠", 1))),
+     ("LIT", "리튬 ETF"), (("LG엔솔", 1), ("삼성SDI", 1), ("에코프로비엠", 1))),
     ("원전", r"원전|원자력|SMR|우라늄",
-     ("URA", "우라늄 ETF"), (("두산에너빌리티", 1), ("한전기술", 1), ("현대건설", 1))),
+     ("URA", "우라늄 ETF"), (("두산에너빌", 1), ("한전기술", 1), ("현대건설", 1))),
     ("방산", r"방산|국방|무기|미사일|전쟁|휴전|파병|공습|나토|NATO",
-     ("ITA", "미 방산 ETF"), (("한화에어로스페이스", 1), ("LIG넥스원", 1), ("현대로템", 1))),
+     ("ITA", "美방산 ETF"), (("한화에어로", 1), ("LIG넥스원", 1), ("현대로템", 1))),
     ("조선", r"조선|선박|LNG선|해운|마스가|MASGA",
-     None, (("HD한국조선해양", 1), ("한화오션", 1), ("삼성중공업", 1))),
+     None, (("HD한국조선", 1), ("한화오션", 1), ("삼성중공업", 1))),
     ("바이오", r"바이오|제약|신약|FDA|비만약|비만 치료제|임상",
-     ("XBI", "미 바이오 ETF"), (("삼성바이오로직스", 1), ("셀트리온", 1), ("알테오젠", 1))),
+     ("XBI", "美바이오 ETF"), (("삼성바이오", 1), ("셀트리온", 1), ("알테오젠", 1))),
     ("금", r"금값|금 ?가격|금 ?선물|안전자산",
-     ("GC=F", "금 선물"), (("고려아연", 1), ("풍산", 1))),
+     ("GC=F", "금"), (("고려아연", 1), ("풍산", 1))),
     ("자동차", r"자동차|완성차|관세|테슬라",
      None, (("현대차", 1), ("기아", 1), ("현대모비스", 1))),
     ("AI·빅테크", r"AI|인공지능|오픈AI|챗GPT|데이터센터|빅테크|클라우드",
      ("^IXIC", "나스닥"), (("NAVER", 1), ("카카오", 1), ("LS ELECTRIC", 1))),
     ("중국", r"중국|中|시진핑|위안화|홍콩|항셍",
-     ("FXI", "중국 대형주 ETF"), (("아모레퍼시픽", 1), ("LG생활건강", 1), ("호텔신라", 1))),
+     ("FXI", "中대형주 ETF"), (("아모레퍼시픽", 1), ("LG생활건강", 1), ("호텔신라", 1))),
 )
 THEMES = tuple((k, re.compile(p), px, st) for k, p, px, st in THEMES)
 
@@ -135,20 +135,18 @@ def _arrow(sign):
 
 
 def row(n, moves):
+    """한 건 = 두 줄: [테마] 기사 제목(한 줄로 자름) / 연관 지표 등락 · 종목▲▼"""
     key, _, px, stocks = n["theme"]
-    mv, sign, why = impact(n, moves)
+    mv, sign, _ = impact(n, moves)
     proxy = ""
     if px:
         val = (f'<b class="{d.cls(mv)}">{moves[px[0]][1]}</b>' if mv is not None
                else '<b class="flat">–</b>')
         proxy = f'<span class="ni-px">{escape(px[1])} {val}</span>'
-    chips = "".join(f'<span class="ni-st {d.cls(sign * rel)}">{escape(name)} {_arrow(sign * rel)}</span>'
-                    for name, rel in stocks)
-    basis = {"지표": "지표 기준", "논조": "기사 논조 기준"}.get(why, "방향 불명")
-    return (f'<li><a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
-            f'{d.src_line(n)}'
-            f'<div class="ni-meta"><span class="ni-th">{escape(key)}</span>{proxy}<small>{basis}</small></div>'
-            f'<div class="ni-sts">{chips}</div></li>')
+    sts = "".join(f'<span class="ni-st">{escape(name)}{_arrow(sign * rel)}</span>' for name, rel in stocks)
+    return (f'<li><div class="ni-h"><span class="ni-th">{escape(key)}</span>'
+            f'<a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a></div>'
+            f'<div class="ni-sts">{proxy}{sts}</div></li>')
 
 
 def block(news, moves):
@@ -156,8 +154,8 @@ def block(news, moves):
         return ""
     lis = "".join(row(n, moves) for n in news)
     return (f'<section class="panel ni"><div class="tag">글로벌 뉴스 · 종목 영향</div>'
-            f'<ol class="items">{lis}</ol>'
-            f'<div class="ni-note">▲▼는 연관 지표의 간밤 등락(없으면 기사 논조)으로 추정한 방향입니다.</div></section>')
+            f'<ul class="ni-list">{lis}</ul>'
+            f'<div class="ni-note">▲▼ 연관 지표 간밤 등락(없으면 기사 논조) 기준 추정</div></section>')
 
 
 def build(quotes=(), exclude=(), now_ts=None):
