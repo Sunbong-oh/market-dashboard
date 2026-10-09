@@ -932,7 +932,8 @@ def save_blog_post(png, now):
 
 CALENDAR = Path(__file__).with_name("market_calendar.json")
 THEME_DIR = Path(__file__).with_name("theme_news")
-THEME_W = 1123  # A4 가로 폭(px). 테마 뉴스 한 장은 이 폭 그대로 찍는다
+THEME_W = 1123  # A4 가로 폭(px). 테마 뉴스 한 장(A4판)은 이 폭 그대로 찍는다
+THEME_CARD_W = 540  # 모바일판 카드 폭(px)
 
 
 def theme_news_page(now):
@@ -941,17 +942,36 @@ def theme_news_page(now):
     return src if src.exists() else None
 
 
-def theme_news_png(src):
-    """테마 뉴스 HTML을 화면용으로 감싸(여백·흰 배경·높이 표시) PNG로 찍는다. 실패하면 None."""
+def theme_news_pngs(src):
+    """테마 뉴스 HTML을 PNG로 찍는다. 실패하면 빈 리스트.
+    모바일판(class="card" 카드 여러 장)이면 카드마다 한 장씩(폰에서 글씨가 읽히는 540px 폭),
+    아니면 A4 가로 한 장 전체를 THEME_W 폭으로 찍는다."""
     html = src.read_text(encoding="utf-8")
-    extra = ('<style>@media screen{body{padding:18px 22px;background:#fff}.page{height:auto!important}.cols{margin-bottom:14px}}</style>'
-             "<script>addEventListener('load',()=>{document.documentElement.dataset.h="
-             "Math.ceil(document.documentElement.scrollHeight)})</script>")
+    n_cards = len(re.findall(r'class="card"', html))
+    if n_cards:
+        # #shot-<번호>로 열면 그 카드만 남기고 여백 없이 보여 준다
+        extra = ('<style>@media screen{body{margin:0!important;padding:0!important;background:#fff}'
+                 '.card{margin:0!important}}</style>'
+                 "<script>addEventListener('load',()=>{const m=location.hash.match(/-(\\d+)$/),"
+                 "cs=[...document.querySelectorAll('.card')];if(m)cs.forEach((c,i)=>{if(i+1!=+m[1])c.style.display='none'});"
+                 "document.documentElement.dataset.h=Math.ceil(document.body.getBoundingClientRect().bottom)})</script>")
+    else:
+        extra = ('<style>@media screen{body{padding:18px 22px;background:#fff}.page{height:auto!important}.cols{margin-bottom:14px}}</style>'
+                 "<script>addEventListener('load',()=>{document.documentElement.dataset.h="
+                 "Math.ceil(document.body.getBoundingClientRect().bottom)})</script>")
     html = html.replace("</head>", extra + "</head>", 1) if "</head>" in html else extra + html
     page = OUT.with_name("theme_news.html")
     page.write_text(html, encoding="utf-8")
-    png = OUT.with_name("dashboard_theme.png")
-    return png if screenshot(png, width=THEME_W, layout_w=None, scale=2, page=page) else None
+    if not n_cards:
+        png = OUT.with_name("dashboard_theme.png")
+        return [png] if screenshot(png, width=THEME_W, layout_w=None, scale=2, page=page) else []
+    pngs = []
+    for k in range(1, n_cards + 1):
+        png = OUT.with_name(f"dashboard_theme{k}.png")
+        if not screenshot(png, width=THEME_CARD_W, layout_w=None, part=str(k), scale=2, page=page):
+            return []  # 한 장이라도 빠지면 순서가 어긋나므로 테마 뉴스는 통째로 뺀다
+        pngs.append(png)
+    return pngs
 
 
 def calendar_events(now):
@@ -976,10 +996,10 @@ def notify(quotes, cnn, now):
     shots = [OUT.with_name("dashboard_a.png"), OUT.with_name("dashboard_i.png")]
     ok = screenshot(shots[0], part="a") and screenshot(shots[1], width=600, layout_w=600, part="i")
     theme = theme_news_page(now)
-    if ok and theme:  # 오늘의 관심 테마 뉴스 한 장이 있으면 앨범 세 번째 장으로 붙인다
-        tpng = theme_news_png(theme)
-        if tpng:
-            shots.append(tpng)
+    if ok and theme:  # 오늘의 관심 테마 뉴스가 있으면 앨범 뒤에 붙인다(모바일판은 카드 4장)
+        tpngs = theme_news_pngs(theme)
+        if tpngs:
+            shots += tpngs[:10 - len(shots)]  # 텔레그램 앨범은 최대 10장
         else:
             print("테마 뉴스 캡처 실패 -> 2장만 발송", file=sys.stderr)
     sent = ok and send_telegram_album(shots, caption)
