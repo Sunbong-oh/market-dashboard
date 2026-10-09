@@ -1,0 +1,73 @@
+name: Preview Dashboard (no send)
+
+# 기본은 텔레그램 발송 없이 대시보드를 만들어 이미지로만 저장한다(시크릿 미사용).
+# 수동 실행에서 send=true를 주면 이 브랜치 코드로 한 번 실제 발송한다.
+# PR에서 dashboard.py를 고치면 자동으로 돌고, Actions 탭에서 수동으로도 돌릴 수 있다.
+# 결과: 실행 페이지의 Artifacts(dashboard-preview)와 Summary의 '오늘 한국 시장 영향' 기사 목록.
+on:
+  pull_request:
+    paths: ["dashboard.py", ".github/workflows/preview-dashboard.yml"]
+  workflow_dispatch:
+    inputs:
+      send:
+        description: "true면 이 브랜치 코드로 텔레그램에 실제 발송(수동 실행에서만)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: windows-latest   # 일일 발송과 같은 환경(Edge 헤드리스 캡처)
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build dashboard (no Telegram)
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+          NEWHIGHS: "off"   # 52주 신고가 앨범은 보내지 않는다
+          TELEGRAM_BOT_TOKEN: ${{ inputs.send && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ inputs.send && secrets.TELEGRAM_CHAT_ID || '' }}
+        run: |
+          if [ "${{ inputs.send }}" = "true" ]; then python dashboard.py --no-open --notify; else python dashboard.py --no-open; fi
+      - name: Capture images and list Korea-impact picks
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+          SENT: ${{ inputs.send }}
+        run: |
+          python - <<'EOF'
+          import os
+          from pathlib import Path
+          import dashboard as d
+          if os.environ.get("SENT") != "true":  # 발송 실행은 이미 이미지를 만들었으므로 다시 찍지 않는다
+              ok_a = d.screenshot(d.OUT.with_name("dashboard_a.png"), part="a")
+              ok_i = d.screenshot(d.OUT.with_name("dashboard_i.png"), width=600, layout_w=600, part="i")
+              ok_d = d.screenshot(d.OUT.with_name("dashboard.png"), width=900, layout_w=None, scale=2)
+              print("screenshots:", ok_a, ok_i, ok_d)
+          import re, html
+          page = Path("dashboard.html").read_text(encoding="utf-8")
+          m = re.search(r'<section class="panel kr">(.*?)</section>', page, re.S)
+          picks = re.findall(r'<li><a href="([^"]*)"[^>]*>(.*?)</a><div class="it-src">(.*?)</div>', m.group(1)) if m else []
+          lines = ["### 오늘 한국 시장 영향 (미리보기)"]
+          lines += [f"{i}. [{html.unescape(t)}]({u}) — {html.unescape(s)}" for i, (u, t, s) in enumerate(picks, 1)] or ["(선정된 기사 없음)"]
+          out = os.environ.get("GITHUB_STEP_SUMMARY")
+          if out:
+              Path(out).write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print("\n".join(lines))
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard-preview
+          path: |
+            dashboard.html
+            dashboard.png
+            dashboard_a.png
+            dashboard_i.png
+          if-no-files-found: ignore
