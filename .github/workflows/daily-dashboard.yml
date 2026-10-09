@@ -14,7 +14,7 @@ on:
   workflow_dispatch:        # Actions 탭에서 수동 실행(항상 발송)
 
 permissions:
-  contents: read
+  contents: write   # 웹사이트용 archive/daily/ 저장
   actions: read
 
 # 여러 실행이 겹쳐도 차례로 돌게 해서, 뒤엣것이 "이미 보냄"을 볼 수 있게 한다
@@ -67,6 +67,27 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python dashboard.py --notify --no-open
+      - name: Save to website archive (archive/daily/YYYY-MM-DD)
+        # 웹사이트(site.yml)가 이 기록으로 '오전 데일리' 메뉴를 만든다. 실패해도 텔레그램 발송에는 영향 없음.
+        if: steps.gate.outputs.send == '1'
+        continue-on-error: true
+        shell: bash
+        run: |
+          day=$(date -u -d '+9 hours' +%Y-%m-%d)
+          dest="archive/daily/$day"
+          mkdir -p "$dest"
+          cp dashboard.html "$dest/index.html"
+          [ -f newhighs.html ] && cp newhighs.html "$dest/newhighs.html"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f "$dest"
+          git diff --cached --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "daily: archive $day for website"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         if: always() && steps.gate.outputs.send == '1'
         with:
