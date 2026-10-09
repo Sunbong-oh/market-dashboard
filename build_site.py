@@ -110,12 +110,12 @@ def write_app_files():
     (OUT / "manifest.webmanifest").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
 
 
-def page(title, body, root, active, kicker="MY STOCK NOTE", sub=""):
+def page(title, body, root, active, kicker="MY STOCK NOTE", sub="", hero=True):
     return f'''<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{escape(title)}</title><meta name="robots" content="noindex">{head_tags(root)}<style>{CSS}</style></head><body>
 {nav(root, active)}<div class="wrap">
-<header class="top"><div class="kicker">{kicker}</div><h1>{escape(title)}</h1>{f'<div class="sub">{sub}</div>' if sub else ""}</header>
+{f'''<header class="top"><div class="kicker">{kicker}</div><h1>{escape(title)}</h1>{f'<div class="sub">{sub}</div>' if sub else ""}</header>''' if hero else ""}
 {body}
 <footer>매일 자동으로 업데이트됩니다. 투자 판단의 근거가 아닌 참고용 자료이며, 투자 결과의 책임은 투자자 본인에게 있습니다.</footer>
 </div></body></html>'''
@@ -298,20 +298,13 @@ def build_news(now, theme_doc=None):
             print("뉴스 수집 실패:", fn.__name__, type(e).__name__, e, file=sys.stderr)
             return []
     kr = safe(d.fetch_kr_news, n=6)  # dashboard.market_news로 주가 관련 기사만 후보에 들어간다
-    us = d.market_news(safe(d.fetch_news))  # '상승 출발' 같은 단순 등락 기사는 뺀다
     theme = safe(theme_news)
-    cal = d.calendar_events(now)
-    cal_html = ""
-    if cal:
-        lis = "".join(f'<li>{escape(e)}</li>' for e in cal)
-        cal_html = f'<section class="panel"><div class="tag c">오늘의 증시 캘린더</div><ol class="items">{lis}</ol></section>'
-    body = (f'{theme_block(theme_doc, "")}{cal_html}'
+    body = (f'{theme_block(theme_doc, "")}'
             f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스</div>'
             f'<p class="meta">직전 한국 장 마감(15:30) 이후 뉴스 중 주가·실적·금리·환율·유가·관세·업종과 직접 관련된 것만,'
             f' 여러 언론이 크게 다룬 순 (정치·사회 기사 제외)</p>{news_items(kr)}</section>'
             f'<section class="panel"><div class="tag n">수혜주 · 관련주 · 특징주</div>'
-            f'<p class="meta">최근 24시간 · 주가 등락 나열, 칼럼·종목 추천성 기사 제외</p>{news_items(theme)}</section>'
-            f'<section class="panel"><div class="tag c">뉴욕증시 이슈</div><p class="meta">단순 등락 기사는 빼고 원인·영향이 담긴 기사만</p>{news_items(us)}</section>')
+            f'<p class="meta">최근 24시간 · 주가 등락 나열, 칼럼·종목 추천성 기사 제외</p>{news_items(theme)}</section>')
     (OUT / "news").mkdir(parents=True, exist_ok=True)
     news_page_body = (body.replace(f'src="{theme_doc["path"]}"', f'src="../{theme_doc["path"]}"')
                       if theme_doc else body)
@@ -479,12 +472,10 @@ addEventListener('resize',function(){document.querySelectorAll('iframe.embed').f
 def build_home(now, daily, news, close, live=None):
     if live:
         s1 = f'<iframe class="embed" src="{live["embed"]}" title="실시간 시세" loading="eager"></iframe>'
-        more1 = f'<a href="daily/">실시간 · {live["at"]:%H:%M} 기준 (22~02시 10분마다)</a>'
     elif daily and daily.get("embed"):
-        s1 = (f'<iframe class="embed" src="{daily["embed"]}" title="오전 데일리" loading="eager"></iframe>')
-        more1 = f'<a href="daily/">{label(daily["day"])} · 지난 리포트</a>'
+        s1 = f'<iframe class="embed" src="{daily["embed"]}" title="오전 데일리" loading="eager"></iframe>'
     else:
-        s1, more1 = '<section class="panel"><p class="err">오전 데일리는 다음 아침 7시 발송분부터 표시됩니다.</p></section>', ""
+        s1 = '<section class="panel"><p class="err">오전 데일리는 다음 아침 7시 발송분부터 표시됩니다.</p></section>'
     if close and close.get("embed"):
         s3 = f'<iframe class="embed" src="{close["embed"]}" title="장마감 수급" loading="lazy"></iframe>'
         more3 = f'<a href="close/">{label(close["day"])}</a>'
@@ -492,13 +483,12 @@ def build_home(now, daily, news, close, live=None):
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}</style>'
             '<nav class="jump"><a href="#daily">오전 데일리</a><a href="#news">돈이 되는 뉴스</a><a href="#close">장마감 수급</a></nav>'
-            f'<section class="sec" id="daily"><div class="sec-h"><h2>🌅 오전 데일리</h2>{more1}</div>{s1}</section>'
+            f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
             f'{FIT_JS}')
-    (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", "MY STOCK NOTE",
-                                         f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 업데이트"),
+    (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
 
