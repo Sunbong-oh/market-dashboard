@@ -81,7 +81,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
              "padding:8px 12px;background:#1c2330;font:600 14px/1.2 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif")
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
-MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("close/", "장마감 리포트"))
+MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("stocks/", "관심 종목"), ("close/", "장마감 리포트"))
 
 
 def nav(root, active):
@@ -258,6 +258,103 @@ def theme_news(limit=10):
              if d.KR_THEME.search(x["raw"]) and not d.KR_EXCLUDE.search(x["raw"])
              and x["ts"] >= since and not x["src"].startswith(d.KR_SKIP_SRC)]
     return d.rank(d.market_news(items), limit=limit)
+
+
+# ---------- 관심 종목 뉴스 (watchlist/<종목>.txt 파일 하나가 종목 하나) ----------
+WATCH = ROOT / "watchlist"
+REPO_URL = "https://github.com/Sunbong-oh/market-dashboard"
+
+
+def watchlist():
+    names = []
+    for f in sorted(WATCH.glob("*.txt")) if WATCH.exists() else []:
+        name = (f.read_text(encoding="utf-8").strip().splitlines() or [f.stem])[0].strip() or f.stem
+        names.append((name, f.name))
+    return names
+
+
+def stock_news(name, limit=6):
+    """종목명이 제목에 들어간 최근 3일 기사 (해외 스팸·칼럼·추천성 기사 제외)."""
+    key = re.sub(r"\s+", "", name)
+    since = datetime.now(d.KST).timestamp() - 3 * 86400
+    items = [x for x in d.google_news(f'"{name}" when:3d')
+             if key in re.sub(r"\s+", "", x["raw"]) and x["ts"] >= since
+             and not d.CLICKBAIT.search(x["title"]) and not d.FOREIGN_SRC.search(x["src"])
+             and (re.search(r"[가-힣]", x["src"]) or d.KR_LATIN_SRC.search(x["src"]))
+             and not x["src"].startswith(d.KR_SKIP_SRC)]
+    return d.rank(items, limit=limit)
+
+
+STOCK_CSS = """
+.stk-add{display:flex;gap:8px;margin:10px 0 4px}.stk-add input{flex:1;min-width:0;font:inherit;font-size:16px;padding:9px 12px;
+ border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
+.stk-add button,.cus button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:9px 14px;background:var(--accent);color:#fff;cursor:pointer}
+.cus{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}.cus button{background:var(--bg);color:var(--text);border:1px solid var(--line);padding:5px 12px;border-radius:99px;font-size:14px}
+.cus button.on{background:var(--text);color:var(--card)}.cus button.ed{border-style:dashed}
+.stks{display:grid;gap:12px;margin-top:12px}@media (min-width:900px){.stks{grid-template-columns:1fr 1fr}}
+.stk h3{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:18px}.stk h3 .x{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none}
+.stk h3 label{font-size:13px;font-weight:700;color:var(--accent);display:none}.editing .stk h3 label{display:inline}
+.stk .items li{font-size:15px}.stk[hidden]{display:none}
+"""
+STOCK_JS = """<script>
+(function(){var KEY='brian-customers',box=document.getElementById('stocks');if(!box)return;
+ var st;try{st=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){st={}}st.c=st.c||{};
+ var cur=st.cur||'',editing=false;
+ function save(){st.cur=cur;try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
+ function cards(){return box.querySelectorAll('.stk')}
+ function draw(){var row=box.querySelector('.cus'),h='<button data-c="" class="'+(cur?'':'on')+'">전체</button>';
+  Object.keys(st.c).sort().forEach(function(n){h+='<button data-c="'+n.replace(/"/g,'&quot;')+'" class="'+(n===cur?'on':'')+'">'+n.replace(/</g,'&lt;')+'</button>'});
+  h+='<button data-a="add" class="ed">+ 손님</button>'+(cur?'<button data-a="edit" class="ed">'+(editing?'완료':'종목 고르기')+'</button><button data-a="del" class="ed">손님 삭제</button>':'');
+  row.innerHTML=h;box.classList.toggle('editing',editing&&!!cur);
+  var mine=cur?st.c[cur]||[]:null;
+  cards().forEach(function(c){var n=c.dataset.name,cb=c.querySelector('input');cb.checked=!!mine&&mine.indexOf(n)>=0;
+   c.hidden=!!mine&&!editing&&mine.indexOf(n)<0});
+  var e=box.querySelector('.none');if(e)e.hidden=!(mine&&!editing&&!mine.length)}
+ box.addEventListener('click',function(ev){var b=ev.target.closest('.cus button');if(!b)return;
+  if(b.dataset.a==='add'){var n=(prompt('손님 이름 (이 핸드폰에만 저장돼요)')||'').trim();if(n){st.c[n]=st.c[n]||[];cur=n;editing=true}}
+  else if(b.dataset.a==='edit')editing=!editing;
+  else if(b.dataset.a==='del'){if(confirm(cur+' 손님을 지울까요? (종목 뉴스는 그대로 남아요)')){delete st.c[cur];cur='';editing=false}}
+  else{cur=b.dataset.c;editing=false}
+  save();draw()});
+ box.addEventListener('change',function(ev){var cb=ev.target;if(!cb.matches('.stk input')||!cur)return;
+  var n=cb.closest('.stk').dataset.name,l=st.c[cur]=st.c[cur]||[],i=l.indexOf(n);
+  if(cb.checked&&i<0)l.push(n);if(!cb.checked&&i>=0)l.splice(i,1);save()});
+ box.querySelector('.stk-add').addEventListener('submit',function(ev){ev.preventDefault();
+  var inp=this.querySelector('input'),n=inp.value.replace(/[\\\\/:*?"<>|#%%]/g,'').trim();if(!n)return;
+  if(cur){var l=st.c[cur]=st.c[cur]||[];if(l.indexOf(n)<0)l.push(n);save()}
+  window.open('%s/new/main/watchlist?filename='+encodeURIComponent(n+'.txt')+'&value='+encodeURIComponent(n),'_blank');inp.value=''});
+ draw()})();
+</script>""" % REPO_URL
+
+
+def stocks_block(stocks):
+    """관심 종목 입력칸 + 손님 고르기 + 종목별 뉴스 카드."""
+    cards = "".join(
+        f'<div class="card stk" data-name="{escape(name)}"><h3>{escape(name)}'
+        f'<label><input type="checkbox"> 이 손님 종목</label>'
+        f'<a class="x" href="{REPO_URL}/delete/main/watchlist/{escape(fname)}" target="_blank" rel="noopener">삭제</a></h3>'
+        f'{news_items(items)}</div>' for name, fname, items in stocks)
+    empty = '' if stocks else '<p class="err">아직 종목이 없습니다. 위 칸에 종목명을 적고 추가를 누르세요.</p>'
+    return (f'<style>{STOCK_CSS}</style><section class="panel" id="stocks"><div class="tag c">관심 종목 뉴스</div>'
+            f'<form class="stk-add"><input placeholder="종목명 (예: 삼성전자)" enterkeyhint="done"><button>추가</button></form>'
+            f'<p class="meta">추가를 누르면 GitHub 저장 화면이 열려요 → 초록색 <b>Commit changes</b>를 누르면 2~3분 뒤 뉴스가 붙어요. '
+            f'손님 구분은 이 핸드폰에만 저장되고 사이트에는 종목 이름만 보여요.</p>'
+            f'<div class="cus"></div><p class="err none" hidden>이 손님에게 고른 종목이 없어요. "종목 고르기"를 눌러 체크하세요.</p>'
+            f'<div class="stks">{cards}</div>{empty}</section>{STOCK_JS}')
+
+
+def build_stocks(now):
+    from concurrent.futures import ThreadPoolExecutor
+    names = watchlist()
+    with ThreadPoolExecutor(8) as ex:
+        news = list(ex.map(lambda nf: stock_news(nf[0]), names))
+    stocks = [(n, f, items) for (n, f), items in zip(names, news)]
+    body = stocks_block(stocks)
+    (OUT / "stocks").mkdir(parents=True, exist_ok=True)
+    (OUT / "stocks" / "index.html").write_text(
+        page("관심 종목 뉴스", body, "../", "stocks/", "MY STOCKS",
+             f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 종목별 최근 3일 기사"), encoding="utf-8")
+    return dict(body=body, at=now, n=len(stocks))
 
 
 # ---------- 관심 테마 뉴스 (Claude 루틴이 일~목 21:00에 theme_news/<발송일>.html 커밋) ----------
@@ -579,7 +676,7 @@ addEventListener('resize',function(){document.querySelectorAll('iframe.embed').f
 </script>"""
 
 
-def build_home(now, daily, news, close, live=None):
+def build_home(now, daily, news, close, live=None, stocks=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
@@ -596,6 +693,8 @@ def build_home(now, daily, news, close, live=None):
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
+            f'<section class="sec" id="mystocks"><div class="sec-h"><h2>📌 관심 종목 뉴스</h2>'
+            f'<a href="stocks/">{stocks["at"]:%m/%d %H:%M} 수집</a></div>{stocks["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
             f'{FIT_JS}{FUT_JS}{LIVE_FUT_JS % json.dumps(FUT_SRC)}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
@@ -614,10 +713,11 @@ def main():
     news = build_news(now, theme_doc)
     close = build_close()
     live = build_live(now)
-    build_home(now, daily, news, close, live)
+    stocks = build_stocks(now)
+    build_home(now, daily, news, close, live, stocks)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"],
                       "live": bool(live),
-                      "news": [len(news["kr"]), len(news["theme"])]}, ensure_ascii=False))
+                      "news": [len(news["kr"]), len(news["theme"])], "stocks": stocks["n"]}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
