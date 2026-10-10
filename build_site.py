@@ -401,7 +401,9 @@ function futChart(el,d,live){
  var ok=function(m){return m>=0&&m<=420};
  var bars=(d.bars||[]).filter(function(b){return b.c!=null}).map(function(b){return [tm(b.t),b.c]}).filter(function(p){return ok(p[0])});
  var fl=(d.flows||[]).filter(function(r){return r['외국인']!=null}).map(function(r){return [tm(r.t),r['외국인']]}).filter(function(p){return ok(p[0])});
- if(bars.length<2||fl.length<2)return false;
+ if(bars.length<2)return false;
+ var hf=fl.length>=2,cf=d.current_flows||{};
+ if(!hf){if(cf['외국인']==null)return false;fl=[[bars[bars.length-1][0],cf['외국인']]]}
  var F=d.futures||{},last=bars[bars.length-1][1],prev=(F.price!=null&&F.change!=null)?F.price-F.change:bars[0][1];
  var W=640,H=330,L=88,R=548,T=16,B=276,x=function(m){return L+(R-L)*m/420};
  var sc=function(v,inc){var lo=Math.min.apply(0,v.concat([inc])),hi=Math.max.apply(0,v.concat([inc])),p=(hi-lo)*.08||1;lo-=p;hi+=p;
@@ -416,6 +418,10 @@ function futChart(el,d,live){
   '<text x="'+X+'" y="'+(B+26)+'" text-anchor="middle">'+t.slice(0,2)+':'+t.slice(2)+'</text>'}).join('');
  var area=path(bars,sf.y)+' L'+x(bars[bars.length-1][0]).toFixed(1)+','+yp.toFixed(1)+' L'+x(bars[0][0]).toFixed(1)+','+yp.toFixed(1)+' Z';
  var yz=sg.y(0),lf=bars[bars.length-1],lg=fl[fl.length-1];
+ var fsvg=hf?'<line x1="'+L+'" y1="'+yz.toFixed(1)+'" x2="'+R+'" y2="'+yz.toFixed(1)+'" stroke="#f08c00" stroke-dasharray="2 4" opacity=".7"/>'+
+  '<text x="'+(R+6)+'" y="'+(T+16)+'" fill="#e67700">'+sg0(sg.hi)+'</text><text x="'+(R+6)+'" y="'+B+'" fill="#e67700">'+sg0(sg.lo)+'</text>'+
+  (yz-T>36&&B-yz>26?'<text x="'+(R+6)+'" y="'+(yz+6).toFixed(1)+'" fill="#e67700">0</text>':'')+
+  '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#f59f00" stroke-width="2.6" stroke-linejoin="round"/>':'';
  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="KOSPI200 선물과 외국인 선물 순매수 누적" style="font:18px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'+g+
   '<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(B-T)+'" fill="#fff" stroke="#e3e6ec"/>'+grid+
   '<path d="'+area+'" fill="url(#'+id+')" opacity=".13"/>'+
@@ -423,23 +429,20 @@ function futChart(el,d,live){
   '<text x="'+(L-6)+'" y="'+(yp+6).toFixed(1)+'" text-anchor="end" fill="#495057" font-weight="700">'+prev.toFixed(2)+'</text>'+
   (yp-T>30?'<text x="'+(L-6)+'" y="'+(T+16)+'" text-anchor="end">'+sf.hi.toFixed(1)+'</text>':'')+
   (B-yp>30?'<text x="'+(L-6)+'" y="'+B+'" text-anchor="end">'+sf.lo.toFixed(1)+'</text>':'')+
-  '<line x1="'+L+'" y1="'+yz.toFixed(1)+'" x2="'+R+'" y2="'+yz.toFixed(1)+'" stroke="#f08c00" stroke-dasharray="2 4" opacity=".7"/>'+
-  '<text x="'+(R+6)+'" y="'+(T+16)+'" fill="#e67700">'+sg0(sg.hi)+'</text><text x="'+(R+6)+'" y="'+B+'" fill="#e67700">'+sg0(sg.lo)+'</text>'+
-  (yz-T>36&&B-yz>26?'<text x="'+(R+6)+'" y="'+(yz+6).toFixed(1)+'" fill="#e67700">0</text>':'')+
-  '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#f59f00" stroke-width="2.6" stroke-linejoin="round"/>'+
+  fsvg+
   '<path d="'+path(bars,sf.y)+'" fill="none" stroke="url(#'+id+')" stroke-width="2.4" stroke-linejoin="round"/>'+
   '<circle cx="'+x(lf[0]).toFixed(1)+'" cy="'+sf.y(lf[1]).toFixed(1)+'" r="5" fill="'+(lf[1]>=prev?'#e03131':'#1c6dd0')+'"/>'+
-  '<circle cx="'+x(lg[0]).toFixed(1)+'" cy="'+sg.y(lg[1]).toFixed(1)+'" r="5" fill="#f59f00"/></svg>';
+  (hf?'<circle cx="'+x(lg[0]).toFixed(1)+'" cy="'+sg.y(lg[1]).toFixed(1)+'" r="5" fill="#f59f00"/>':'')+'</svg>';
  var ch=last-prev,pct=prev?ch/prev*100:0,fu=ch>0?'up':ch<0?'dn':'',ar=ch>0?'▲':ch<0?'▼':'–';
- var back=fl.filter(function(p){return p[0]<=lg[0]-30}),d30=back.length?lg[1]-back[back.length-1][1]:null;
+ var back=!hf?[]:fl.filter(function(p){return p[0]<=lg[0]-30}),d30=back.length?lg[1]-back[back.length-1][1]:null;
  var gu=lg[1]>0?'up':lg[1]<0?'dn':'';
- var rest=(d.flows||[]).slice(-1)[0]||{},oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])+'억'}).join(' · ');
+ var rest=hf?(d.flows||[]).slice(-1)[0]||{}:cf,oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])+'억'}).join(' · ');
  var hhmm=String(lf[0]+525>=0?Math.floor((lf[0]+525)/60):0)+':'+('0'+((lf[0]+525)%60)).slice(-2);
  el.innerHTML='<div class="sum"><div class="card '+fu+'"><small>KOSPI200 선물</small><b>'+last.toFixed(2)+'</b><span>'+ar+' '+Math.abs(ch).toFixed(2)+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</span></div>'+
-  '<div class="card '+gu+'"><small>외국인 선물 누적</small><b>'+sg0(lg[1])+'억</b><span>'+(lg[1]>0?'순매수':lg[1]<0?'순매도':'')+
+  '<div class="card '+gu+'"><small>외국인 선물 누적</small><b>'+sg0(lg[1])+'억</b><span>'+(lg[1]>0?'순매수':lg[1]<0?'순매도':'')+(hf?'':' · 장마감 확정')+
   (d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+(d30>0?' 사는 중':d30<0?' 파는 중':''):'')+'</span></div></div>'+
-  '<p class="lg"><i style="color:#e03131">━</i><i style="color:#1c6dd0">━</i> 선물 (좌, 전일 종가 '+prev.toFixed(2)+' 위 빨강 · 아래 파랑) · <i style="color:#f59f00">━</i> 외국인 누적 (우, 억원)'+(oth?' · '+oth:'')+'</p>'+svg+
-  '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 회사 PC가 1분마다 올리고 이 화면은 1~2분마다 자동 갱신':'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)')+'</p>';
+  '<p class="lg"><i style="color:#e03131">━</i><i style="color:#1c6dd0">━</i> 선물 (좌, 전일 종가 '+prev.toFixed(2)+' 위 빨강 · 아래 파랑)'+(hf?' · <i style="color:#f59f00">━</i> 외국인 누적 (우, 억원)':'')+(oth?' · '+oth:'')+'</p>'+svg+
+  '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 회사 PC가 1분마다 올리고 이 화면은 1~2분마다 자동 갱신':(hf?'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)':'선물 1분봉 · 외국인 분 단위 추이는 회사 PC 기록이 있는 날부터 함께 그려집니다'))+'</p>';
  return true}
 </script>"""
 
@@ -447,17 +450,25 @@ function futChart(el,d,live){
 def _fut_data(d):
     keep = ("t", "외국인", "기관계", "개인")
     return {"futures": d.get("futures"), "bars": [{"t": b["t"], "c": b.get("c")} for b in d.get("bars") or []],
-            "flows": [{k: r[k] for k in keep if k in r} for r in d.get("flows") or []]}
+            "flows": [{k: r[k] for k in keep if k in r} for r in d.get("flows") or []],
+            "current_flows": {k: v for k, v in (d.get("current_flows") or {}).items() if k in keep}}
 
 
 def futures_chart(day_dir):
     """회사 PC 서버가 올린 futures_flow.json으로 KOSPI200 선물(좌축)과 외국인 선물 순매수 누적(우축) 교차 차트."""
     f = day_dir / "futures_flow.json"
-    if not f.exists():
-        return ""
     try:
-        data = json.dumps(_fut_data(json.loads(f.read_text(encoding="utf-8"))), ensure_ascii=False).replace("</", "<\\/")
-    except (ValueError, KeyError, TypeError):
+        if f.exists():
+            raw = json.loads(f.read_text(encoding="utf-8"))
+        else:  # PC 기록이 없는 날: 장마감 리포트 HTML에 들어 있는 /api/futures 응답(선물 1분봉 + 마감 수급)
+            h = next(day_dir.glob("*.html"), None)
+            txt = h.read_text(encoding="utf-8") if h else ""
+            i = txt.find('"/api/futures?minutes=1": {')
+            if i < 0:
+                return ""
+            raw = json.JSONDecoder().raw_decode(txt[txt.index("{", i):])[0]
+        data = json.dumps(_fut_data(raw), ensure_ascii=False).replace("</", "<\\/")
+    except (ValueError, KeyError, TypeError, AttributeError):
         return ""
     return (f'{FUT_CSS}<div class="box fut"><h3>선물지수 · 외국인 선물 순매수 (분 단위)</h3><div></div></div>{FUT_JS}'
             f'<script>(function(b){{if(!futChart(b.lastChild,{data}))b.remove()}})'
