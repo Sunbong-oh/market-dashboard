@@ -274,10 +274,10 @@ def watchlist():
 
 
 def stock_news(name, limit=6):
-    """종목명이 제목에 들어간 최근 3일 기사 (해외 스팸·칼럼·추천성 기사 제외)."""
+    """종목명이 제목에 들어간 최근 7일 기사 (해외 스팸·칼럼·추천성 기사 제외)."""
     key = re.sub(r"\s+", "", name)
-    since = datetime.now(d.KST).timestamp() - 3 * 86400
-    items = [x for x in d.google_news(f'"{name}" when:3d')
+    since = datetime.now(d.KST).timestamp() - 7 * 86400
+    items = [x for x in d.google_news(f'"{name}" when:7d')
              if key in re.sub(r"\s+", "", x["raw"]) and x["ts"] >= since
              and not d.CLICKBAIT.search(x["title"]) and not d.FOREIGN_SRC.search(x["src"])
              and (re.search(r"[가-힣]", x["src"]) or d.KR_LATIN_SRC.search(x["src"]))
@@ -344,8 +344,8 @@ def stock_reports(code, limit=4):
         print("리포트 수집 실패:", code, type(e).__name__, e, file=sys.stderr)
         return []
     out = []
-    for tr in re.findall(r"<tr>(.*?)</tr>", html, re.S):
-        m = re.search(r'href="(company_read\.naver\?[^"]+)"[^>]*>(.*?)</a>', tr, re.S)
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S | re.I):
+        m = re.search(r'href="[^"]*?(company_read\.naver\?[^"]+)"[^>]*>(.*?)</a>', tr, re.S | re.I)
         if not m:
             continue
         tds = [re.sub(r"<[^>]+>", "", t).strip() for t in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
@@ -356,6 +356,8 @@ def stock_reports(code, limit=4):
                         link=pdf.group(1) if pdf else "https://finance.naver.com/research/" + unescape(m.group(1))))
         if len(out) >= limit:
             break
+    if not out:
+        print("리포트 0건:", code, len(html), "bytes, company_read 링크", html.count("company_read"), file=sys.stderr)
     return out
 
 
@@ -439,7 +441,7 @@ def stocks_block(stocks):
             f'<a class="x" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>'
             f'<h4>📢 공시 · 수주</h4>{_mini(dis, "최근 공시 없음")}'
             f'<h4>📝 증권사 리포트</h4>{_mini(rep, "최근 리포트 없음")}'
-            f'<h4>📰 뉴스</h4>{_mini(news, "최근 3일 기사 없음")}</div>')
+            f'<h4>📰 뉴스</h4>{_mini(news, "최근 7일 기사 없음")}</div>')
     cards = "".join(cards)
     empty = '' if stocks else '<p class="err">아직 종목이 없습니다. 위 칸에 종목명을 적고 추가를 누르세요.</p>'
     return (f'<style>{STOCK_CSS}</style><section class="panel" id="stocks"><div class="tag c">관심 종목 공시 · 리포트 · 뉴스</div>'
@@ -459,7 +461,7 @@ def build_stocks(now):
     (OUT / "stocks").mkdir(parents=True, exist_ok=True)
     (OUT / "stocks" / "index.html").write_text(
         page("관심 종목 뉴스", body, "../", "stocks/", "MY STOCKS",
-             f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 종목별 최근 3일 기사"), encoding="utf-8")
+             f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 종목별 공시·리포트·최근 7일 기사"), encoding="utf-8")
     return dict(body=body, at=now, n=len(stocks))
 
 
