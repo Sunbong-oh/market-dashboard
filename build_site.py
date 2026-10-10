@@ -273,15 +273,48 @@ def watchlist():
     return names
 
 
-def stock_news(name, limit=6):
-    """종목명이 제목에 들어간 최근 7일 기사 (해외 스팸·칼럼·추천성 기사 제외)."""
+def naver_stock_news(code, since):
+    """네이버 증권 종목 뉴스 (종목코드로 묶인 기사라 제목에 종목명이 없어도 나온다)."""
+    if not code:
+        return []
+    try:
+        data = json.loads(_get(f"https://m.stock.naver.com/api/news/stock/{code}?pageSize=30&page=1"))
+    except Exception as e:
+        print("네이버 종목뉴스 실패:", code, type(e).__name__, e, file=sys.stderr)
+        return []
+    rows = []
+    for g in data if isinstance(data, list) else [data]:
+        rows += g.get("items") or [] if isinstance(g, dict) and "items" in g else [g] if isinstance(g, dict) else []
+    out = []
+    for r in rows:
+        title = unescape(re.sub(r"<[^>]+>", "", str(r.get("title") or r.get("titleFull") or ""))).strip()
+        dt = re.sub(r"\D", "", str(r.get("datetime") or r.get("dateTime") or ""))[:12]
+        if not title or len(dt) < 8:
+            continue
+        try:
+            ts = datetime.strptime(dt.ljust(12, "0"), "%Y%m%d%H%M").replace(tzinfo=d.KST).timestamp()
+        except ValueError:
+            continue
+        oid, aid = r.get("officeId"), r.get("articleId")
+        link = (f"https://n.news.naver.com/mnews/article/{oid}/{aid}" if oid and aid
+                else f"https://m.stock.naver.com/domestic/stock/{code}/news")
+        if ts >= since:
+            out.append(dict(raw=title, title=title, src=str(r.get("officeName") or "네이버"), link=link, ts=ts))
+    return out
+
+
+def stock_news(name, code="", limit=8):
+    """최근 7일 종목 뉴스: 네이버 종목뉴스 + Google 뉴스(제목에 종목명), 최신순·중복 제거, 칼럼·추천성·해외 스팸 제외."""
     key = re.sub(r"\s+", "", name)
     since = datetime.now(d.KST).timestamp() - 7 * 86400
-    items = [x for x in d.google_news(f'"{name}" when:7d')
-             if key in re.sub(r"\s+", "", x["raw"]) and x["ts"] >= since
-             and not d.CLICKBAIT.search(x["title"]) and not d.FOREIGN_SRC.search(x["src"])
-             and (re.search(r"[가-힣]", x["src"]) or d.KR_LATIN_SRC.search(x["src"]))
-             and not x["src"].startswith(d.KR_SKIP_SRC)]
+    google = [x for x in d.google_news(f"{name} when:7d")
+              if key in re.sub(r"\s+", "", x["raw"]) and x["ts"] >= since
+              and not d.FOREIGN_SRC.search(x["src"])
+              and (re.search(r"[가-힣]", x["src"]) or d.KR_LATIN_SRC.search(x["src"]))
+              and not x["src"].startswith(d.KR_SKIP_SRC)]
+    naver = naver_stock_news(code, since)
+    items = [x for x in naver + google if not d.CLICKBAIT.search(x["title"])]
+    print(f"  뉴스 후보 {name}: 네이버 {len(naver)} 구글 {len(google)}", file=sys.stderr)
     return d.rank(items, limit=limit)
 
 
@@ -311,7 +344,7 @@ def stock_code(name, txt=""):
 ORDER = re.compile(r"공급계약|수주|판매ㆍ공급|판매·공급|계약 ?체결")
 
 
-def stock_disclosures(code, limit=6):
+def stock_disclosures(code, limit=2):
     """네이버 증권(전자공시 DART 연동) 최근 공시. 수주(단일판매·공급계약)는 따로 표시."""
     if not code:
         return []
@@ -364,7 +397,7 @@ def stock_reports(code, limit=4):
 def stock_info(name, fname):
     txt = (WATCH / fname).read_text(encoding="utf-8")
     code = stock_code(name, txt)
-    info = dict(name=name, fname=fname, code=code, news=stock_news(name), dis=stock_disclosures(code), rep=stock_reports(code))
+    info = dict(name=name, fname=fname, code=code, news=stock_news(name, code), dis=stock_disclosures(code), rep=stock_reports(code))
     print(f"관심종목 {name}({code or '?'}): 공시 {len(info['dis'])} 리포트 {len(info['rep'])} 뉴스 {len(info['news'])}", file=sys.stderr)
     return info
 
@@ -435,18 +468,19 @@ def stocks_block(stocks):
         news = [dict(link=n["link"], title=n["title"], sub=f'{n["src"]} · {datetime.fromtimestamp(n["ts"], d.KST):%m/%d %H:%M}')
                 for n in x["news"]]
         code = f' <small>{x["code"]}</small>' if x["code"] else ""
+        rep_html = f'<h4>📝 증권사 리포트</h4>{_mini(rep, "")}' if rep else ""
         cards.append(
             f'<div class="card stk" data-name="{escape(x["name"])}"><h3>{escape(x["name"])}{code}'
             f'<label><input type="checkbox"> 이 손님 종목</label>'
             f'<a class="x" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>'
-            f'<h4>📢 공시 · 수주</h4>{_mini(dis, "최근 공시 없음")}'
-            f'<h4>📝 증권사 리포트</h4>{_mini(rep, "최근 리포트 없음")}'
-            f'<h4>📰 뉴스</h4>{_mini(news, "최근 7일 기사 없음")}</div>')
+            f'<h4>📰 뉴스 (최근 1주일)</h4>{_mini(news, "최근 1주일 기사 없음")}'
+            f'<h4>📢 최근 공시</h4>{_mini(dis, "최근 공시 없음")}'
+            f'{rep_html}</div>')
     cards = "".join(cards)
     empty = '' if stocks else '<p class="err">아직 종목이 없습니다. 위 칸에 종목명을 적고 추가를 누르세요.</p>'
     return (f'<style>{STOCK_CSS}</style><section class="panel" id="stocks"><div class="tag c">관심 종목 공시 · 리포트 · 뉴스</div>'
             f'<form class="stk-add"><input placeholder="종목명 (예: 삼성전자)" enterkeyhint="done"><button>추가</button></form>'
-            f'<p class="meta">추가를 누르면 GitHub 저장 화면이 열려요 → 초록색 <b>Commit changes</b>를 누르면 2~3분 뒤 공시·리포트·뉴스가 붙어요 (🔴 = 수주·공급계약 공시). '
+            f'<p class="meta">추가를 누르면 GitHub 저장 화면이 열려요 → 초록색 <b>Commit changes</b>를 누르면 2~3분 뒤 1주일 뉴스·최근 공시가 붙어요 (🔴 = 수주·공급계약 공시). '
             f'손님 구분은 이 핸드폰에만 저장되고 사이트에는 종목 이름만 보여요.</p>'
             f'<div class="cus"></div><p class="err none" hidden>이 손님에게 고른 종목이 없어요. "종목 고르기"를 눌러 체크하세요.</p>'
             f'<div class="stks">{cards}</div>{empty}</section>{STOCK_JS}')
