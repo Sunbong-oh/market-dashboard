@@ -431,6 +431,7 @@ STOCK_CSS = """
 .stk h3{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:18px}.stk h3 .x{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none}
 .stk h3 label{font-size:13px;font-weight:700;color:var(--accent);display:none}.editing .stk h3 label{display:inline}
 .stk .items li{font-size:15px}.stk[hidden]{display:none}
+.who{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:15px}.who small{color:var(--muted)}
 .stk h4{margin:12px 0 4px;font-size:14px;color:var(--muted)}.stk h3 small{font-size:12px;color:var(--muted);font-weight:600}
 .mini{list-style:none;margin:0;padding:0}.mini li{padding:6px 0;border-top:1px solid var(--line);font-size:15px;font-weight:700;line-height:1.4}
 .mini li:first-child{border-top:0}.mini a{text-decoration:none}.mini span{display:block;font-size:12px;font-weight:400;color:var(--muted)}
@@ -440,14 +441,26 @@ STOCK_JS = """<script>
 (function(){var KEY='brian-customers',box=document.getElementById('stocks');if(!box)return;
  try{var q=new URLSearchParams(location.search).get('admin');if(q==='brian')localStorage.setItem('brian-admin','1');if(q==='off')localStorage.removeItem('brian-admin');
   if(localStorage.getItem('brian-admin')==='1')box.classList.add('admin')}catch(e){}
- if(!box.classList.contains('admin')){box.classList.remove('editing');return}
+ function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ if(!box.classList.contains('admin')){
+  /* 손님 링크(#c=이름&s=종목,종목): 그 손님 종목만 보여 준다. 주소 # 뒤는 서버로 가지 않고, 이 폰에만 기억한다. */
+  var v=null;try{var h=new URLSearchParams(location.hash.slice(1));
+   if(h.get('s')){v={c:h.get('c')||'',s:h.get('s').split(',').map(function(x){return x.trim()}).filter(Boolean)};localStorage.setItem('brian-view',JSON.stringify(v))}
+   else v=JSON.parse(localStorage.getItem('brian-view')||'null')}catch(e){}
+  if(v&&v.s&&v.s.length){var have=[],norm=function(t){return t.replace(/\\s/g,'')},want=v.s.map(norm);
+   box.querySelectorAll('.stk').forEach(function(c){var k=norm(c.dataset.name),on=want.indexOf(k)>=0;c.hidden=!on;if(on)have.push(k)});
+   var miss=v.s.filter(function(x){return have.indexOf(norm(x))<0});
+   var w=document.createElement('p');w.className='who';
+   w.innerHTML='👤 <b>'+esc(v.c||'')+'</b>'+(v.c?'님 ':'')+'관심 종목 '+v.s.map(esc).join(' · ')+(miss.length?'<br><small>준비 중: '+miss.map(esc).join(', ')+'</small>':'');
+   box.insertBefore(w,box.querySelector('.stks'))}
+  return}
  var st;try{st=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){st={}}st.c=st.c||{};
  var cur=st.cur||'',editing=false;
  function save(){st.cur=cur;try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
  function cards(){return box.querySelectorAll('.stk')}
  function draw(){var row=box.querySelector('.cus'),h='<button data-c="" class="'+(cur?'':'on')+'">전체</button>';
   Object.keys(st.c).sort().forEach(function(n){h+='<button data-c="'+n.replace(/"/g,'&quot;')+'" class="'+(n===cur?'on':'')+'">'+n.replace(/</g,'&lt;')+'</button>'});
-  h+='<button data-a="add" class="ed">+ 손님</button>'+(cur?'<button data-a="edit" class="ed">'+(editing?'완료':'종목 고르기')+'</button><button data-a="del" class="ed">손님 삭제</button>':'');
+  h+='<button data-a="add" class="ed">+ 손님</button>'+(cur?'<button data-a="link" class="ed">🔗 손님 링크</button><button data-a="edit" class="ed">'+(editing?'완료':'종목 고르기')+'</button><button data-a="del" class="ed">손님 삭제</button>':'');
   row.innerHTML=h;box.classList.toggle('editing',editing&&!!cur);
   var mine=cur?st.c[cur]||[]:null;
   cards().forEach(function(c){var n=c.dataset.name,cb=c.querySelector('input');cb.checked=!!mine&&mine.indexOf(n)>=0;
@@ -455,6 +468,11 @@ STOCK_JS = """<script>
   var e=box.querySelector('.none');if(e)e.hidden=!(mine&&!editing&&!mine.length)}
  box.addEventListener('click',function(ev){var b=ev.target.closest('.cus button');if(!b)return;
   if(b.dataset.a==='add'){var n=(prompt('손님 이름 (이 핸드폰에만 저장돼요)')||'').trim();if(n){st.c[n]=st.c[n]||[];cur=n;editing=true}}
+  else if(b.dataset.a==='link'){var l=st.c[cur]||[];if(!l.length){alert('먼저 "종목 고르기"로 이 손님 종목을 체크하세요.');return}
+   var url=location.origin+location.pathname.replace(/stocks\\/.*$/,'').replace(/index\\.html$/,'')+'#c='+encodeURIComponent(cur)+'&s='+encodeURIComponent(l.join(','));
+   if(navigator.share){navigator.share({title:cur+'님 관심 종목',url:url}).catch(function(){})}
+   else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){alert('링크를 복사했어요. 카톡·문자에 붙여 넣으세요.\\n'+url)},function(){prompt('이 링크를 복사하세요',url)})}
+   else prompt('이 링크를 복사하세요',url);return}
   else if(b.dataset.a==='edit')editing=!editing;
   else if(b.dataset.a==='del'){if(confirm(cur+' 손님을 지울까요? (종목 뉴스는 그대로 남아요)')){delete st.c[cur];cur='';editing=false}}
   else{cur=b.dataset.c;editing=false}
