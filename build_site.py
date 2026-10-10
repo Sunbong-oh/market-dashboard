@@ -285,6 +285,96 @@ def stock_news(name, limit=6):
     return d.rank(items, limit=limit)
 
 
+def _get(url, enc="utf-8"):
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": d.UA, "Referer": "https://m.stock.naver.com/"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return r.read().decode(enc, "replace")
+
+
+def stock_code(name, txt=""):
+    """종목코드 6자리: 파일에 적혀 있으면 그것, 아니면 네이버 증권 검색."""
+    m = re.search(r"\b(\d{6})\b", txt)
+    if m:
+        return m.group(1)
+    try:
+        import urllib.parse
+        data = json.loads(_get("https://ac.stock.naver.com/ac?target=stock&q=" + urllib.parse.quote(name)))
+        items = [x for x in data.get("items") or [] if re.fullmatch(r"\d{6}", str(x.get("code", "")))]
+        exact = [x for x in items if re.sub(r"\s+", "", x.get("name", "")) == re.sub(r"\s+", "", name)]
+        return str((exact or items)[0]["code"]) if items else ""
+    except Exception as e:
+        print("종목코드 검색 실패:", name, type(e).__name__, e, file=sys.stderr)
+        return ""
+
+
+ORDER = re.compile(r"공급계약|수주|판매ㆍ공급|판매·공급|계약 ?체결")
+
+
+def stock_disclosures(code, limit=6):
+    """네이버 증권(전자공시 DART 연동) 최근 공시. 수주(단일판매·공급계약)는 따로 표시."""
+    if not code:
+        return []
+    try:
+        data = json.loads(_get(f"https://m.stock.naver.com/api/stock/{code}/disclosure?page=1&pageSize=15"))
+    except Exception as e:
+        print("공시 수집 실패:", code, type(e).__name__, e, file=sys.stderr)
+        return []
+    rows = data if isinstance(data, list) else next((v for v in data.values() if isinstance(v, list)), []) if isinstance(data, dict) else []
+    out = []
+    for r in rows[:limit * 2]:
+        title = next((r[k] for k in ("title", "disclosureTitle", "reportNm") if r.get(k)), "")
+        when = next((str(r[k]) for k in ("datetime", "dateTime", "date", "rceptDt", "disclosureDate") if r.get(k)), "")
+        rid = next((str(r[k]) for k in ("rceptNo", "rcpNo", "disclosureId", "id") if r.get(k)), "")
+        if not title:
+            continue
+        link = (f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={rid}" if re.fullmatch(r"\d{14}", rid)
+                else f"https://m.stock.naver.com/domestic/stock/{code}/disclosure")
+        out.append(dict(title=title.strip(), when=re.sub(r"[^0-9]", "", when)[:8], link=link, order=bool(ORDER.search(title))))
+    return out[:limit]
+
+
+def stock_reports(code, limit=4):
+    """네이버 증권 리서치 - 종목분석 리포트 (증권사, 날짜, PDF)."""
+    if not code:
+        return []
+    try:
+        html = _get(f"https://finance.naver.com/research/company_list.naver?searchType=itemCode&itemCode={code}", "euc-kr")
+    except Exception as e:
+        print("리포트 수집 실패:", code, type(e).__name__, e, file=sys.stderr)
+        return []
+    out = []
+    for tr in re.findall(r"<tr>(.*?)</tr>", html, re.S):
+        m = re.search(r'href="(company_read\.naver\?[^"]+)"[^>]*>(.*?)</a>', tr, re.S)
+        if not m:
+            continue
+        tds = [re.sub(r"<[^>]+>", "", t).strip() for t in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
+        pdf = re.search(r'href="(https?://[^"]+\.pdf)"', tr)
+        date = next((t for t in tds if re.fullmatch(r"\d{2}\.\d{2}\.\d{2}", t)), "")
+        broker = tds[2] if len(tds) > 2 else ""
+        out.append(dict(title=unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip(), broker=unescape(broker), date=date,
+                        link=pdf.group(1) if pdf else "https://finance.naver.com/research/" + unescape(m.group(1))))
+        if len(out) >= limit:
+            break
+    return out
+
+
+def stock_info(name, fname):
+    txt = (WATCH / fname).read_text(encoding="utf-8")
+    code = stock_code(name, txt)
+    info = dict(name=name, fname=fname, code=code, news=stock_news(name), dis=stock_disclosures(code), rep=stock_reports(code))
+    print(f"관심종목 {name}({code or '?'}): 공시 {len(info['dis'])} 리포트 {len(info['rep'])} 뉴스 {len(info['news'])}", file=sys.stderr)
+    return info
+
+
+def _mini(rows, empty):
+    if not rows:
+        return f'<p class="none2">{empty}</p>'
+    return '<ul class="mini">' + "".join(
+        f'<li{" class=ord" if r.get("order") else ""}><a href="{escape(r["link"])}" target="_blank" rel="noopener">'
+        f'{"🔴 " if r.get("order") else ""}{escape(r["title"])}</a><span>{escape(r["sub"])}</span></li>' for r in rows) + "</ul>"
+
+
 STOCK_CSS = """
 .stk-add{display:flex;gap:8px;margin:10px 0 4px}.stk-add input{flex:1;min-width:0;font:inherit;font-size:16px;padding:9px 12px;
  border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
@@ -295,6 +385,10 @@ STOCK_CSS = """
 .stk h3{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:18px}.stk h3 .x{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none}
 .stk h3 label{font-size:13px;font-weight:700;color:var(--accent);display:none}.editing .stk h3 label{display:inline}
 .stk .items li{font-size:15px}.stk[hidden]{display:none}
+.stk h4{margin:12px 0 4px;font-size:14px;color:var(--muted)}.stk h3 small{font-size:12px;color:var(--muted);font-weight:600}
+.mini{list-style:none;margin:0;padding:0}.mini li{padding:6px 0;border-top:1px solid var(--line);font-size:15px;font-weight:700;line-height:1.4}
+.mini li:first-child{border-top:0}.mini a{text-decoration:none}.mini span{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.mini li.ord a{color:#e03131}.none2{margin:2px 0;font-size:13px;color:var(--muted)}
 """
 STOCK_JS = """<script>
 (function(){var KEY='brian-customers',box=document.getElementById('stocks');if(!box)return;
@@ -322,6 +416,7 @@ STOCK_JS = """<script>
  box.querySelector('.stk-add').addEventListener('submit',function(ev){ev.preventDefault();
   var inp=this.querySelector('input'),n=inp.value.replace(/[\\\\/:*?"<>|#%%]/g,'').trim();if(!n)return;
   if(cur){var l=st.c[cur]=st.c[cur]||[];if(l.indexOf(n)<0)l.push(n);save()}
+  if([].some.call(cards(),function(c){return c.dataset.name.replace(/\\s/g,'')===n.replace(/\\s/g,'')})){alert(n+'은(는) 이미 추가된 종목이에요.');inp.value='';draw();return}
   window.open('%s/new/main/watchlist?filename='+encodeURIComponent(n+'.txt')+'&value='+encodeURIComponent(n),'_blank');inp.value=''});
  draw()})();
 </script>""" % REPO_URL
@@ -329,15 +424,27 @@ STOCK_JS = """<script>
 
 def stocks_block(stocks):
     """관심 종목 입력칸 + 손님 고르기 + 종목별 뉴스 카드."""
-    cards = "".join(
-        f'<div class="card stk" data-name="{escape(name)}"><h3>{escape(name)}'
-        f'<label><input type="checkbox"> 이 손님 종목</label>'
-        f'<a class="x" href="{REPO_URL}/delete/main/watchlist/{escape(fname)}" target="_blank" rel="noopener">삭제</a></h3>'
-        f'{news_items(items)}</div>' for name, fname, items in stocks)
+    def ymd(v):
+        return f"{v[2:4]}.{v[4:6]}.{v[6:8]}" if len(v) == 8 else v
+    cards = []
+    for x in stocks:
+        dis = [dict(r, sub=ymd(r["when"])) for r in x["dis"]]
+        rep = [dict(r, sub=f'{r["broker"]} · {r["date"]}') for r in x["rep"]]
+        news = [dict(link=n["link"], title=n["title"], sub=f'{n["src"]} · {datetime.fromtimestamp(n["ts"], d.KST):%m/%d %H:%M}')
+                for n in x["news"]]
+        code = f' <small>{x["code"]}</small>' if x["code"] else ""
+        cards.append(
+            f'<div class="card stk" data-name="{escape(x["name"])}"><h3>{escape(x["name"])}{code}'
+            f'<label><input type="checkbox"> 이 손님 종목</label>'
+            f'<a class="x" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>'
+            f'<h4>📢 공시 · 수주</h4>{_mini(dis, "최근 공시 없음")}'
+            f'<h4>📝 증권사 리포트</h4>{_mini(rep, "최근 리포트 없음")}'
+            f'<h4>📰 뉴스</h4>{_mini(news, "최근 3일 기사 없음")}</div>')
+    cards = "".join(cards)
     empty = '' if stocks else '<p class="err">아직 종목이 없습니다. 위 칸에 종목명을 적고 추가를 누르세요.</p>'
-    return (f'<style>{STOCK_CSS}</style><section class="panel" id="stocks"><div class="tag c">관심 종목 뉴스</div>'
+    return (f'<style>{STOCK_CSS}</style><section class="panel" id="stocks"><div class="tag c">관심 종목 공시 · 리포트 · 뉴스</div>'
             f'<form class="stk-add"><input placeholder="종목명 (예: 삼성전자)" enterkeyhint="done"><button>추가</button></form>'
-            f'<p class="meta">추가를 누르면 GitHub 저장 화면이 열려요 → 초록색 <b>Commit changes</b>를 누르면 2~3분 뒤 뉴스가 붙어요. '
+            f'<p class="meta">추가를 누르면 GitHub 저장 화면이 열려요 → 초록색 <b>Commit changes</b>를 누르면 2~3분 뒤 공시·리포트·뉴스가 붙어요 (🔴 = 수주·공급계약 공시). '
             f'손님 구분은 이 핸드폰에만 저장되고 사이트에는 종목 이름만 보여요.</p>'
             f'<div class="cus"></div><p class="err none" hidden>이 손님에게 고른 종목이 없어요. "종목 고르기"를 눌러 체크하세요.</p>'
             f'<div class="stks">{cards}</div>{empty}</section>{STOCK_JS}')
@@ -347,8 +454,7 @@ def build_stocks(now):
     from concurrent.futures import ThreadPoolExecutor
     names = watchlist()
     with ThreadPoolExecutor(8) as ex:
-        news = list(ex.map(lambda nf: stock_news(nf[0]), names))
-    stocks = [(n, f, items) for (n, f), items in zip(names, news)]
+        stocks = list(ex.map(lambda nf: stock_info(*nf), names))
     body = stocks_block(stocks)
     (OUT / "stocks").mkdir(parents=True, exist_ok=True)
     (OUT / "stocks" / "index.html").write_text(
