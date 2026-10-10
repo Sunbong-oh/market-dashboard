@@ -378,10 +378,76 @@ def close_extra_lines(lines):
     return out, one
 
 
-def _tmin(t):
-    """'0915' -> 08:45부터 지난 분."""
-    t = str(t).zfill(4)
-    return (int(t[:2]) * 60 + int(t[2:4])) - (8 * 60 + 45)
+FUT_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/futures_flow.json?ref=flow-live",
+           "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/futures_flow.json")
+FUT_CSS = """<style>
+.fut{font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#1c2330}
+.fut .sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+.fut .card{border-radius:12px;padding:10px 12px;background:#f4f5f8}
+.fut .card small{display:block;font-size:12px;color:#6b7385;font-weight:700}
+.fut .card b{display:block;font-size:24px;line-height:1.25;letter-spacing:-.5px}
+.fut .card span{display:block;font-size:13px;font-weight:700}
+.fut .up{background:#fff0f0}.fut .up b,.fut .up span{color:#e03131}
+.fut .dn{background:#eef4ff}.fut .dn b,.fut .dn span{color:#1c6dd0}
+.fut .lg{margin:0 0 6px;font-size:12.5px;color:#6b7385}.fut .lg i{font-style:normal;font-weight:800}
+.fut .note{margin:6px 0 0;font-size:12px;color:#8a92a3}
+.fut .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e03131;margin-right:5px;animation:futp 1.4s infinite}
+@keyframes futp{50%{opacity:.25}}
+</style>"""
+# 선물 교차 차트: 장마감 페이지(저장된 json)와 홈 실시간 박스(flow-live 브랜치)에서 같은 함수로 그린다.
+FUT_JS = r"""<script>
+function futChart(el,d,live){
+ var tm=function(t){t=String(t);while(t.length<4)t='0'+t;return (+t.slice(0,2))*60+(+t.slice(2,4))-525};
+ var ok=function(m){return m>=0&&m<=420};
+ var bars=(d.bars||[]).filter(function(b){return b.c!=null}).map(function(b){return [tm(b.t),b.c]}).filter(function(p){return ok(p[0])});
+ var fl=(d.flows||[]).filter(function(r){return r['외국인']!=null}).map(function(r){return [tm(r.t),r['외국인']]}).filter(function(p){return ok(p[0])});
+ if(bars.length<2||fl.length<2)return false;
+ var F=d.futures||{},last=bars[bars.length-1][1],prev=(F.price!=null&&F.change!=null)?F.price-F.change:bars[0][1];
+ var W=640,H=330,L=88,R=548,T=16,B=276,x=function(m){return L+(R-L)*m/420};
+ var sc=function(v,inc){var lo=Math.min.apply(0,v.concat([inc])),hi=Math.max.apply(0,v.concat([inc])),p=(hi-lo)*.08||1;lo-=p;hi+=p;
+   return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
+ var sf=sc(bars.map(function(p){return p[1]}),prev),sg=sc(fl.map(function(p){return p[1]}),0);
+ var path=function(ps,y){return 'M'+ps.map(function(p){return x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)}).join(' L')};
+ var n0=function(v){return Math.round(v).toLocaleString('ko-KR')},sg0=function(v){return (v>0?'+':v<0?'−':'')+n0(Math.abs(v))};
+ var yp=sf.y(prev),o=Math.max(0,Math.min(1,(yp-T)/(B-T))).toFixed(3),id='fg'+Math.random().toString(36).slice(2,7);
+ var g='<defs><linearGradient id="'+id+'" gradientUnits="userSpaceOnUse" x1="0" y1="'+T+'" x2="0" y2="'+B+'">'+
+  '<stop offset="'+o+'" stop-color="#e03131"/><stop offset="'+o+'" stop-color="#1c6dd0"/></linearGradient></defs>';
+ var grid=['0900','1100','1300','1500'].map(function(t){var X=x(tm(t));return '<line x1="'+X+'" y1="'+T+'" x2="'+X+'" y2="'+B+'" stroke="#e3e6ec"/>'+
+  '<text x="'+X+'" y="'+(B+26)+'" text-anchor="middle">'+t.slice(0,2)+':'+t.slice(2)+'</text>'}).join('');
+ var area=path(bars,sf.y)+' L'+x(bars[bars.length-1][0]).toFixed(1)+','+yp.toFixed(1)+' L'+x(bars[0][0]).toFixed(1)+','+yp.toFixed(1)+' Z';
+ var yz=sg.y(0),lf=bars[bars.length-1],lg=fl[fl.length-1];
+ var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="KOSPI200 선물과 외국인 선물 순매수 누적" style="font:18px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'+g+
+  '<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(B-T)+'" fill="#fff" stroke="#e3e6ec"/>'+grid+
+  '<path d="'+area+'" fill="url(#'+id+')" opacity=".13"/>'+
+  '<line x1="'+L+'" y1="'+yp.toFixed(1)+'" x2="'+R+'" y2="'+yp.toFixed(1)+'" stroke="#495057" stroke-dasharray="5 4" opacity=".6"/>'+
+  '<text x="'+(L-6)+'" y="'+(yp+6).toFixed(1)+'" text-anchor="end" fill="#495057" font-weight="700">'+prev.toFixed(2)+'</text>'+
+  (yp-T>30?'<text x="'+(L-6)+'" y="'+(T+16)+'" text-anchor="end">'+sf.hi.toFixed(1)+'</text>':'')+
+  (B-yp>30?'<text x="'+(L-6)+'" y="'+B+'" text-anchor="end">'+sf.lo.toFixed(1)+'</text>':'')+
+  '<line x1="'+L+'" y1="'+yz.toFixed(1)+'" x2="'+R+'" y2="'+yz.toFixed(1)+'" stroke="#f08c00" stroke-dasharray="2 4" opacity=".7"/>'+
+  '<text x="'+(R+6)+'" y="'+(T+16)+'" fill="#e67700">'+sg0(sg.hi)+'</text><text x="'+(R+6)+'" y="'+B+'" fill="#e67700">'+sg0(sg.lo)+'</text>'+
+  (yz-T>36&&B-yz>26?'<text x="'+(R+6)+'" y="'+(yz+6).toFixed(1)+'" fill="#e67700">0</text>':'')+
+  '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#f59f00" stroke-width="2.6" stroke-linejoin="round"/>'+
+  '<path d="'+path(bars,sf.y)+'" fill="none" stroke="url(#'+id+')" stroke-width="2.4" stroke-linejoin="round"/>'+
+  '<circle cx="'+x(lf[0]).toFixed(1)+'" cy="'+sf.y(lf[1]).toFixed(1)+'" r="5" fill="'+(lf[1]>=prev?'#e03131':'#1c6dd0')+'"/>'+
+  '<circle cx="'+x(lg[0]).toFixed(1)+'" cy="'+sg.y(lg[1]).toFixed(1)+'" r="5" fill="#f59f00"/></svg>';
+ var ch=last-prev,pct=prev?ch/prev*100:0,fu=ch>0?'up':ch<0?'dn':'',ar=ch>0?'▲':ch<0?'▼':'–';
+ var back=fl.filter(function(p){return p[0]<=lg[0]-30}),d30=back.length?lg[1]-back[back.length-1][1]:null;
+ var gu=lg[1]>0?'up':lg[1]<0?'dn':'';
+ var rest=(d.flows||[]).slice(-1)[0]||{},oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])+'억'}).join(' · ');
+ var hhmm=String(lf[0]+525>=0?Math.floor((lf[0]+525)/60):0)+':'+('0'+((lf[0]+525)%60)).slice(-2);
+ el.innerHTML='<div class="sum"><div class="card '+fu+'"><small>KOSPI200 선물</small><b>'+last.toFixed(2)+'</b><span>'+ar+' '+Math.abs(ch).toFixed(2)+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</span></div>'+
+  '<div class="card '+gu+'"><small>외국인 선물 누적</small><b>'+sg0(lg[1])+'억</b><span>'+(lg[1]>0?'순매수':lg[1]<0?'순매도':'')+
+  (d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+(d30>0?' 사는 중':d30<0?' 파는 중':''):'')+'</span></div></div>'+
+  '<p class="lg"><i style="color:#e03131">━</i><i style="color:#1c6dd0">━</i> 선물 (좌, 전일 종가 '+prev.toFixed(2)+' 위 빨강 · 아래 파랑) · <i style="color:#f59f00">━</i> 외국인 누적 (우, 억원)'+(oth?' · '+oth:'')+'</p>'+svg+
+  '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 회사 PC가 1분마다 올리고 이 화면은 1~2분마다 자동 갱신':'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)')+'</p>';
+ return true}
+</script>"""
+
+
+def _fut_data(d):
+    keep = ("t", "외국인", "기관계", "개인")
+    return {"futures": d.get("futures"), "bars": [{"t": b["t"], "c": b.get("c")} for b in d.get("bars") or []],
+            "flows": [{k: r[k] for k in keep if k in r} for r in d.get("flows") or []]}
 
 
 def futures_chart(day_dir):
@@ -390,52 +456,28 @@ def futures_chart(day_dir):
     if not f.exists():
         return ""
     try:
-        d = json.loads(f.read_text(encoding="utf-8"))
-    except ValueError:
+        data = json.dumps(_fut_data(json.loads(f.read_text(encoding="utf-8"))), ensure_ascii=False).replace("</", "<\\/")
+    except (ValueError, KeyError, TypeError):
         return ""
-    bars = [(_tmin(b["t"]), b["c"]) for b in d.get("bars") or [] if b.get("c") is not None and 0 <= _tmin(b["t"]) <= 420]
-    flows = [(_tmin(r["t"]), r["외국인"]) for r in d.get("flows") or []
-             if r.get("외국인") is not None and 0 <= _tmin(r["t"]) <= 420]
-    if len(bars) < 2 or len(flows) < 2:
-        return ""
-    W, H, L, R, T, B = 640, 320, 92, 548, 20, 270
-    x = lambda m: L + (R - L) * m / 420
+    return (f'{FUT_CSS}<div class="box fut"><h3>선물지수 · 외국인 선물 순매수 (분 단위)</h3><div></div></div>{FUT_JS}'
+            f'<script>(function(b){{if(!futChart(b.lastChild,{data}))b.remove()}})'
+            f'(document.currentScript.previousElementSibling.previousElementSibling)</script>')
 
-    def scale(vals, zero=False):
-        lo, hi = min(vals), max(vals)
-        if zero:
-            lo, hi = min(lo, 0), max(hi, 0)
-        pad = (hi - lo) * 0.08 or 1
-        lo, hi = lo - pad, hi + pad
-        return lo, hi, (lambda v: B - (B - T) * (v - lo) / (hi - lo))
 
-    flo, fhi, yf = scale([c for _, c in bars])
-    glo, ghi, yg = scale([v for _, v in flows], zero=True)
-    path = lambda pts, y: "M" + " L".join(f"{x(m):.1f},{y(v):.1f}" for m, v in pts)
-    grid = "".join(f'<line x1="{x(_tmin(t))}" y1="{T}" x2="{x(_tmin(t))}" y2="{B}" stroke="#e3e6ec"/>'
-                   f'<text x="{x(_tmin(t))}" y="{B + 26}" text-anchor="middle">{t[:2]}:{t[2:]}</text>'
-                   for t in ("0900", "1100", "1300", "1500"))
-    zero = (f'<line x1="{L}" y1="{yg(0):.1f}" x2="{R}" y2="{yg(0):.1f}" stroke="#e03131" stroke-dasharray="4 4" opacity=".45"/>'
-            + (f'<text x="{R + 6}" y="{yg(0) + 6:.1f}" fill="#e03131">0</text>'
-               if T + 36 < yg(0) < B - 26 else ""))
-    fmt = lambda v: f"{v:+,.0f}"
-    axes = (f'<text x="{L - 6}" y="{T + 16}" text-anchor="end">{fhi:,.1f}</text>'
-            f'<text x="{L - 6}" y="{B}" text-anchor="end">{flo:,.1f}</text>'
-            f'<text x="{R + 6}" y="{T + 16}" fill="#e03131">{fmt(ghi)}</text>'
-            f'<text x="{R + 6}" y="{B}" fill="#e03131">{fmt(glo)}</text>')
-    last_f, last_g = bars[-1][1], flows[-1][1]
-    others = [(k, (d.get("flows") or [{}])[-1].get(k)) for k in ("기관계", "개인")]
-    others = " · ".join(f"{k} {fmt(v)}" for k, v in others if v is not None)
-    svg = (f'<svg viewBox="0 0 {W} {H}" width="100%" role="img" aria-label="KOSPI200 선물과 외국인 선물 순매수 누적"'
-           f' style="font:19px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'
-           f'<rect x="{L}" y="{T}" width="{R - L}" height="{B - T}" fill="#fafbfc" stroke="#e3e6ec"/>{grid}{zero}{axes}'
-           f'<path d="{path(bars, yf)}" fill="none" stroke="#1c2330" stroke-width="1.8"/>'
-           f'<path d="{path(flows, yg)}" fill="none" stroke="#e03131" stroke-width="2.2"/></svg>')
-    return (f'<div class="box"><h3>선물지수 · 외국인 선물 순매수 (분 단위)</h3>'
-            f'<p style="margin:0 0 8px;font-size:13px;color:#6b7385"><b style="color:#1c2330">━ KOSPI200 선물</b> (좌) {last_f:,.2f} · '
-            f'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) {fmt(last_g)}{" · " + others if others else ""}</p>'
-            f'{svg}<p style="margin:6px 0 0;font-size:12px;color:#8a92a3">회사 PC 서버가 08:45~15:45 1분마다 기록한 값 '
-            f'(서버가 꺼져 있던 시간은 비어 있음)</p></div>')
+LIVE_FUT = """<section class="sec" id="futlive" hidden><div class="sec-h"><h2>📈 장중 선물 · 외국인</h2><span class="futt">실시간</span></div>
+<div class="panel fut"></div></section>"""
+LIVE_FUT_JS = """<script>
+(function(){var box=document.getElementById('futlive'),src=%s;
+ function kst(){var n=new Date(Date.now()+9*3600e3);return {d:n.toISOString().slice(0,10).replace(/-/g,''),hm:n.toISOString().slice(11,16),wd:n.getUTCDay()}}
+ function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='08:45'&&k.hm<='16:30'}
+ function load(i){i=i||0;if(i>=src.length)return;
+  fetch(src[i]+(i?'?t='+Date.now():''),{cache:'no-store',headers:i?{}:{Accept:'application/vnd.github.raw'}})
+  .then(function(r){if(!r.ok)throw r;return r.json()})
+  .then(function(d){if(d.flow_date===kst().d&&futChart(box.querySelector('.fut'),d,true))box.hidden=false})
+  .catch(function(){load(i+1)})}
+ function tick(){if(on()&&!document.hidden)load(0)}
+ tick();setInterval(tick,90000);document.addEventListener('visibilitychange',tick)})();
+</script>"""
 
 
 def close_extra(lines, days, cur, prefix, chart=""):
@@ -520,7 +562,8 @@ def build_close():
 # 데일리·장마감은 원본 HTML을 iframe에 넣고 내용 높이만큼 늘려 안쪽 스크롤이 생기지 않게 한다.
 HOME_CSS = """
 .sec{scroll-margin-top:56px;margin-top:22px}
-#daily{margin-top:0}
+#daily,#futlive{margin-top:0}#futlive+#daily{margin-top:22px}
+.futt{font-size:13px;color:#e03131;font-weight:700}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 10px}
 .sec-h h2{margin:0}.sec-h a{font-size:13px;color:var(--muted)}
 iframe.embed{display:block;width:100%;border:0;border-radius:14px;background:var(--card);min-height:400px}
@@ -548,11 +591,12 @@ def build_home(now, daily, news, close, live=None):
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}</style>'
+            f'{FUT_CSS}{LIVE_FUT}'
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
-            f'{FIT_JS}')
+            f'{FIT_JS}{FUT_JS}{LIVE_FUT_JS % json.dumps(FUT_SRC)}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
