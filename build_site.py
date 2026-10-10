@@ -421,6 +421,7 @@ def _mini(rows, empty):
 
 
 STOCK_CSS = """
+#stocks:not(.admin) .adm{display:none!important}
 .stk-add{display:flex;gap:8px;margin:10px 0 4px}.stk-add input{flex:1;min-width:0;font:inherit;font-size:16px;padding:9px 12px;
  border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
 .stk-add button,.cus button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:9px 14px;background:var(--accent);color:#fff;cursor:pointer}
@@ -437,6 +438,9 @@ STOCK_CSS = """
 """
 STOCK_JS = """<script>
 (function(){var KEY='brian-customers',box=document.getElementById('stocks');if(!box)return;
+ try{var q=new URLSearchParams(location.search).get('admin');if(q==='brian')localStorage.setItem('brian-admin','1');if(q==='off')localStorage.removeItem('brian-admin');
+  if(localStorage.getItem('brian-admin')==='1')box.classList.add('admin')}catch(e){}
+ if(!box.classList.contains('admin')){box.classList.remove('editing');return}
  var st;try{st=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){st={}}st.c=st.c||{};
  var cur=st.cur||'',editing=false;
  function save(){st.cur=cur;try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
@@ -482,18 +486,18 @@ def stocks_block(stocks):
         rep_html = f'<h4>📝 증권사 리포트</h4>{_mini(rep, "")}' if rep else ""
         cards.append(
             f'<div class="card stk" data-name="{escape(x["name"])}"><h3>{escape(x["name"])}{code}'
-            f'<label><input type="checkbox"> 이 손님 종목</label>'
-            f'<a class="x" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>'
+            f'<label class="adm"><input type="checkbox"> 이 손님 종목</label>'
+            f'<a class="x adm" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>'
             f'<h4>📰 뉴스 (최근 1주일)</h4>{_mini(news, "최근 30일 기사 없음")}'
             f'<h4>📢 최근 공시</h4>{_mini(dis, "최근 공시 없음")}'
             f'{rep_html}</div>')
     cards = "".join(cards)
-    empty = '' if stocks else '<p class="err">아직 종목이 없습니다. 위 칸에 종목명을 적고 추가를 누르세요.</p>'
+    empty = '' if stocks else '<p class="err">아직 등록된 종목이 없습니다.</p>'
     return (f'<style>{STOCK_CSS}</style><section class="panel" id="stocks"><div class="tag c">관심 종목 공시 · 리포트 · 뉴스</div>'
-            f'<form class="stk-add"><input placeholder="종목명 (예: 삼성전자)" enterkeyhint="done"><button>추가</button></form>'
-            f'<p class="meta">추가를 누르면 GitHub 저장 화면이 열려요 → 초록색 <b>Commit changes</b>를 누르면 2~3분 뒤 1주일 뉴스·최근 공시가 붙어요 (🔴 = 수주·공급계약 공시). '
+            f'<form class="stk-add adm"><input placeholder="종목명 (예: 삼성전자)" enterkeyhint="done"><button>추가</button></form>'
+            f'<p class="meta adm">추가를 누르면 GitHub 저장 화면이 열려요 → 초록색 <b>Commit changes</b>를 누르면 2~3분 뒤 1주일 뉴스·최근 공시가 붙어요 (🔴 = 수주·공급계약 공시). '
             f'손님 구분은 이 핸드폰에만 저장되고 사이트에는 종목 이름만 보여요.</p>'
-            f'<div class="cus"></div><p class="err none" hidden>이 손님에게 고른 종목이 없어요. "종목 고르기"를 눌러 체크하세요.</p>'
+            f'<div class="cus adm"></div><p class="err none adm" hidden>이 손님에게 고른 종목이 없어요. "종목 고르기"를 눌러 체크하세요.</p>'
             f'<div class="stks">{cards}</div>{empty}</section>{STOCK_JS}')
 
 
