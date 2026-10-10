@@ -91,11 +91,13 @@ def nav(root, active):
 
 
 APP_NAME = "Brian's 투자노트"  # 홈 화면 아이콘 아래 이름
+# 이름·아이콘을 바꾸면 파일 이름도 바꾼다(폰 브라우저가 예전 manifest를 캐시에서 다시 쓰지 않게)
+MANIFEST = "app-brian.webmanifest"
 
 
 def head_tags(root):
     """홈 화면에 앱처럼 설치되도록 하는 manifest·아이콘 태그."""
-    return (f'<link rel="manifest" href="{root}manifest.webmanifest"><meta name="theme-color" content="#1c2330">'
+    return (f'<link rel="manifest" href="{root}{MANIFEST}"><meta name="theme-color" content="#1c2330">'
             f'<link rel="icon" href="{root}assets/icon-192.png"><link rel="apple-touch-icon" href="{root}assets/apple-touch-icon.png">'
             f'<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">'
             f'<meta name="apple-mobile-web-app-title" content="{APP_NAME}">')
@@ -107,7 +109,7 @@ def write_app_files():
                 "display": "standalone", "background_color": "#f4f5f7", "theme_color": "#1c2330",
                 "icons": [{"src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
                           {"src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}]}
-    (OUT / "manifest.webmanifest").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    (OUT / MANIFEST).write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
 
 
 def page(title, body, root, active, kicker="MY STOCK NOTE", sub="", hero=True):
