@@ -378,14 +378,74 @@ def close_extra_lines(lines):
     return out, one
 
 
-def close_extra(lines, days, cur, prefix):
-    """차트 리포트 아래에 붙이는 블록: 실적·이슈·일정, 한 줄 요약, 날짜별 리포트 목록."""
+def _tmin(t):
+    """'0915' -> 08:45부터 지난 분."""
+    t = str(t).zfill(4)
+    return (int(t[:2]) * 60 + int(t[2:4])) - (8 * 60 + 45)
+
+
+def futures_chart(day_dir):
+    """회사 PC 서버가 올린 futures_flow.json으로 KOSPI200 선물(좌축)과 외국인 선물 순매수 누적(우축) 교차 차트."""
+    f = day_dir / "futures_flow.json"
+    if not f.exists():
+        return ""
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+    except ValueError:
+        return ""
+    bars = [(_tmin(b["t"]), b["c"]) for b in d.get("bars") or [] if b.get("c") is not None and 0 <= _tmin(b["t"]) <= 420]
+    flows = [(_tmin(r["t"]), r["외국인"]) for r in d.get("flows") or []
+             if r.get("외국인") is not None and 0 <= _tmin(r["t"]) <= 420]
+    if len(bars) < 2 or len(flows) < 2:
+        return ""
+    W, H, L, R, T, B = 640, 320, 92, 548, 20, 270
+    x = lambda m: L + (R - L) * m / 420
+
+    def scale(vals, zero=False):
+        lo, hi = min(vals), max(vals)
+        if zero:
+            lo, hi = min(lo, 0), max(hi, 0)
+        pad = (hi - lo) * 0.08 or 1
+        lo, hi = lo - pad, hi + pad
+        return lo, hi, (lambda v: B - (B - T) * (v - lo) / (hi - lo))
+
+    flo, fhi, yf = scale([c for _, c in bars])
+    glo, ghi, yg = scale([v for _, v in flows], zero=True)
+    path = lambda pts, y: "M" + " L".join(f"{x(m):.1f},{y(v):.1f}" for m, v in pts)
+    grid = "".join(f'<line x1="{x(_tmin(t))}" y1="{T}" x2="{x(_tmin(t))}" y2="{B}" stroke="#e3e6ec"/>'
+                   f'<text x="{x(_tmin(t))}" y="{B + 26}" text-anchor="middle">{t[:2]}:{t[2:]}</text>'
+                   for t in ("0900", "1100", "1300", "1500"))
+    zero = (f'<line x1="{L}" y1="{yg(0):.1f}" x2="{R}" y2="{yg(0):.1f}" stroke="#e03131" stroke-dasharray="4 4" opacity=".45"/>'
+            + (f'<text x="{R + 6}" y="{yg(0) + 6:.1f}" fill="#e03131">0</text>'
+               if T + 36 < yg(0) < B - 26 else ""))
+    fmt = lambda v: f"{v:+,.0f}"
+    axes = (f'<text x="{L - 6}" y="{T + 16}" text-anchor="end">{fhi:,.1f}</text>'
+            f'<text x="{L - 6}" y="{B}" text-anchor="end">{flo:,.1f}</text>'
+            f'<text x="{R + 6}" y="{T + 16}" fill="#e03131">{fmt(ghi)}</text>'
+            f'<text x="{R + 6}" y="{B}" fill="#e03131">{fmt(glo)}</text>')
+    last_f, last_g = bars[-1][1], flows[-1][1]
+    others = [(k, (d.get("flows") or [{}])[-1].get(k)) for k in ("기관계", "개인")]
+    others = " · ".join(f"{k} {fmt(v)}" for k, v in others if v is not None)
+    svg = (f'<svg viewBox="0 0 {W} {H}" width="100%" role="img" aria-label="KOSPI200 선물과 외국인 선물 순매수 누적"'
+           f' style="font:19px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'
+           f'<rect x="{L}" y="{T}" width="{R - L}" height="{B - T}" fill="#fafbfc" stroke="#e3e6ec"/>{grid}{zero}{axes}'
+           f'<path d="{path(bars, yf)}" fill="none" stroke="#1c2330" stroke-width="1.8"/>'
+           f'<path d="{path(flows, yg)}" fill="none" stroke="#e03131" stroke-width="2.2"/></svg>')
+    return (f'<div class="box"><h3>선물지수 · 외국인 선물 순매수 (분 단위)</h3>'
+            f'<p style="margin:0 0 8px;font-size:13px;color:#6b7385"><b style="color:#1c2330">━ KOSPI200 선물</b> (좌) {last_f:,.2f} · '
+            f'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) {fmt(last_g)}{" · " + others if others else ""}</p>'
+            f'{svg}<p style="margin:6px 0 0;font-size:12px;color:#8a92a3">회사 PC 서버가 08:45~15:45 1분마다 기록한 값 '
+            f'(서버가 꺼져 있던 시간은 비어 있음)</p></div>')
+
+
+def close_extra(lines, days, cur, prefix, chart=""):
+    """차트 리포트 아래에 붙이는 블록: 선물·외국인 교차 차트, 실적·이슈·일정, 한 줄 요약, 날짜별 리포트 목록."""
     rest, one = close_extra_lines(lines)
     one_html = f'<div class="one">▶ {escape(one)}</div>' if one else ""
     body = f'<div class="box">{report_text(chr(10).join(rest))}{one_html}</div>' if rest or one else ""
     chips = "".join(f'<li><a href="{prefix}{p.name}/"{" class=on" if p.name == cur else ""}>{label(p.name)}</a></li>'
                     for p in days)
-    return (f'{EXTRA_CSS}<div class="site-extra">{body}'
+    return (f'{EXTRA_CSS}<div class="site-extra">{chart}{body}'
             f'<div class="box"><h3>날짜별 장마감 리포트</h3><ul class="dates">{chips}</ul></div></div>')
 
 
@@ -420,13 +480,14 @@ def build_close():
         text_page = "summary.html" if chart else "index.html"
         btn = '<a class="btn" href="./">차트로 보기</a>' if chart else ""
         if chart:
+            fchart = futures_chart(p)
             html = (p / "장마감 수급체크.html").read_text(encoding="utf-8")
             (dest / "index.html").write_text(
-                with_extra(with_nav(html, "../../", "close/"), close_extra(lines, days, p.name, "../")),
+                with_extra(with_nav(html, "../../", "close/"), close_extra(lines, days, p.name, "../", fchart)),
                 encoding="utf-8")
             if p == days[0]:  # 메뉴 '장마감 리포트'는 목록 대신 최신 리포트를 바로 연다
-                latest_html = with_extra(with_nav(html, "../", "close/"), close_extra(lines, days, p.name, ""))
-                (out / "embed.html").write_text(with_extra(embed_html(html), close_extra(lines, days, p.name, "")),
+                latest_html = with_extra(with_nav(html, "../", "close/"), close_extra(lines, days, p.name, "", fchart))
+                (out / "embed.html").write_text(with_extra(embed_html(html), close_extra(lines, days, p.name, "", fchart)),
                                                 encoding="utf-8")
             (dest / "interactive.html").write_text(  # 예전 주소 호환
                 '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./"><a href="./">이동</a>',
