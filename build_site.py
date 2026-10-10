@@ -282,6 +282,7 @@ def naver_stock_news(code, since):
     except Exception as e:
         print("네이버 종목뉴스 실패:", code, type(e).__name__, e, file=sys.stderr)
         return []
+    print("  네이버 종목뉴스 응답:", type(data).__name__, str(data)[:300].replace("\n", " "), file=sys.stderr)
     rows = []
     for g in data if isinstance(data, list) else [data]:
         rows += g.get("items") or [] if isinstance(g, dict) and "items" in g else [g] if isinstance(g, dict) else []
@@ -304,10 +305,12 @@ def naver_stock_news(code, since):
 
 
 def stock_news(name, code="", limit=8):
-    """최근 7일 종목 뉴스: 네이버 종목뉴스 + Google 뉴스(제목에 종목명), 최신순·중복 제거, 칼럼·추천성·해외 스팸 제외."""
+    """종목 뉴스: 최근 7일 우선, 7일 안에 3건이 안 되면 최근 30일 기사로 채운다.
+    네이버 종목뉴스 + Google 뉴스(제목에 종목명), 최신순·중복 제거, 칼럼·추천성·해외 스팸 제외."""
     key = re.sub(r"\s+", "", name)
-    since = datetime.now(d.KST).timestamp() - 7 * 86400
-    google = [x for x in d.google_news(f"{name} when:7d")
+    week = datetime.now(d.KST).timestamp() - 7 * 86400
+    since = datetime.now(d.KST).timestamp() - 30 * 86400
+    google = [x for x in d.google_news(f"{name} when:30d")
               if key in re.sub(r"\s+", "", x["raw"]) and x["ts"] >= since
               and not d.FOREIGN_SRC.search(x["src"])
               and (re.search(r"[가-힣]", x["src"]) or d.KR_LATIN_SRC.search(x["src"]))
@@ -315,7 +318,10 @@ def stock_news(name, code="", limit=8):
     naver = naver_stock_news(code, since)
     items = [x for x in naver + google if not d.CLICKBAIT.search(x["title"])]
     print(f"  뉴스 후보 {name}: 네이버 {len(naver)} 구글 {len(google)}", file=sys.stderr)
-    return d.rank(items, limit=limit)
+    recent = d.rank([x for x in items if x["ts"] >= week], limit=limit)
+    if len(recent) < 3:
+        recent += [dict(x, old=True) for x in d.rank([x for x in items if x["ts"] < week], limit=5 - len(recent))]
+    return recent
 
 
 def _get(url, enc="utf-8"):
@@ -390,7 +396,11 @@ def stock_reports(code, limit=4):
         if len(out) >= limit:
             break
     if not out:
-        print("리포트 0건:", code, len(html), "bytes, company_read 링크", html.count("company_read"), file=sys.stderr)
+        t = re.search(r"<title>(.*?)</title>", html, re.S)
+        i = html.find("type_1")
+        print("리포트 0건:", code, len(html), "bytes, company_read 링크", html.count("company_read"),
+              "| title:", t.group(1).strip() if t else "-", "| table:", re.sub(r"\s+", " ", html[i:i + 600]) if i >= 0 else "type_1 없음",
+              file=sys.stderr)
     return out
 
 
@@ -465,7 +475,8 @@ def stocks_block(stocks):
     for x in stocks:
         dis = [dict(r, sub=ymd(r["when"])) for r in x["dis"]]
         rep = [dict(r, sub=f'{r["broker"]} · {r["date"]}') for r in x["rep"]]
-        news = [dict(link=n["link"], title=n["title"], sub=f'{n["src"]} · {datetime.fromtimestamp(n["ts"], d.KST):%m/%d %H:%M}')
+        news = [dict(link=n["link"], title=n["title"],
+                     sub=f'{n["src"]} · {datetime.fromtimestamp(n["ts"], d.KST):%m/%d %H:%M}{" · 1주일 이전" if n.get("old") else ""}')
                 for n in x["news"]]
         code = f' <small>{x["code"]}</small>' if x["code"] else ""
         rep_html = f'<h4>📝 증권사 리포트</h4>{_mini(rep, "")}' if rep else ""
@@ -473,7 +484,7 @@ def stocks_block(stocks):
             f'<div class="card stk" data-name="{escape(x["name"])}"><h3>{escape(x["name"])}{code}'
             f'<label><input type="checkbox"> 이 손님 종목</label>'
             f'<a class="x" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>'
-            f'<h4>📰 뉴스 (최근 1주일)</h4>{_mini(news, "최근 1주일 기사 없음")}'
+            f'<h4>📰 뉴스 (최근 1주일)</h4>{_mini(news, "최근 30일 기사 없음")}'
             f'<h4>📢 최근 공시</h4>{_mini(dis, "최근 공시 없음")}'
             f'{rep_html}</div>')
     cards = "".join(cards)
