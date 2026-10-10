@@ -441,6 +441,11 @@ STOCK_JS = """<script>
 (function(){var KEY='brian-customers',box=document.getElementById('stocks');if(!box)return;
  try{var q=new URLSearchParams(location.search).get('admin');if(q==='brian')localStorage.setItem('brian-admin','1');if(q==='off')localStorage.removeItem('brian-admin');
   if(localStorage.getItem('brian-admin')==='1')box.classList.add('admin')}catch(e){}
+ /* 홈 화면 앱은 주소창이 없어 ?admin=brian 을 칠 수 없다: 제목 배지를 5번 연달아 누르면 비밀번호를 묻는다 */
+ var taps=0,tt=0;box.querySelector('.tag').addEventListener('click',function(){var now=Date.now();taps=now-tt<800?taps+1:1;tt=now;
+  if(taps<5)return;taps=0;
+  if(box.classList.contains('admin')){if(confirm('관리 화면을 끌까요?')){try{localStorage.removeItem('brian-admin')}catch(e){}location.reload()}return}
+  if((prompt('관리 비밀번호')||'').trim()==='brian'){try{localStorage.setItem('brian-admin','1')}catch(e){}location.reload()}});
  function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  if(!box.classList.contains('admin')){
   /* 손님 링크(#c=이름&s=종목,종목): 그 손님 종목만 보여 준다. 주소 # 뒤는 서버로 가지 않고, 이 폰에만 기억한다. */
