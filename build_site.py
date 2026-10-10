@@ -90,7 +90,7 @@ def nav(root, active):
     return f'<nav style="{NAV_STYLE}"><b style="color:#ffd43b;margin-right:8px">📈 {SITE_NAME}</b>{links}</nav>'
 
 
-APP_NAME = "주식노트"  # 홈 화면 아이콘 아래 이름
+APP_NAME = "Brian's 투자노트"  # 홈 화면 아이콘 아래 이름
 
 
 def head_tags(root):
