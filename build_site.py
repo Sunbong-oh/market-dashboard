@@ -475,7 +475,7 @@ STOCK_JS = """<script>
   if(b.dataset.a==='add'){var n=(prompt('손님 이름 (이 핸드폰에만 저장돼요)')||'').trim();if(n){st.c[n]=st.c[n]||[];cur=n;editing=true}}
   else if(b.dataset.a==='link'){var l=st.c[cur]||[];if(!l.length){alert('먼저 "종목 고르기"로 이 손님 종목을 체크하세요.');return}
    var url=location.origin+location.pathname.replace(/stocks\\/.*$/,'').replace(/index\\.html$/,'')+'#c='+encodeURIComponent(cur)+'&s='+encodeURIComponent(l.join(','));
-   if(navigator.share){navigator.share({title:cur+'님 관심 종목',url:url}).catch(function(){})}
+   if(navigator.share){navigator.share({title:cur+'님 투자사이트',text:cur+'님 투자사이트',url:url}).catch(function(){})}
    else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){alert('링크를 복사했어요. 카톡·문자에 붙여 넣으세요.\\n'+url)},function(){prompt('이 링크를 복사하세요',url)})}
    else prompt('이 링크를 복사하세요',url);return}
   else if(b.dataset.a==='edit')editing=!editing;
