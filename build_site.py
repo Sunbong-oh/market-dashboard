@@ -304,7 +304,7 @@ def naver_stock_news(code, since):
     return out
 
 
-def stock_news(name, code="", limit=8):
+def stock_news(name, code="", limit=3):
     """종목 뉴스: 최근 7일 우선, 7일 안에 3건이 안 되면 최근 30일 기사로 채운다.
     네이버 종목뉴스 + Google 뉴스(제목에 종목명), 최신순·중복 제거, 칼럼·추천성·해외 스팸 제외."""
     key = re.sub(r"\s+", "", name)
@@ -319,8 +319,8 @@ def stock_news(name, code="", limit=8):
     items = [x for x in naver + google if not d.CLICKBAIT.search(x["title"])]
     print(f"  뉴스 후보 {name}: 네이버 {len(naver)} 구글 {len(google)}", file=sys.stderr)
     recent = d.rank([x for x in items if x["ts"] >= week], limit=limit)
-    if len(recent) < 3:
-        recent += [dict(x, old=True) for x in d.rank([x for x in items if x["ts"] < week], limit=5 - len(recent))]
+    if len(recent) < limit:
+        recent += [dict(x, old=True) for x in d.rank([x for x in items if x["ts"] < week], limit=limit - len(recent))]
     return recent
 
 
