@@ -163,8 +163,30 @@ def daily_grid3(html):
     return html[:i] + GRID3 + html[i:] if i >= 0 else html + GRID3
 
 
-def embed_html(html):
+# 비트코인은 24시간 거래라 주말에도 움직인다. 홈 임베드를 열 때마다(그리고 1분마다) 바이낸스 일봉으로 카드를 덮어쓴다.
+# 실패하면 아침에 찍어 둔 값이 그대로 남는다. 지난 날짜 리포트에는 붙이지 않는다.
+BTC_LIVE = """<script>(function(){
+var SRC=['https://data-api.binance.vision','https://api.binance.com'];
+function fmt(v){return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function card(){var s=document.querySelectorAll('article.card .sym');
+for(var i=0;i<s.length;i++)if(s[i].textContent.indexOf('BTC-USD')===0)return s[i].closest('article.card');return null}
+function apply(k){var c=card();if(!c||!k||k.length<2)return;
+var prev=parseFloat(k[k.length-2][4]),last=parseFloat(k[k.length-1][4]);if(!(prev>0&&last>0))return;
+var d=last-prev,p=(last/prev-1)*100,cl=d>0?'up':d<0?'down':'flat';
+c.querySelector('.price').firstElementChild.nextSibling.nodeValue=fmt(last);
+var dl=c.querySelector('.delta');
+dl.innerHTML='<span class="'+cl+'">'+(d>0?'\u25B2':d<0?'\u25BC':'\u2013')+' '+fmt(Math.abs(d))+' ('+(p>0?'+':'')+p.toFixed(2)+'%)</span> <small>\u00B7 \uc2e4\uc2dc\uac04</small>'}
+function load(i){if(i>=SRC.length)return;
+fetch(SRC[i]+'/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=2').then(function(r){if(!r.ok)throw 0;return r.json()})
+.then(apply).catch(function(){load(i+1)})}
+load(0);setInterval(function(){load(0)},60000)})()</script>"""
+
+
+def embed_html(html, btc_live=False):
     """홈 화면에 통째로 끼워 넣을 원본 리포트 (메뉴 없이, 링크는 바깥 창에서 열림)."""
+    if btc_live:
+        i = html.lower().rfind("</body>")
+        html = html[:i] + BTC_LIVE + html[i:] if i >= 0 else html + BTC_LIVE
     tag = '<base target="_top">'
     m = re.search(r"<head[^>]*>", html, re.I)
     return html[:m.end()] + tag + html[m.end():] if m else tag + html
@@ -218,7 +240,7 @@ def build_daily():
     kr = re.findall(r'<section class="panel kr">.*?</section>', html, re.S)
     kr_titles = re.findall(r'<li><a [^>]*>(.*?)</a>', kr[0], re.S) if kr else []
     if html:
-        (out / p.name / "embed.html").write_text(embed_html(daily_grid3(html)), encoding="utf-8")
+        (out / p.name / "embed.html").write_text(embed_html(daily_grid3(html), btc_live=True), encoding="utf-8")
     return dict(day=p.name, headline=unescape(m.group(1)) if m else "", kr=[unescape(t) for t in kr_titles],
                 embed=f"daily/{p.name}/embed.html" if html else "",
                 newhighs=(p / "newhighs.html").exists())
@@ -246,7 +268,7 @@ def build_live(now):
     dest.mkdir(parents=True, exist_ok=True)
     html = daily_grid3(html)
     (dest / "index.html").write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
-    (dest / "embed.html").write_text(embed_html(html), encoding="utf-8")
+    (dest / "embed.html").write_text(embed_html(html, btc_live=True), encoding="utf-8")
     return dict(at=now, embed="daily/live/embed.html")
 
 
