@@ -404,11 +404,36 @@ def stock_reports(code, limit=4):
     return out
 
 
+def stock_price(code):
+    """네이버 증권 현재가 (사이트를 만들 때 값, 장중엔 약 2시간마다 갱신)."""
+    if not code:
+        return None
+    try:
+        r = json.loads(_get(f"https://m.stock.naver.com/api/stock/{code}/basic"))
+    except Exception as e:
+        print("현재가 실패:", code, type(e).__name__, e, file=sys.stderr)
+        return None
+    num = lambda v: float(str(v).replace(",", "").replace("+", "")) if v not in (None, "") else None
+    try:
+        price = num(r.get("closePrice"))
+        chg = num(r.get("compareToPreviousClosePrice"))
+        pct = num(r.get("fluctuationsRatio"))
+    except ValueError:
+        return None
+    if price is None:
+        return None
+    kind = str((r.get("compareToPreviousPrice") or {}).get("name") or "")
+    if chg is not None and kind in ("FALLING", "LOWER_LIMIT") and chg > 0:
+        chg, pct = -chg, -abs(pct or 0)
+    at = re.sub(r"\D", "", str(r.get("localTradedAt") or ""))[:12]
+    return dict(price=price, chg=chg or 0, pct=pct or 0, at=at, status=str(r.get("marketStatus") or ""))
+
+
 def stock_info(name, fname):
     txt = (WATCH / fname).read_text(encoding="utf-8")
     code = stock_code(name, txt)
-    info = dict(name=name, fname=fname, code=code, news=stock_news(name, code), dis=stock_disclosures(code), rep=stock_reports(code))
-    print(f"관심종목 {name}({code or '?'}): 공시 {len(info['dis'])} 리포트 {len(info['rep'])} 뉴스 {len(info['news'])}", file=sys.stderr)
+    info = dict(name=name, fname=fname, code=code, price=stock_price(code), news=stock_news(name, code), dis=stock_disclosures(code), rep=stock_reports(code))
+    print(f"관심종목 {name}({code or '?'}): 현재가 {info['price'] and info['price']['price']} 공시 {len(info['dis'])} 리포트 {len(info['rep'])} 뉴스 {len(info['news'])}", file=sys.stderr)
     return info
 
 
@@ -431,6 +456,8 @@ STOCK_CSS = """
 .stk h3{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:18px}.stk h3 .x{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none}
 .stk h3 label{font-size:13px;font-weight:700;color:var(--accent);display:none}.editing .stk h3 label{display:inline}
 .stk .items li{font-size:15px}.stk[hidden]{display:none}
+.px{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:2px 0 4px}.px b{font-size:20px}.px span{font-weight:800;font-size:15px}
+.px small{flex-basis:100%;font-size:12px;color:var(--muted)}.px.up b,.px.up span{color:#e03131}.px.dn b,.px.dn span{color:#1c6dd0}
 .who{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:15px}.who small{color:var(--muted)}
 .stk h4{margin:12px 0 4px;font-size:14px;color:var(--muted)}.stk h3 small{font-size:12px;color:var(--muted);font-weight:600}
 .mini{list-style:none;margin:0;padding:0}.mini li{padding:6px 0;border-top:1px solid var(--line);font-size:15px;font-weight:700;line-height:1.4}
@@ -506,11 +533,21 @@ def stocks_block(stocks):
                      sub=f'{n["src"]} · {datetime.fromtimestamp(n["ts"], d.KST):%m/%d %H:%M}{" · 1주일 이전" if n.get("old") else ""}')
                 for n in x["news"]]
         code = f' <small>{x["code"]}</small>' if x["code"] else ""
+        pr = x.get("price")
+        if pr:
+            cls = "up" if pr["chg"] > 0 else "dn" if pr["chg"] < 0 else ""
+            arrow = "▲" if pr["chg"] > 0 else "▼" if pr["chg"] < 0 else "-"
+            when = f'{pr["at"][4:6]}/{pr["at"][6:8]} {pr["at"][8:10]}:{pr["at"][10:12]}' if len(pr["at"]) >= 12 else ""
+            price_html = (f'<div class="px {cls}"><b>{pr["price"]:,.0f}원</b> <span>{arrow} {abs(pr["chg"]):,.0f} '
+                          f'({pr["pct"]:+.2f}%)</span><small>{when} 기준{" · 장 마감" if pr["status"] == "CLOSE" else ""}</small></div>')
+        else:
+            price_html = ""
+
         rep_html = f'<h4>📝 증권사 리포트</h4>{_mini(rep, "")}' if rep else ""
         cards.append(
             f'<div class="card stk" data-name="{escape(x["name"])}"><h3>{escape(x["name"])}{code}'
             f'<label class="adm"><input type="checkbox"> 이 손님 종목</label>'
-            f'<a class="x adm" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>'
+            f'<a class="x adm" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>{price_html}'
             f'<h4>📰 뉴스 (최근 1주일)</h4>{_mini(news, "최근 30일 기사 없음")}'
             f'<h4>📢 최근 공시</h4>{_mini(dis, "최근 공시 없음")}'
             f'{rep_html}</div>')
