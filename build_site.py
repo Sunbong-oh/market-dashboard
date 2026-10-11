@@ -721,6 +721,17 @@ def _fut_data(d):
             "current_flows": {k: v for k, v in (d.get("current_flows") or {}).items() if k in keep}}
 
 
+# 리포트의 '투자자별 순매수' 카드는 스크립트가 나중에 그리므로, 다 그려지면 차트를 '선물 · 옵션' 막대 바로 아래로 옮긴다
+FUT_MOVE_JS = """<style>.fut.in-report{border:0;border-top:1px solid #e3e6ec;border-radius:0;padding:14px 0 0;margin:14px 0 0;background:none}
+.fut.in-report h3{font-size:15px;margin:0 0 8px;color:#1c2330}</style><script>
+(function(){var box=document.getElementById('futbox'),n=0;if(!box)return;
+ var t=setInterval(function(){var inv=document.getElementById('investors');
+  var g=inv&&[].filter.call(inv.querySelectorAll('.inv-group'),function(e){var h=e.querySelector('h4');return h&&/옵션/.test(h.textContent)})[0];
+  if(g&&g.nextElementSibling!==box){box.classList.add('in-report');g.parentNode.insertBefore(box,g.nextSibling)}
+  if(++n>60)clearInterval(t)},500)})();
+</script>"""
+
+
 def futures_chart(day_dir):
     """회사 PC 서버가 올린 futures_flow.json으로 KOSPI200 선물(좌축)과 외국인 선물 순매수 누적(우축) 교차 차트."""
     f = day_dir / "futures_flow.json"
@@ -737,9 +748,9 @@ def futures_chart(day_dir):
         data = json.dumps(_fut_data(raw), ensure_ascii=False).replace("</", "<\\/")
     except (ValueError, KeyError, TypeError, AttributeError):
         return ""
-    return (f'{FUT_CSS}<div class="box fut"><h3>선물지수 · 외국인 선물 순매수 (분 단위)</h3><div></div></div>{FUT_JS}'
+    return (f'{FUT_CSS}<div class="box fut" id="futbox"><h3>선물지수 · 외국인 선물 순매수 (분 단위)</h3><div></div></div>{FUT_JS}'
             f'<script>(function(b){{if(!futChart(b.lastChild,{data}))b.remove()}})'
-            f'(document.currentScript.previousElementSibling.previousElementSibling)</script>')
+            f'(document.currentScript.previousElementSibling.previousElementSibling)</script>{FUT_MOVE_JS}')
 
 
 LIVE_FUT = """<section class="sec" id="futlive" hidden><div class="sec-h"><h2>📈 장중 선물 · 외국인</h2><span class="futt">실시간</span></div>
