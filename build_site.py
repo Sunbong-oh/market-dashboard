@@ -839,9 +839,12 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
 
 LIVE_HOME_JS = """<script>
 (function(){var h=document.querySelector('#close .sec-h h2'),box=document.getElementById('futlive');
+ /* 상단 선물 차트는 평일 08:00~16:00(KST)에만 보인다. 주말·장 마감 뒤에는 숨긴다 */
+ function open(){var n=new Date(Date.now()+9*3600e3),wd=n.getUTCDay(),hm=n.toISOString().slice(11,16);return wd>0&&wd<6&&hm>='08:00'&&hm<'16:00'}
+ setInterval(function(){if(box&&!open())box.hidden=true},60000);
  addEventListener('message',function(e){var m=e.data;if(!m||!m.liveClose)return;
   if(h){h.textContent='📊 실시간 수급 · '+m.liveClose;var a=h.parentNode.querySelector('a');if(a)a.textContent='전일 장마감 보기'}
-  if(m.fut&&box&&m.fut.flow_date&&futChart(box.querySelector('.fut'),m.fut,true))box.hidden=false})})();
+  if(m.fut&&box&&m.fut.flow_date&&open()&&futChart(box.querySelector('.fut'),m.fut,true))box.hidden=false})})();
 </script>"""
 
 
