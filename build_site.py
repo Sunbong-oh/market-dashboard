@@ -788,8 +788,8 @@ function futChart(el,d,live){
   f2(Math.abs(ch))+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</span></div>':'')+'</div>';
  var rest=hf?(d.flows||[]).slice(-1)[0]||{}:cf,oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])}).join(' · ');
  var hh=lf[0]+525,hhmm=Math.floor(hh/60)+':'+('0'+hh%60).slice(-2);
- el.innerHTML=badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) '+sg0(fg)+' · 축 비율 지수 2pt = 200억 · ':'')+
-  '<b style="color:#495057">━ KOSPI200 선물</b> (좌) '+f2(last)+(oth?' · '+oth:'')+'</p>'+svg+
+ el.innerHTML=badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) · ':'')+
+  '<b style="color:#495057">━ KOSPI200 선물</b> (좌) '+f2(last)+'</p>'+svg+
   '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 1분마다 기록, 화면은 1~2분마다 자동 갱신':
   (hf?'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)':'외국인 분 단위 추이는 회사 PC 기록이 있는 날부터 함께 그려집니다'))+'</p>';
  return true}
@@ -888,6 +888,7 @@ if(typeof drawMinis==='function'){drawMinis=function(){document.querySelectorAll
 
 # 리포트 지수 목록에서 KOSPI200 선물 카드와 그 아래 등락 종목수 줄(#breadth)은 사이트에서 뺀다 (리포트가 15초마다 다시 그려서 계속 확인)
 HIDE_IDX_JS = """<style>#breadth{display:none!important}
+#investors .inv-group:first-child h4::after{content:"단위: 억원";float:right;font-size:13px;font-weight:600;color:#7a828c}#investors>p.muted{display:none!important}
 .bar-row{grid-template-columns:64px 1fr 112px!important;font-size:14px!important}.bar-row .val{font-size:17px!important;font-weight:800!important}
 .inv-cols.pair .bar-row{grid-template-columns:42px 1fr 58px!important;font-size:13px!important}.inv-cols.pair .bar-row .val{font-size:15.5px!important}
 </style>""" + MINI_JS + """<script>setInterval(function(){document.querySelectorAll('#indices .index').forEach(function(e){
@@ -938,8 +939,6 @@ def build_close():
         if chart:
             fchart = futures_chart(p)
             html = (p / "장마감 수급체크.html").read_text(encoding="utf-8")
-            html = html.replace("<h2>투자자별 순매수 (오늘)</h2>",  # 단위 표기
-                                "<h2>투자자별 순매수 (오늘) <span style=\"font-size:13px;font-weight:600;color:#7a828c\">(단위: 억원)</span></h2>", 1)
             (dest / "index.html").write_text(
                 with_extra(with_nav(html, "../../", "close/"), close_extra(lines, days, p.name, "../", fchart)),
                 encoding="utf-8")
