@@ -21,6 +21,8 @@ from pathlib import Path
 import dashboard as d
 
 ROOT = Path(__file__).resolve().parent
+# 빌드마다 바뀌는 값: iframe 주소 뒤에 붙여 폰이 예전 내용을 캐시에서 다시 쓰지 않게 한다 (GitHub Pages는 10분 캐시)
+VER = datetime.now().strftime("%y%m%d%H%M%S")
 OUT = Path(os.environ.get("SITE_OUT", ROOT / "_site"))
 DAILY = ROOT / "archive" / "daily"
 CLOSE = Path(os.environ.get("CLOSE_REPO", ROOT.parent / "kb-market-report")) / "archive"
@@ -630,7 +632,7 @@ def build_theme():
     html = re.sub(r'<div class="kpi"><div><div class="n">([^<]*)</div>.*?<div class="v[^"]*">[^<]*</div></div>',
                   lambda m: "" if INDEX_KPI.search(m.group(1)) else m.group(0), html)
     (OUT / "theme" / f"{day}.html").write_text(embed_html(html), encoding="utf-8")
-    return dict(day=day, path=f"theme/{day}.html")
+    return dict(day=day, path=f"theme/{day}.html?v={VER}")
 
 
 def theme_block(theme, root):
@@ -971,13 +973,13 @@ addEventListener('resize',function(){document.querySelectorAll('iframe.embed').f
 
 def build_home(now, daily, news, close, live=None, stocks=None):
     if live:
-        s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}" title="실시간 시세" loading="eager"></iframe>'
+        s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
-        s1 = f'<iframe class="embed" scrolling="no" src="{daily["embed"]}" title="오전 데일리" loading="eager"></iframe>'
+        s1 = f'<iframe class="embed" scrolling="no" src="{daily["embed"]}?v={VER}" title="오전 데일리" loading="eager"></iframe>'
     else:
         s1 = '<section class="panel"><p class="err">오전 데일리는 다음 아침 7시 발송분부터 표시됩니다.</p></section>'
     if close and close.get("embed"):
-        s3 = f'<iframe class="embed" scrolling="no" src="{close["embed"]}" title="장마감 수급" loading="eager"></iframe>'
+        s3 = f'<iframe class="embed" scrolling="no" src="{close["embed"]}?v={VER}" title="장마감 수급" loading="eager"></iframe>'
         more3 = f'<a href="close/">{label(close["day"])}</a>'
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
