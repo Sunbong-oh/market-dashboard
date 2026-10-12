@@ -650,13 +650,13 @@ def build_news(now, theme_doc=None):
         except Exception as e:  # 뉴스 하나가 실패해도 사이트는 만든다
             print("뉴스 수집 실패:", fn.__name__, type(e).__name__, e, file=sys.stderr)
             return []
-    kr = safe(d.fetch_kr_news, n=6)  # dashboard.market_news로 주가 관련 기사만 후보에 들어간다
-    theme = safe(theme_news)
+    kr = safe(d.fetch_kr_news, n=5)  # dashboard.market_news로 주가 관련 기사만 후보에 들어간다
+    theme = safe(theme_news, limit=5)
     body = (f'{theme_block(theme_doc, "")}'
             f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스</div>'
             f'<p class="meta">직전 한국 장 마감(15:30) 이후 뉴스 중 주가·실적·금리·환율·유가·관세·업종과 직접 관련된 것만,'
             f' 여러 언론이 크게 다룬 순 (정치·사회 기사 제외)</p>{news_items(kr)}</section>'
-            f'<section class="panel"><div class="tag n">수혜주 · 관련주 · 특징주</div>'
+            f'<section class="panel"><div class="tag n">관련주</div>'
             f'<p class="meta">최근 24시간 · 주가 등락 나열, 칼럼·종목 추천성 기사 제외</p>{news_items(theme)}</section>')
     (OUT / "news").mkdir(parents=True, exist_ok=True)
     news_page_body = (body.replace(f'src="{theme_doc["path"]}"', f'src="../{theme_doc["path"]}"')
