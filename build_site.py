@@ -714,8 +714,6 @@ def close_extra_lines(lines):
     return out, one
 
 
-FUT_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/futures_flow.json?ref=flow-live",
-           "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/futures_flow.json")
 FUT_CSS = """<style>
 .fut{font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#1c2330}
 .fut .badge{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;border-radius:12px;padding:10px 12px;margin:0 0 10px;background:#f4f5f8}
@@ -783,11 +781,11 @@ def _fut_data(d):
 # 리포트의 '투자자별 순매수' 카드는 스크립트가 나중에 그리므로, 다 그려지면 차트를 '선물 · 옵션' 막대 바로 아래로 옮긴다
 FUT_MOVE_JS = """<style>.fut.in-report{border:0;border-top:1px solid #e3e6ec;border-radius:0;padding:14px 0 0;margin:14px 0 0;background:none}
 .fut.in-report h3{font-size:15px;margin:0 0 8px;color:#1c2330}</style><script>
-(function(){var box=document.getElementById('futbox'),n=0;if(!box)return;
+(function(){var box=document.getElementById('futbox');if(!box)return;
  var t=setInterval(function(){var inv=document.getElementById('investors');
   var g=inv&&[].filter.call(inv.querySelectorAll('.inv-group'),function(e){var h=e.querySelector('h4');return h&&/옵션/.test(h.textContent)})[0];
   if(g&&g.nextElementSibling!==box){box.classList.add('in-report');g.parentNode.insertBefore(box,g.nextSibling)}
-  if(++n>60)clearInterval(t)},500)})();
+  },1000)})();
 </script>"""
 
 
@@ -814,17 +812,36 @@ def futures_chart(day_dir):
 
 LIVE_FUT = """<section class="sec" id="futlive" hidden><div class="sec-h"><h2>📈 장중 선물 · 외국인</h2><span class="futt">실시간</span></div>
 <div class="panel fut"></div></section>"""
-LIVE_FUT_JS = """<script>
-(function(){var box=document.getElementById('futlive'),src=%s;
+SNAP_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/snapshot.json?ref=flow-live",
+             "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/snapshot.json")
+# 최신 장마감 리포트(embed·메뉴)에 붙인다: 평일 08:00~16:00에 회사 PC가 1분마다 올리는 오늘 스냅샷이 있으면
+# 리포트가 읽는 데이터(window.__SNAPSHOT__)를 바꿔 끼워 실시간 수급으로 보여 준다. 없으면 전일 장마감 그대로.
+LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #report-title{display:none}</style><script>
+(function(){var src=%s;
  function kst(){var n=new Date(Date.now()+9*3600e3);return {d:n.toISOString().slice(0,10).replace(/-/g,''),hm:n.toISOString().slice(11,16),wd:n.getUTCDay()}}
- function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='08:45'&&k.hm<='16:30'}
- function load(i){i=i||0;if(i>=src.length)return;
-  fetch(src[i]+(i?'?t='+Date.now():''),{cache:'no-store',headers:i?{}:{Accept:'application/vnd.github.raw'}})
-  .then(function(r){if(!r.ok)throw r;return r.json()})
-  .then(function(d){if(d.flow_date===kst().d&&futChart(box.querySelector('.fut'),d,true))box.hidden=false})
-  .catch(function(){load(i+1)})}
+ function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='08:00'&&k.hm<='16:10'}
+ function apply(j){if(!j||j.date!==kst().d||!j.data||!j.data['/api/market'])return;
+  window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');
+  var b=document.getElementById('snapshot-banner');if(b){b.textContent='🔴 실시간 · '+j.time+' 기준 (회사 PC가 1분마다 갱신)';b.hidden=false}
+  try{refreshFast();refreshSlow()}catch(e){}
+  var f=j.data['/api/futures?minutes=1'],fb=document.getElementById('futbox');
+  if(f&&fb&&window.futChart){fb.hidden=!futChart(fb.lastChild,f,true)}
+  try{parent!==window&&parent.postMessage({liveClose:j.time,fut:f||null},'*')}catch(e){}}
+ /* 리포트 페이지는 window.fetch를 스냅샷 읽기로 바꿔 두므로 XMLHttpRequest로 가져온다 */
+ function load(i){i=i||0;if(i>=src.length)return;var x=new XMLHttpRequest();
+  x.open('GET',src[i]+(i?'?t='+Date.now():''));if(!i)x.setRequestHeader('Accept','application/vnd.github.raw');
+  x.onload=function(){if(x.status!==200)return load(i+1);try{apply(JSON.parse(x.responseText))}catch(e){}};
+  x.onerror=function(){load(i+1)};x.send()}
  function tick(){if(on()&&!document.hidden)load(0)}
- tick();setInterval(tick,90000);document.addEventListener('visibilitychange',tick)})();
+ tick();setInterval(tick,75000);document.addEventListener('visibilitychange',tick)})();
+</script>""" % json.dumps(SNAP_SRC)
+
+
+LIVE_HOME_JS = """<script>
+(function(){var h=document.querySelector('#close .sec-h h2'),box=document.getElementById('futlive');
+ addEventListener('message',function(e){var m=e.data;if(!m||!m.liveClose)return;
+  if(h){h.textContent='📊 실시간 수급 · '+m.liveClose;var a=h.parentNode.querySelector('a');if(a)a.textContent='전일 장마감 보기'}
+  if(m.fut&&box&&m.fut.flow_date&&futChart(box.querySelector('.fut'),m.fut,true))box.hidden=false})})();
 </script>"""
 
 
@@ -832,7 +849,7 @@ def close_extra(lines, days, cur, prefix, chart=""):
     """차트 리포트 아래에 붙이는 블록: 선물·외국인 교차 차트, 실적·이슈·일정, 한 줄 요약, 날짜별 리포트 목록."""
     rest, one = close_extra_lines(lines)
     one_html = f'<div class="one">▶ {escape(one)}</div>' if one else ""
-    body = f'<div class="box">{report_text(chr(10).join(rest))}{one_html}</div>' if rest or one else ""
+    body = f'<div class="box prev">{report_text(chr(10).join(rest))}{one_html}</div>' if rest or one else ""
     chips = "".join(f'<li><a href="{prefix}{p.name}/"{" class=on" if p.name == cur else ""}>{label(p.name)}</a></li>'
                     for p in days)
     return (f'{EXTRA_CSS}<div class="site-extra">{chart}{body}'
@@ -876,8 +893,8 @@ def build_close():
                 with_extra(with_nav(html, "../../", "close/"), close_extra(lines, days, p.name, "../", fchart)),
                 encoding="utf-8")
             if p == days[0]:  # 메뉴 '장마감 리포트'는 목록 대신 최신 리포트를 바로 연다
-                latest_html = with_extra(with_nav(html, "../", "close/"), close_extra(lines, days, p.name, "", fchart))
-                (out / "embed.html").write_text(with_extra(embed_html(html), close_extra(lines, days, p.name, "", fchart)),
+                latest_html = with_extra(with_nav(html, "../", "close/"), close_extra(lines, days, p.name, "", fchart) + LIVE_CLOSE_JS)
+                (out / "embed.html").write_text(with_extra(embed_html(html), close_extra(lines, days, p.name, "", fchart) + LIVE_CLOSE_JS),
                                                 encoding="utf-8")
             (dest / "interactive.html").write_text(  # 예전 주소 호환
                 '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./"><a href="./">이동</a>',
@@ -934,7 +951,7 @@ def build_home(now, daily, news, close, live=None, stocks=None):
     else:
         s1 = '<section class="panel"><p class="err">오전 데일리는 다음 아침 7시 발송분부터 표시됩니다.</p></section>'
     if close and close.get("embed"):
-        s3 = f'<iframe class="embed" scrolling="no" src="{close["embed"]}" title="장마감 수급" loading="lazy"></iframe>'
+        s3 = f'<iframe class="embed" scrolling="no" src="{close["embed"]}" title="장마감 수급" loading="eager"></iframe>'
         more3 = f'<a href="close/">{label(close["day"])}</a>'
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
@@ -946,7 +963,7 @@ def build_home(now, daily, news, close, live=None, stocks=None):
             f'<section class="sec" id="mystocks"><div class="sec-h"><h2>📌 관심 종목 뉴스</h2>'
             f'<a href="stocks/">{stocks["at"]:%m/%d %H:%M} 수집</a></div>{stocks["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
-            f'{FIT_JS}{FUT_JS}{LIVE_FUT_JS % json.dumps(FUT_SRC)}')
+            f'{FIT_JS}{FUT_JS}{LIVE_HOME_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
