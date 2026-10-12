@@ -979,6 +979,7 @@ def save_blog_post(png, now):
 
 CALENDAR = Path(__file__).with_name("market_calendar.json")
 THEME_DIR = Path(__file__).with_name("theme_news")
+THEME_ON = False  # 관심 테마 뉴스 일시 중지(2026-10-13, 사용자 요청): 텔레그램·사이트·금주 캘린더 모두. 다시 켜려면 True
 THEME_W = 1123  # A4 가로 폭(px). 테마 뉴스 한 장(A4판)은 이 폭 그대로 찍는다
 THEME_CARD_W = 540  # 모바일판 카드 폭(px)
 
@@ -986,6 +987,8 @@ THEME_CARD_W = 540  # 모바일판 카드 폭(px)
 def theme_news_page(now):
     """Claude 루틴이 전날 밤 21:00 KST에 커밋해 두는 '관심 테마 뉴스'(theme_news/YYYY-MM-DD.html).
     파일 날짜가 작성일(전날)이든 발송일(오늘)이든 찾도록 오늘 → 어제 순으로 본다. 없으면 None."""
+    if not THEME_ON:
+        return None
     for day in (now, now - timedelta(days=1)):
         src = THEME_DIR / f"{day:%Y-%m-%d}.html"
         if src.exists():
