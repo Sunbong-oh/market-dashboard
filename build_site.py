@@ -726,13 +726,12 @@ def close_extra_lines(lines):
 
 FUT_CSS = """<style>
 .fut{font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#1c2330}
-.fut .badge2{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;margin:0 0 10px}
+.fut .badge2{margin:0 0 10px}
 .fut .badge2>div{border-radius:12px;padding:9px 12px;background:#f4f5f8}.fut .badge2 .k{display:block;font-size:12.5px;font-weight:700;color:#6b7385}
 .fut .badge2 b{display:block;font-size:22px;letter-spacing:-.4px;line-height:1.25}.fut .badge2 .fg b{font-size:26px}
 .fut .badge2 .c{display:block;font-size:13px;font-weight:800}
 .fut .badge2 .up{background:#fff0f0}.fut .badge2 .up b,.fut .badge2 .up .c{color:#e03131}
 .fut .badge2 .dn{background:#eef4ff}.fut .badge2 .dn b,.fut .badge2 .dn .c{color:#1c6dd0}
-.fut .badge2 .fg{border:2px solid #e03131}
 .fut .g.up{color:#e03131}.fut .g.dn{color:#1c6dd0}
 .fut .lg{margin:0 0 8px;font-size:13px;color:#6b7385;line-height:1.5}
 .fut .note{margin:6px 0 0;font-size:12px;color:#8a92a3}
@@ -784,8 +783,7 @@ function futChart(el,d,live){
  var gc=fg>0?'up':fg<0?'dn':'';
  var badge='<div class="badge2">'+(fg!=null?'<div class="fg '+gc+'"><span class="k">외국인 선물 누적'+(hf?'':' (마감)')+'</span><b>'+sg0(fg)+'억</b>'+
   '<span class="c">'+(fg>0?'순매수':fg<0?'순매도':'')+(d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+'억 '+(d30>0?'사는 중':d30<0?'파는 중':''):'')+'</span></div>':'')+
-  (ch!=null?'<div class="fu '+cls+'"><span class="k">KOSPI200 선물</span><b>'+f2(last)+'</b><span class="c">'+(ch>0?'▲':ch<0?'▼':'')+
-  f2(Math.abs(ch))+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</span></div>':'')+'</div>';
+  '</div>';
  var rest=hf?(d.flows||[]).slice(-1)[0]||{}:cf,oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])}).join(' · ');
  var hh=lf[0]+525,hhmm=Math.floor(hh/60)+':'+('0'+hh%60).slice(-2);
  el.innerHTML=badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) '+sg0(fg)+' · 축 비율 지수 2pt = 200억 · ':'')+
