@@ -1065,10 +1065,13 @@ def build_map():
 # 리포트 지수 카드의 KOSPI·KOSDAQ 이름 옆 주황 '맵' 버튼 → 맵 페이지의 해당 시장 탭 (리포트가 15초마다 다시 그려서 계속 확인)
 def map_btn(href):
     return ("<style>.map-btn{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:7px;background:#F39800;color:#fff!important;"
-            "font-size:12.5px;font-weight:800;text-decoration:none;vertical-align:1px;letter-spacing:0}</style><script>(function(){"
+            "font-size:12.5px;font-weight:800;text-decoration:none;vertical-align:1px;letter-spacing:0}"
+            ".map-hint{display:inline-block;margin-left:6px;color:#F39800;font-size:12.5px;font-weight:800;vertical-align:1px;"
+            "animation:mapwig 1s ease-in-out infinite}@keyframes mapwig{0%,100%{transform:translateX(0)}50%{transform:translateX(-6px)}}"
+            "</style><script>(function(){"
             "function f(){document.querySelectorAll('#indices .index .n').forEach(function(n){if(n.querySelector('.map-btn'))return;"
             "var t=n.textContent.trim(),m=t=='KOSPI'?'kospi':t=='KOSDAQ'?'kosdaq':'';"
-            f"if(m)n.insertAdjacentHTML('beforeend','<a class=\"map-btn\" href=\"{href}#'+m+'\" target=\"_top\">맵</a>')}})}}"
+            f"if(m)n.insertAdjacentHTML('beforeend','<a class=\"map-btn\" href=\"{href}#'+m+'\" target=\"_top\">맵</a><span class=\"map-hint\">&lt;--- 터치!</span>')}})}}"
             "f();setInterval(f,500)})()</script>")
 
 
