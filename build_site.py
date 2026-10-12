@@ -970,6 +970,28 @@ def with_extra(html, extra):
     return html[:i] + extra + html[i:] if i >= 0 else html + extra
 
 
+def with_week_schedule(lines, day):
+    """'금주의 일정'이 생기기 전(2026-10-13) 리포트에도 같은 증시 캘린더(kb-market-report/market_calendar.py)로 붙인다."""
+    if any(t.startswith(("■ 금주의 일정", "■ 다음 주 일정")) for t in lines):
+        return lines
+    try:
+        sys.path.insert(0, str(CLOSE.parent))
+        import market_calendar as mc
+        today = datetime.strptime(day, "%Y-%m-%d").date()
+        title, week = mc._week_rest(today, mc.next_trading_day(today))
+    except Exception as e:
+        print("금주 일정 붙이기 실패:", type(e).__name__, e, file=sys.stderr)
+        return lines
+    finally:
+        if sys.path and sys.path[0] == str(CLOSE.parent):
+            sys.path.pop(0)
+    if not week:
+        return lines
+    add = ["", f"■ {title}", *(f"- {lab}: " + " · ".join(vals) for lab, vals in week)]
+    i = next((k for k, t in enumerate(lines) if t.startswith(("(★ 핵심", "▶"))), len(lines))
+    return lines[:i] + add + lines[i:]
+
+
 def build_close():
     out = OUT / "close"
     days = dated_dirs(CLOSE)
@@ -984,6 +1006,7 @@ def build_close():
         lines = body_txt.strip().splitlines()
         if lines and lines[0].strip() == title:
             lines = lines[1:]
+        lines = with_week_schedule(lines, p.name)
         imgs = []
         for name in IMG_ORDER:
             if (p / f"{name}.jpg").exists():
