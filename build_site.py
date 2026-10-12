@@ -871,6 +871,11 @@ LIVE_HOME_JS = """<script>
 </script>"""
 
 
+# 리포트 지수 목록에서 KOSPI200 선물 카드는 사이트에서 뺀다 (리포트가 15초마다 다시 그려서 계속 확인)
+HIDE_IDX_JS = """<script>setInterval(function(){document.querySelectorAll('#indices .index').forEach(function(e){
+ var n=e.querySelector('.n');if(n&&/KOSPI200/.test(n.textContent))e.style.display='none'})},500)</script>"""
+
+
 def close_extra(lines, days, cur, prefix, chart=""):
     """차트 리포트 아래에 붙이는 블록: 선물·외국인 교차 차트, 실적·이슈·일정, 한 줄 요약, 날짜별 리포트 목록."""
     rest, one = close_extra_lines(lines)
@@ -878,7 +883,7 @@ def close_extra(lines, days, cur, prefix, chart=""):
     body = f'<div class="box prev">{report_text(chr(10).join(rest))}{one_html}</div>' if rest or one else ""
     chips = "".join(f'<li><a href="{prefix}{p.name}/"{" class=on" if p.name == cur else ""}>{label(p.name)}</a></li>'
                     for p in days)
-    return (f'{EXTRA_CSS}<div class="site-extra">{chart}{body}'
+    return (f'{EXTRA_CSS}{HIDE_IDX_JS}<div class="site-extra">{chart}{body}'
             f'<div class="box"><h3>날짜별 장마감 리포트</h3><ul class="dates">{chips}</ul></div></div>')
 
 
