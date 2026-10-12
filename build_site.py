@@ -1062,12 +1062,14 @@ def build_map():
     (dest / "index.html").write_text(page("🗺️ 맵 · 업종별 등락", body, "../", "map/", hero=False), encoding="utf-8")
 
 
-# 리포트 '시장 지수' 제목 옆 '🗺️ 맵' 버튼 (prefix 기준 상대 경로)
+# 리포트 지수 카드의 KOSPI·KOSDAQ 이름 옆 주황 '맵' 버튼 → 맵 페이지의 해당 시장 탭 (리포트가 15초마다 다시 그려서 계속 확인)
 def map_btn(href):
-    return ("<style>.map-btn{margin-left:10px;font-size:13px;font-weight:700;padding:4px 10px;border-radius:8px;background:#1c2330;"
-            "color:#fff!important;text-decoration:none;vertical-align:middle}</style><script>(function(){"
-            "document.querySelectorAll('.card-head h2').forEach(function(h){if(h.textContent.trim()=='시장 지수'&&!h.querySelector('.map-btn'))"
-            f"h.insertAdjacentHTML('beforeend','<a class=\"map-btn\" href=\"{href}\" target=\"_top\">🗺️ 맵</a>')}})}})()</script>")
+    return ("<style>.map-btn{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:7px;background:#F39800;color:#fff!important;"
+            "font-size:12.5px;font-weight:800;text-decoration:none;vertical-align:1px;letter-spacing:0}</style><script>(function(){"
+            "function f(){document.querySelectorAll('#indices .index .n').forEach(function(n){if(n.querySelector('.map-btn'))return;"
+            "var t=n.textContent.trim(),m=t=='KOSPI'?'kospi':t=='KOSDAQ'?'kosdaq':'';"
+            f"if(m)n.insertAdjacentHTML('beforeend','<a class=\"map-btn\" href=\"{href}#'+m+'\" target=\"_top\">맵</a>')}})}}"
+            "f();setInterval(f,500)})()</script>")
 
 
 # ---------- 홈 ----------
