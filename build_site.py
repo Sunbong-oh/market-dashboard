@@ -938,6 +938,8 @@ def build_close():
         if chart:
             fchart = futures_chart(p)
             html = (p / "장마감 수급체크.html").read_text(encoding="utf-8")
+            html = html.replace("<h2>투자자별 순매수 (오늘)</h2>",  # 단위 표기
+                                "<h2>투자자별 순매수 (오늘) <span style=\"font-size:13px;font-weight:600;color:#7a828c\">(단위: 억원)</span></h2>", 1)
             (dest / "index.html").write_text(
                 with_extra(with_nav(html, "../../", "close/"), close_extra(lines, days, p.name, "../", fchart)),
                 encoding="utf-8")
