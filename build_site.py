@@ -842,10 +842,13 @@ SNAP_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/s
 LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #report-title{display:none}</style><script>
 (function(){var src=%s;
  function kst(){var n=new Date(Date.now()+9*3600e3);return {d:n.toISOString().slice(0,10).replace(/-/g,''),hm:n.toISOString().slice(11,16),wd:n.getUTCDay()}}
- function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='08:00'&&k.hm<='16:10'}
+ /* 장중(08:00~16:10)은 실시간. 그 뒤에도 사이트가 아직 오늘 장마감 리포트로 다시 빌드되기 전(이 페이지가 지난 날짜)이면
+    오늘 마지막 스냅샷(장마감 수급·외국인 선물 기록)을 그대로 보여 준다 */
+ var DAY='__DAY__';
+ function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='08:00'&&(k.hm<='16:10'||DAY!==k.d)}
  function apply(j){if(!j||j.date!==kst().d||!j.data||!j.data['/api/market'])return;
   window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');
-  var b=document.getElementById('snapshot-banner');if(b){b.textContent='🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
+  var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
   try{refreshFast();refreshSlow()}catch(e){}
   var f=j.data['/api/futures?minutes=1'],fb=document.getElementById('futbox');
   if(f&&fb&&window.futChart){fb.hidden=!futChart(fb.lastChild,f,true)}
@@ -863,7 +866,8 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
 LIVE_HOME_JS = """<script>
 (function(){var h=document.querySelector('#close .sec-h h2');
  addEventListener('message',function(e){var m=e.data;if(!m||!m.liveClose)return;
-  if(h){h.textContent='📊 실시간 수급 · '+m.liveClose;var a=h.parentNode.querySelector('a');if(a)a.textContent='전일 장마감 보기'}})})();
+  var hm=new Date(Date.now()+9*3600e3).toISOString().slice(11,16);
+  if(h){h.textContent=(hm>'16:10'?'📊 오늘 장마감 수급 · ':'📊 실시간 수급 · ')+m.liveClose;var a=h.parentNode.querySelector('a');if(a)a.textContent='전일 장마감 보기'}})})();
 </script>"""
 
 
@@ -963,8 +967,8 @@ def build_close():
                 with_extra(with_nav(html, "../../", "close/"), close_extra(lines, days, p.name, "../", fchart)),
                 encoding="utf-8")
             if p == days[0]:  # 메뉴 '장마감 리포트'는 목록 대신 최신 리포트를 바로 연다
-                latest_html = with_extra(with_nav(html, "../", "close/"), close_extra(lines, days, p.name, "", fchart) + LIVE_CLOSE_JS)
-                (out / "embed.html").write_text(with_extra(embed_html(html), close_extra(lines, days, p.name, "", fchart) + LIVE_CLOSE_JS),
+                latest_html = with_extra(with_nav(html, "../", "close/"), close_extra(lines, days, p.name, "", fchart) + LIVE_CLOSE_JS.replace("__DAY__", p.name.replace("-", "")))
+                (out / "embed.html").write_text(with_extra(embed_html(html), close_extra(lines, days, p.name, "", fchart) + LIVE_CLOSE_JS.replace("__DAY__", p.name.replace("-", ""))),
                                                 encoding="utf-8")
             (dest / "interactive.html").write_text(  # 예전 주소 호환
                 '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./"><a href="./">이동</a>',
