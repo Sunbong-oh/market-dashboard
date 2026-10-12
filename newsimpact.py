@@ -2,9 +2,8 @@
 
 - 후보: 직전 한국 장 마감(15:30 KST) 이후의 글로벌 이슈 기사(Google 뉴스 한국어 검색)
 - 각 기사를 테마(반도체·유가·금리·환율 …) 하나에 묶고, 테마별 미국 연관 지표의 간밤 등락을 함께 보여준다
-- 국내 연관 종목의 방향(▲/▼)은 '연관 지표 등락 × 종목과 지표의 관계'로 정한다.
-  연관 지표가 없거나 거의 안 움직였으면 기사 제목의 논조(급등/급락 등)로 정하고, 그것도 없으면 '–'
-- 방향은 추정치다(패널에 그렇게 표시). 종목과 관계는 THEMES 표에서 고친다.
+- 국내 연관 종목은 이름만 보여 준다. 예전에는 '지표 등락 × 관계'로 ▲/▼를 추정해 붙였지만
+  장중 실제 주가와 어긋나는 일이 많아 뺐다(impact()는 남겨 둠). 종목은 THEMES 표에서 고친다.
 단독 실행: python newsimpact.py  ->  newsimpact.html (패널만 미리보기)
 """
 import re
@@ -129,21 +128,16 @@ def impact(n, moves):
     return mv, t, "논조" if t else ""
 
 
-def _arrow(sign):
-    return ('<b class="up">▲</b>' if sign > 0 else '<b class="down">▼</b>' if sign < 0
-            else '<b class="flat">–</b>')
-
-
 def row(n, moves):
     """한 건 = 두 줄: [테마] 기사 제목(한 줄로 자름) / 연관 지표 등락 · 종목▲▼"""
     key, _, px, stocks = n["theme"]
-    mv, sign, _ = impact(n, moves)
+    mv, _, _ = impact(n, moves)
     proxy = ""
     if px:
         val = (f'<b class="{d.cls(mv)}">{moves[px[0]][1]}</b>' if mv is not None
                else '<b class="flat">–</b>')
         proxy = f'<span class="ni-px">{escape(px[1])} {val}</span>'
-    sts = "".join(f'<span class="ni-st">{escape(name)}{_arrow(sign * rel)}</span>' for name, rel in stocks)
+    sts = "".join(f'<span class="ni-st">{escape(name)}</span>' for name, _ in stocks)  # 상승·하락 추정 표시는 하지 않는다
     return (f'<li><div class="ni-h"><span class="ni-th">{escape(key)}</span>'
             f'<a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a></div>'
             f'<div class="ni-sts">{proxy}{sts}</div></li>')
@@ -153,9 +147,9 @@ def block(news, moves):
     if not news:
         return ""
     lis = "".join(row(n, moves) for n in news)
-    return (f'<section class="panel ni"><div class="tag">글로벌 뉴스 · 종목 영향</div>'
+    return (f'<section class="panel ni"><div class="tag">글로벌 뉴스 · 관련 종목</div>'
             f'<ul class="ni-list">{lis}</ul>'
-            f'<div class="ni-note">▲▼ 연관 지표 간밤 등락(없으면 기사 논조) 기준 추정</div></section>')
+            f'<div class="ni-note">연관 지표는 간밤 등락 · 관련 종목은 테마 연관 종목(주가 방향 추정 아님)</div></section>')
 
 
 def build(quotes=(), exclude=(), now_ts=None):

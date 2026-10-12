@@ -1209,7 +1209,7 @@ def main():
     kr = fetch_kr_news(quotes=quotes)
     impact = ""
     if not theme_news_page(datetime.now(KST)):  # 테마 뉴스 한 장이 있는 날은 겹치므로 패널을 뺀다
-        import newsimpact  # 글로벌 뉴스·종목 영향 패널. 실패해도 빈 칸으로 넘어간다
+        import newsimpact  # 글로벌 뉴스·관련 종목 패널. 실패해도 빈 칸으로 넘어간다
         impact = newsimpact.build(quotes + extra, exclude=kr)
 
     now = datetime.now(KST)
@@ -1227,7 +1227,7 @@ def main():
 </div>
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
-<footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 기사 제목). 글로벌 뉴스 · 종목 영향의 ▲▼는 추정치입니다. 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
+<footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
 SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
 투자 판단의 근거가 아닌 참고용입니다.{"<br>수집 실패: " + ", ".join(failed) if failed else ""}</footer>
 </div><script>{JS}</script>
