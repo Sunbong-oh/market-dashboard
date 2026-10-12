@@ -896,6 +896,25 @@ HIDE_IDX_JS = """<style>#breadth{display:none!important}
  var n=e.querySelector('.n');if(n&&/KOSPI200/.test(n.textContent))e.style.display='none'})},500)</script>"""
 
 
+# 이슈 테마(같은 기사에 묶인 급등주, kb-market-report /api/themes 의 issues): 예전 리포트 코드로 그리는 화면(실시간 수급 등)에도
+# 강세 테마 카드 맨 위에 넣는다. 새 리포트처럼 이미 그려져 있으면 그대로 둔다 (리포트가 다시 그려도 1초마다 확인).
+ISSUE_JS = r"""<style>.theme-row.issue{background:rgba(243,152,0,.12);margin:0 -8px;padding:9px 8px;border-radius:8px}
+.theme-row.issue .tname small{font-size:11px;font-weight:800;color:#fff;background:#F39800;padding:1px 6px;border-radius:6px;vertical-align:1px}
+.theme-row.issue .tsum a{color:var(--muted);text-decoration:underline}</style><script>
+(function(){function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function sg(v){return (v>0?'+':'')+Number(v).toFixed(2)+'%'}function c(v){return v>0?'up':v<0?'down':''}
+ function f(){var box=document.getElementById('themes'),d=window.__SNAPSHOT__&&window.__SNAPSHOT__['/api/themes'],iss=d&&d.issues;
+  if(!box||!iss||!iss.length||!box.querySelector('.theme-row')||box.querySelector('.theme-row.issue'))return;
+  var h=iss.map(function(g){return '<div class="theme-row issue"><span class="rank">🔥</span><span class="tname">'+e(g.name)+' <small>이슈</small></span>'+
+   '<span class="pct '+c(g.change_pct)+'">'+sg(g.change_pct)+'</span><span class="tsum">'+g.stocks.map(function(s){return '<b>'+e(s.name)+'</b> <span class="'+c(s.change_pct)+'">'+sg(s.change_pct)+'</span>'}).join(', ')+
+   '<br>'+(g.url?'<a href="'+e(g.url)+'" target="_blank" rel="noopener">'+e(g.headline)+'</a>':e(g.headline))+'</span></div>'}).join('');
+  var lead=box.querySelector('.theme-lead');
+  if(lead){lead.insertAdjacentHTML('afterend',h);var b=lead.querySelector('b');if(b)b.insertAdjacentHTML('beforebegin','<b>'+iss.map(function(g){return e(g.name)}).join(' · ')+'</b> 이슈와 ')}
+  else box.insertAdjacentHTML('afterbegin',h)}
+ f();setInterval(f,1000)})();
+</script>"""
+
+
 def close_extra(lines, days, cur, prefix, chart=""):
     """차트 리포트 아래에 붙이는 블록: 선물·외국인 교차 차트, 실적·이슈·일정, 한 줄 요약, 날짜별 리포트 목록."""
     rest, one = close_extra_lines(lines)
@@ -903,7 +922,7 @@ def close_extra(lines, days, cur, prefix, chart=""):
     body = f'<div class="box prev">{report_text(chr(10).join(rest))}{one_html}</div>' if rest or one else ""
     chips = "".join(f'<li><a href="{prefix}{p.name}/"{" class=on" if p.name == cur else ""}>{label(p.name)}</a></li>'
                     for p in days)
-    return (f'{EXTRA_CSS}{HIDE_IDX_JS}{map_btn(prefix + "../map/")}<div class="site-extra">{chart}{body}'
+    return (f'{EXTRA_CSS}{HIDE_IDX_JS}{ISSUE_JS}{map_btn(prefix + "../map/")}<div class="site-extra">{chart}{body}'
             f'<div class="box"><h3>날짜별 장마감 리포트</h3><ul class="dates">{chips}</ul></div></div>')
 
 
