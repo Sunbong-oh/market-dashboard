@@ -987,7 +987,12 @@ iframe.embed{display:block;width:100%;border:0;border-radius:14px;background:var
 @media (max-width:520px){iframe.embed{width:calc(100% + 32px);margin:0 -16px;border-radius:0}}
 """
 FIT_JS = """<script>
-function fit(f){try{var d=f.contentDocument,z=parseFloat(d.documentElement.style.zoom)||1;f.style.height=Math.ceil(Math.max(d.documentElement.scrollHeight,d.body.scrollHeight)*z)+'px'}catch(e){}}
+/* 높이는 본문 내용 기준(documentElement.scrollHeight는 iframe 높이 이하로 줄지 않아, 내용이 줄면 회색 빈칸이 남는다) */
+function fit(f){try{var d=f.contentDocument,b=d.body,z=parseFloat(d.documentElement.style.zoom)||1,cs=getComputedStyle(b);
+ var h=Math.max(b.scrollHeight,b.getBoundingClientRect().height)+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0);
+ var l=b.lastElementChild;while(l&&(l.tagName=='SCRIPT'||l.tagName=='STYLE'||!l.getBoundingClientRect().height))l=l.previousElementSibling;
+ if(l)h=Math.max(h,l.getBoundingClientRect().bottom+d.defaultView.scrollY+(parseFloat(getComputedStyle(l).marginBottom)||0));
+ f.style.height=Math.ceil(h*z)+'px'}catch(e){}}
 document.querySelectorAll('iframe.embed').forEach(function(f){f.addEventListener('load',function(){fit(f);
 try{new ResizeObserver(function(){fit(f)}).observe(f.contentDocument.body)}catch(e){}
 setTimeout(function(){fit(f)},800);setTimeout(function(){fit(f)},2500)})});
