@@ -773,45 +773,6 @@ function futChart(el,d,live){
 </script>"""
 
 
-NIGHT_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/futures_night.json?ref=night-live",
-             "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/night-live/futures_night.json")
-LIVE_NIGHT = """<section class="sec" id="futnight" hidden><div class="sec-h"><h2>🌙 코스피200 야간선물</h2><span class="futt">실시간</span></div>
-<div class="panel fut"></div></section>"""
-# 회사 PC가 평일 18:00~다음날 06:00 1분마다 night-live 브랜치에 올린 야간 5분봉을 그린다. 20분 넘게 갱신이 없으면 숨긴다.
-LIVE_NIGHT_JS = r"""<script>
-(function(){var box=document.getElementById('futnight'),src=%s;
- function f2(v){return v.toLocaleString('ko-KR',{minimumFractionDigits:2,maximumFractionDigits:2})}
- function mm(t){t=String(t);while(t.length<4)t='0'+t;return ((+t.slice(0,2))*60+(+t.slice(2,4))-1080+1440)%%1440}
- function draw(el,d){var bars=(d.bars||[]).filter(function(b){return b.c!=null}).map(function(b){return [mm(b.t),b.c]}).filter(function(p){return p[0]<=720});
-  if(bars.length<2)return false;
-  var last=bars[bars.length-1][1],base=d.base,hasB=base!=null&&base>0,vs=bars.map(function(p){return p[1]}).concat(hasB?[base]:[]);
-  var lo=Math.min.apply(0,vs),hi=Math.max.apply(0,vs);if(hi==lo){hi+=1;lo-=1}
-  var W=640,H=250,L=92,R=620,T=14,B=212,x=function(m){return L+(R-L)*m/720},y=function(v){return B-(B-T)*(v-lo)/(hi-lo)};
-  var grid=[[0,'18:00'],[180,'21:00'],[360,'00:00'],[540,'03:00'],[720,'06:00']].map(function(g){var X=x(g[0]);
-   return '<line x1="'+X+'" y1="'+T+'" x2="'+X+'" y2="'+B+'" stroke="#e3e6ec"/><text x="'+X+'" y="'+(B+24)+'" text-anchor="middle">'+g[1]+'</text>'}).join('');
-  var bl=hasB?'<line x1="'+L+'" y1="'+y(base).toFixed(1)+'" x2="'+R+'" y2="'+y(base).toFixed(1)+'" stroke="#8a92a3" stroke-dasharray="4 4"/>':'';
-  var path='M'+bars.map(function(p){return x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)}).join(' L');
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%%" role="img" aria-label="KOSPI200 야간선물 5분봉" style="font:15px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'+
-   '<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(B-T)+'" fill="#fafbfc" stroke="#e3e6ec"/>'+grid+bl+
-   '<text x="'+(L-6)+'" y="'+(T+12)+'" text-anchor="end">'+f2(hi)+'</text><text x="'+(L-6)+'" y="'+(B+4)+'" text-anchor="end">'+f2(lo)+'</text>'+
-   '<path d="'+path+'" fill="none" stroke="#1c2330" stroke-width="1.8" stroke-linejoin="round"/></svg>';
-  var ch=hasB?last-base:null,pct=hasB?ch/base*100:0,cls=ch>0?'up':ch<0?'dn':'';
-  var badge='<div class="badge '+cls+'"><span class="k">'+((d.futures&&d.futures.name)||'KOSPI200 선물')+' 야간</span> <b>'+f2(last)+'</b>'+
-   (hasB?' <span class="c">'+(ch>0?'▲':ch<0?'▼':'')+f2(Math.abs(ch))+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%%)</span>':'')+'</div>';
-  var hh=bars[bars.length-1][0]+1080,hhmm=('0'+(Math.floor(hh/60)%%24)).slice(-2)+':'+('0'+hh%%60).slice(-2);
-  el.innerHTML=badge+svg+'<p class="note"><span class="dot"></span>'+hhmm+' 기준 · 등락은 직전 주간 종가'+(hasB?' '+f2(base):'')+' 대비 · 점선은 주간 종가 · 회사 PC가 1분마다 올림</p>';
-  return true}
- function load(i){i=i||0;if(i>=src.length)return;
-  fetch(src[i]+(i?'?t='+Date.now():''),{cache:'no-store',headers:i?{}:{Accept:'application/vnd.github.raw'}})
-  .then(function(r){if(!r.ok)throw r;return r.json()})
-  .then(function(d){var age=Date.now()-Date.parse(d.updated||0);
-   if(age<20*60e3&&draw(box.querySelector('.fut'),d))box.hidden=false;else box.hidden=true})
-  .catch(function(){load(i+1)})}
- function tick(){if(!document.hidden)load(0)}
- tick();setInterval(tick,90000);document.addEventListener('visibilitychange',tick)})();
-</script>"""
-
-
 def _fut_data(d):
     keep = ("t", "외국인", "기관계", "개인")
     return {"futures": d.get("futures"), "bars": [{"t": b["t"], "c": b.get("c")} for b in d.get("bars") or []],
@@ -949,7 +910,7 @@ def build_close():
 # 데일리·장마감은 원본 HTML을 iframe에 넣고 내용 높이만큼 늘려 안쪽 스크롤이 생기지 않게 한다.
 HOME_CSS = """
 .sec{scroll-margin-top:56px;margin-top:22px}
-#daily,#futlive,#futnight{margin-top:0}#futlive+#daily{margin-top:22px}#futnight:not([hidden])~#daily{margin-top:22px}
+#daily,#futlive{margin-top:0}#futlive+#daily{margin-top:22px}
 .futt{font-size:13px;color:#e03131;font-weight:700}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 10px}
 .sec-h h2{margin:0}.sec-h a{font-size:13px;color:var(--muted)}
@@ -978,14 +939,14 @@ def build_home(now, daily, news, close, live=None, stocks=None):
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}</style>'
-            f'{FUT_CSS}{LIVE_NIGHT}{LIVE_FUT}'
+            f'{FUT_CSS}{LIVE_FUT}'
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
             f'<section class="sec" id="mystocks"><div class="sec-h"><h2>📌 관심 종목 뉴스</h2>'
             f'<a href="stocks/">{stocks["at"]:%m/%d %H:%M} 수집</a></div>{stocks["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
-            f'{FIT_JS}{FUT_JS}{LIVE_FUT_JS % json.dumps(FUT_SRC)}{LIVE_NIGHT_JS % json.dumps(NIGHT_SRC)}')
+            f'{FIT_JS}{FUT_JS}{LIVE_FUT_JS % json.dumps(FUT_SRC)}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
