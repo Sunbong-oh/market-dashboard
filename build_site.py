@@ -866,8 +866,8 @@ LIVE_HOME_JS = """<script>
 </script>"""
 
 
-# 리포트 지수 목록에서 KOSPI200 선물 카드는 사이트에서 뺀다 (리포트가 15초마다 다시 그려서 계속 확인)
-HIDE_IDX_JS = """<script>setInterval(function(){document.querySelectorAll('#indices .index').forEach(function(e){
+# 리포트 지수 목록에서 KOSPI200 선물 카드와 그 아래 등락 종목수 줄(#breadth)은 사이트에서 뺀다 (리포트가 15초마다 다시 그려서 계속 확인)
+HIDE_IDX_JS = """<style>#breadth{display:none!important}</style><script>setInterval(function(){document.querySelectorAll('#indices .index').forEach(function(e){
  var n=e.querySelector('.n');if(n&&/KOSPI200/.test(n.textContent))e.style.display='none'})},500)</script>"""
 
 
