@@ -615,9 +615,17 @@ def build_theme():
     (OUT / "theme").mkdir(parents=True, exist_ok=True)
     html = files[day].read_text(encoding="utf-8")
     # 카드는 540px 고정 폭이라 화면 폭에 맞춰 늘고 줄게 바꾸고, 지수 등락 박스(나스닥 등)는 뺀다
-    fit = ("<style>html,body{margin:0!important;overflow:hidden}.card{width:auto!important;max-width:540px;margin:0 auto 12px!important}"
-           "@media (max-width:420px){.card{padding:16px 14px 12px!important}h1{font-size:23px!important}.t{font-size:17px!important}"
-           ".p{font-size:17px!important}.w{font-size:15px!important}.kpi .v{font-size:24px!important}}</style>")
+    # 카드 4장을 2장씩 나란히(2열) 놓아 세로 길이를 줄인다. 폰 폭에서도 읽히게 글자를 줄인다
+    fit = ("<style>html,body{margin:0!important;overflow:hidden}"
+           "body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start;background:transparent!important}"
+           ".card{width:auto!important;max-width:none;margin:0!important;padding:12px 10px 10px!important}"
+           ".topbar{flex-wrap:wrap;gap:2px}.house{font-size:12px!important}.meta{font-size:11px!important}"
+           "h1{font-size:17px!important}.sect{font-size:13px!important;margin-bottom:8px!important}h2{font-size:15px!important;border-left-width:4px!important;padding-left:6px!important}"
+           "h2 small{font-size:11px!important}.t{font-size:13.5px!important}.p{font-size:13px!important}.w{font-size:12px!important}"
+           ".sub{font-size:12px!important}.quiet,.next div{font-size:12.5px!important}.next b{min-width:70px!important}"
+           ".legend,.foot{font-size:10.5px!important}.b{width:22px!important;height:22px!important;font-size:12px!important}"
+           ".row{flex-wrap:wrap;gap:2px 6px!important}.kpi{flex-direction:column;align-items:flex-start!important;padding:8px 10px!important}.kpi .v{font-size:18px!important}.kpi .n{font-size:13px!important}"
+           "@media (min-width:900px){.t{font-size:16px!important}.w{font-size:14px!important}h1{font-size:21px!important}}</style>")
     html = html.replace("</head>", fit + "</head>", 1) if "</head>" in html else fit + html
     html = re.sub(r'<div class="kpi"><div><div class="n">([^<]*)</div>.*?<div class="v[^"]*">[^<]*</div></div>',
                   lambda m: "" if INDEX_KPI.search(m.group(1)) else m.group(0), html)
@@ -716,11 +724,13 @@ def close_extra_lines(lines):
 
 FUT_CSS = """<style>
 .fut{font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#1c2330}
-.fut .badge{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;border-radius:12px;padding:10px 12px;margin:0 0 10px;background:#f4f5f8}
-.fut .badge .k{font-size:13px;font-weight:700;color:#6b7385}.fut .badge b{font-size:22px;letter-spacing:-.4px}
-.fut .badge .c{font-size:16px;font-weight:800}.fut .badge .g{font-size:13px;font-weight:700;margin-left:auto}
-.fut .badge.up{background:#fff0f0}.fut .badge.up b,.fut .badge.up .c{color:#e03131}
-.fut .badge.dn{background:#eef4ff}.fut .badge.dn b,.fut .badge.dn .c{color:#1c6dd0}
+.fut .badge2{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;margin:0 0 10px}
+.fut .badge2>div{border-radius:12px;padding:9px 12px;background:#f4f5f8}.fut .badge2 .k{display:block;font-size:12.5px;font-weight:700;color:#6b7385}
+.fut .badge2 b{display:block;font-size:22px;letter-spacing:-.4px;line-height:1.25}.fut .badge2 .fg b{font-size:26px}
+.fut .badge2 .c{display:block;font-size:13px;font-weight:800}
+.fut .badge2 .up{background:#fff0f0}.fut .badge2 .up b,.fut .badge2 .up .c{color:#e03131}
+.fut .badge2 .dn{background:#eef4ff}.fut .badge2 .dn b,.fut .badge2 .dn .c{color:#1c6dd0}
+.fut .badge2 .fg{border:2px solid #e03131}
 .fut .g.up{color:#e03131}.fut .g.dn{color:#1c6dd0}
 .fut .lg{margin:0 0 8px;font-size:13px;color:#6b7385;line-height:1.5}
 .fut .note{margin:6px 0 0;font-size:12px;color:#8a92a3}
@@ -738,33 +748,42 @@ function futChart(el,d,live){
  var hf=fl.length>=2,cf=d.current_flows||{},lf=bars[bars.length-1],last=lf[1];
  var fg=hf?fl[fl.length-1][1]:cf['외국인'];
  var F=d.futures||{},prev=(F.price!=null&&F.change!=null)?F.price-F.change:null;
- var W=640,H=310,L=92,R=548,T=14,B=262,x=function(m){return L+(R-L)*m/420};
- var sc=function(v){var lo=Math.min.apply(0,v),hi=Math.max.apply(0,v);if(hi==lo){hi+=1;lo-=1}
+ /* 장중에는 가로축을 08:45~(마지막 기록+30분)으로 줄여 지금까지의 흐름을 넓게 보여 준다. 장 마감 뒤엔 하루 전체 */
+ var lastM=Math.max(lf[0],hf?fl[fl.length-1][0]:0),END=live?Math.min(420,Math.max(lastM+30,90)):420;
+ var W=640,H=310,L=92,R=548,T=14,B=262,x=function(m){return L+(R-L)*m/END};
+ var sc=function(v){var lo=Math.min.apply(0,v),hi=Math.max.apply(0,v);if(hi==lo){hi+=1;lo-=1}var pd=(hi-lo)*.06;lo-=pd;hi+=pd;
    return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
- var sf=sc(bars.map(function(p){return p[1]})),sg=hf?sc(fl.map(function(p){return p[1]}).concat([0])):null;
+ var sf=sc(bars.map(function(p){return p[1]})),sg=hf?sc(fl.map(function(p){return p[1]})):null;
  var path=function(ps,y){return 'M'+ps.map(function(p){return x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)}).join(' L')};
  var n0=function(v){return Math.round(v).toLocaleString('ko-KR')},sg0=function(v){return (v>0?'+':v<0?'-':'')+n0(Math.abs(v))};
  var f2=function(v){return v.toLocaleString('ko-KR',{minimumFractionDigits:2,maximumFractionDigits:2})};
- var grid=['0900','1030','1200','1330','1500'].map(function(t){var X=x(tm(t));return '<line x1="'+X+'" y1="'+T+'" x2="'+X+'" y2="'+B+'" stroke="#e3e6ec"/>'+
+ var step=[15,30,60,90].filter(function(s){return END/s<=6})[0]||90,tk=[];
+ for(var m=15;m<=END;m+=step){var hm=m+525;tk.push(('0'+Math.floor(hm/60)).slice(-2)+('0'+hm%60).slice(-2))}
+ var grid=tk.map(function(t){var X=x(tm(t));return '<line x1="'+X+'" y1="'+T+'" x2="'+X+'" y2="'+B+'" stroke="#e3e6ec"/>'+
   '<text x="'+X+'" y="'+(B+24)+'" text-anchor="middle">'+t.slice(0,2)+':'+t.slice(2)+'</text>'}).join('');
  var fsvg='';
  if(hf){var yz=sg.y(0);
-  fsvg='<line x1="'+L+'" y1="'+yz.toFixed(1)+'" x2="'+R+'" y2="'+yz.toFixed(1)+'" stroke="#e03131" stroke-dasharray="4 4" opacity=".45"/>'+
+  var z0=sg.lo<0&&sg.hi>0;  /* 외국인 선은 자기 범위로 꽉 차게(0을 억지로 넣지 않음), 0선은 범위 안일 때만 */
+  fsvg=(z0?'<line x1="'+L+'" y1="'+yz.toFixed(1)+'" x2="'+R+'" y2="'+yz.toFixed(1)+'" stroke="#e03131" stroke-dasharray="4 4" opacity=".45"/>':'')+
    '<text x="'+(R+6)+'" y="'+(T+12)+'" fill="#e03131">'+sg0(sg.hi)+'</text><text x="'+(R+6)+'" y="'+(B+4)+'" fill="#e03131">'+sg0(sg.lo)+'</text>'+
-   (yz-T>=24&&B-yz>=20?'<text x="'+(R+6)+'" y="'+(yz+5).toFixed(1)+'" fill="#e03131">0</text>':(yz-T<24&&sg.hi!==0?'<text x="'+(R+6)+'" y="'+(T+28)+'" fill="#e03131">0</text>':''))+
-   '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#e03131" stroke-width="2.2" stroke-linejoin="round"/>'}
+   (z0&&yz-T>=24&&B-yz>=20?'<text x="'+(R+6)+'" y="'+(yz+5).toFixed(1)+'" fill="#e03131">0</text>':'')+
+   '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#e03131" stroke-width="3.2" stroke-linejoin="round"/>'+
+   '<circle cx="'+x(fl[fl.length-1][0]).toFixed(1)+'" cy="'+sg.y(fl[fl.length-1][1]).toFixed(1)+'" r="5" fill="#e03131"/>'}
  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="KOSPI200 선물과 외국인 선물 순매수 누적 교차 차트" style="font:15px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'+
   '<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(B-T)+'" fill="#fafbfc" stroke="#e3e6ec"/>'+grid+
   '<text x="'+(L-6)+'" y="'+(T+12)+'" text-anchor="end">'+f2(sf.hi)+'</text><text x="'+(L-6)+'" y="'+(B+4)+'" text-anchor="end">'+f2(sf.lo)+'</text>'+
-  fsvg+'<path d="'+path(bars,sf.y)+'" fill="none" stroke="#1c2330" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  '<path d="'+path(bars,sf.y)+'" fill="none" stroke="#1c2330" stroke-width="1.4" stroke-linejoin="round" opacity=".7"/>'+fsvg+'</svg>';
  var ch=prev!=null?last-prev:null,pct=ch!=null&&prev?ch/prev*100:0,cls=ch>0?'up':ch<0?'dn':'';
- var badge=ch==null?'':'<div class="badge '+cls+'"><span class="k">KOSPI200 선물</span> <b>'+f2(last)+'</b> <span class="c">'+(ch>0?'▲':ch<0?'▼':'')+
-  f2(Math.abs(ch))+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%) '+(ch>0?'상승':ch<0?'하락':'보합')+'</span>'+
-  (fg!=null?'<span class="g '+(fg>0?'up':fg<0?'dn':'')+'">외국인 '+sg0(fg)+'억 '+(fg>0?'순매수':fg<0?'순매도':'')+(hf?'':' (마감)')+'</span>':'')+'</div>';
+ var back=hf?fl.filter(function(p){return p[0]<=fl[fl.length-1][0]-30}):[],d30=back.length?fg-back[back.length-1][1]:null;
+ var gc=fg>0?'up':fg<0?'dn':'';
+ var badge='<div class="badge2">'+(fg!=null?'<div class="fg '+gc+'"><span class="k">외국인 선물 누적'+(hf?'':' (마감)')+'</span><b>'+sg0(fg)+'억</b>'+
+  '<span class="c">'+(fg>0?'순매수':fg<0?'순매도':'')+(d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+'억 '+(d30>0?'사는 중':d30<0?'파는 중':''):'')+'</span></div>':'')+
+  (ch!=null?'<div class="fu '+cls+'"><span class="k">KOSPI200 선물</span><b>'+f2(last)+'</b><span class="c">'+(ch>0?'▲':ch<0?'▼':'')+
+  f2(Math.abs(ch))+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</span></div>':'')+'</div>';
  var rest=hf?(d.flows||[]).slice(-1)[0]||{}:cf,oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])}).join(' · ');
  var hh=lf[0]+525,hhmm=Math.floor(hh/60)+':'+('0'+hh%60).slice(-2);
- el.innerHTML=badge+'<p class="lg"><b style="color:#1c2330">━ KOSPI200 선물</b> (좌) '+f2(last)+
-  (hf?' · <b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) '+sg0(fg):'')+(oth?' · '+oth:'')+'</p>'+svg+
+ el.innerHTML=badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) '+sg0(fg)+' · ':'')+
+  '<b style="color:#495057">━ KOSPI200 선물</b> (좌) '+f2(last)+(oth?' · '+oth:'')+'</p>'+svg+
   '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 회사 PC가 1분마다 올리고 이 화면은 1~2분마다 자동 갱신':
   (hf?'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)':'외국인 분 단위 추이는 회사 PC 기록이 있는 날부터 함께 그려집니다'))+'</p>';
  return true}
