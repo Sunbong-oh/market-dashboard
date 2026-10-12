@@ -615,17 +615,17 @@ def build_theme():
     (OUT / "theme").mkdir(parents=True, exist_ok=True)
     html = files[day].read_text(encoding="utf-8")
     # 카드는 540px 고정 폭이라 화면 폭에 맞춰 늘고 줄게 바꾸고, 지수 등락 박스(나스닥 등)는 뺀다
-    # 카드 4장을 2장씩 나란히(2열) 놓아 세로 길이를 줄인다. 폰 폭에서도 읽히게 글자를 줄인다
-    fit = ("<style>html,body{margin:0!important;overflow:hidden}"
-           "body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start;background:transparent!important}"
-           ".card{width:auto!important;max-width:none;margin:0!important;padding:12px 10px 10px!important}"
-           ".topbar{flex-wrap:wrap;gap:2px}.house{font-size:12px!important}.meta{font-size:11px!important}"
-           "h1{font-size:17px!important}.sect{font-size:13px!important;margin-bottom:8px!important}h2{font-size:15px!important;border-left-width:4px!important;padding-left:6px!important}"
-           "h2 small{font-size:11px!important}.t{font-size:13.5px!important}.p{font-size:13px!important}.w{font-size:12px!important}"
-           ".sub{font-size:12px!important}.quiet,.next div{font-size:12.5px!important}.next b{min-width:70px!important}"
-           ".legend,.foot{font-size:10.5px!important}.b{width:22px!important;height:22px!important;font-size:12px!important}"
-           ".row{flex-wrap:wrap;gap:2px 6px!important}.kpi{flex-direction:column;align-items:flex-start!important;padding:8px 10px!important}.kpi .v{font-size:18px!important}.kpi .n{font-size:13px!important}"
-           "@media (min-width:900px){.t{font-size:16px!important}.w{font-size:14px!important}h1{font-size:21px!important}}</style>")
+    # 카드는 한 장씩 세로로, 여백·글자를 줄여 한 장의 크기를 작게 한다
+    fit = ("<style>html,body{margin:0!important;overflow:hidden}body{background:transparent!important}"
+           ".card{width:auto!important;max-width:540px;margin:0 auto 10px!important;padding:12px 12px 10px!important}"
+           ".topbar{margin-bottom:8px!important;padding-bottom:4px!important}.house{font-size:13px!important}.meta{font-size:11.5px!important}"
+           ".tag{font-size:11px!important;margin-bottom:4px!important}h1{font-size:19px!important}.sect{font-size:13.5px!important;margin-bottom:8px!important}"
+           "h2{font-size:16px!important;border-left-width:4px!important;padding-left:7px!important}h2 small{font-size:12px!important}"
+           ".t{font-size:14.5px!important}.p{font-size:14px!important}.w{font-size:12.5px!important;margin-top:1px!important}"
+           ".sub{font-size:12.5px!important;margin:8px 0 2px!important}.quiet{font-size:13px!important}.next div{font-size:13px!important;padding:5px 0!important}"
+           ".next b{min-width:90px!important}.legend,.foot{font-size:11px!important}.b{width:24px!important;height:24px!important;font-size:13px!important}"
+           ".kpi{padding:7px 10px!important;margin-bottom:6px!important}.kpi .v{font-size:19px!important}.kpi .n{font-size:13px!important}.kpi .s{font-size:11.5px!important}"
+           "</style>")
     html = html.replace("</head>", fit + "</head>", 1) if "</head>" in html else fit + html
     html = re.sub(r'<div class="kpi"><div><div class="n">([^<]*)</div>.*?<div class="v[^"]*">[^<]*</div></div>',
                   lambda m: "" if INDEX_KPI.search(m.group(1)) else m.group(0), html)
