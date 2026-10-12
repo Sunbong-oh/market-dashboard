@@ -232,6 +232,10 @@ PRICE_MOVE = re.compile(r"(관련주|수혜주|테마주|株|주가|지수|증�
 # 낚시·칼럼·종목 나열형: '진짜 수혜주는 따로 있다', '투자전략은', 'N단계', '8개 상장사', '체크포인트'
 CLICKBAIT = re.compile(r"따로 있다|진짜 수혜|투자 ?전략|전망 ?및|체크 ?포인트|\d+ ?단계|\d+ ?개 ?(상장사|종목|기업)|주목한"
                        r"|끝나지 않았|시대는|보여 ?주는|확인하는|살펴보|알아보|총정리|핵심 정리|TOP ?\d|\?$|[가-힣]은\?")
+# 칼럼·사설·기고 등 의견 기사 (말머리가 남아 있는 원제목 raw로 판단)
+COLUMN = re.compile(r"칼럼|사설|기고|시론|논단|시평|기자 ?수첩|취재 ?수첩|데스크 ?칼럼|오피니언|기자의 ?눈|특파원 ?(리포트|시선)"
+                    r"|\[[^\]]*(시각|시선|View|뷰|인사이트|생각|창|단상|에세이|논평|광장|포럼|아침|저녁|목요|금요|월요|화요|수요)[^\]]*\]"
+                    r"|[가-힣]{2,4}의 ?(눈|시선|생각|창|투자 ?노트|주식 ?이야기|시장 ?읽기|돈 ?이야기)", re.I)
 # 기계 번역된 해외 매체(베트남·인도 등)
 FOREIGN_SRC = re.compile(r"\.(vn|in|ph|id|my|cn)$|IndexBox|Laodong|VnExpress|Vietnam|Vietnamplus|Tuoi ?Tre", re.I)
 # 한글 이름이 아닌 매체는 국내 언론으로 알려진 곳만 (Simply Wall St, 해외 스팸 사이트 등 제외)
@@ -245,6 +249,7 @@ def market_news(items):
     """주가와 직접 관련된 기사만 (사이트 '돈이 되는 뉴스'와 아침 데일리 '오늘 한국 시장 영향' 공용)."""
     return [x for x in items if MARKET.search(x["title"]) and not NOT_MARKET.search(x["title"])
             and not PRICE_MOVE.search(x["title"]) and not CLICKBAIT.search(x["title"])
+            and not COLUMN.search(x.get("raw") or x["title"])
             and (re.search(r"[가-힣]", x["src"]) or KR_LATIN_SRC.search(x["src"]))
             and not FOREIGN_SRC.search(x["src"])]
 
