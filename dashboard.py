@@ -1207,10 +1207,7 @@ def main():
     news = fetch_news(since)
     earnings = fetch_earnings(session_day)
     kr = fetch_kr_news(quotes=quotes)
-    impact = ""
-    if not theme_news_page(datetime.now(KST)):  # 테마 뉴스 한 장이 있는 날은 겹치므로 패널을 뺀다
-        import newsimpact  # 글로벌 뉴스·관련 종목 패널. 실패해도 빈 칸으로 넘어간다
-        impact = newsimpact.build(quotes + extra, exclude=kr)
+    impact = ""  # '글로벌 뉴스 · 관련 종목' 패널(newsimpact.py)은 사용자 요청으로 데일리에서 뺐다
 
     now = datetime.now(KST)
     weekday = "월화수목금토일"[now.weekday()]
