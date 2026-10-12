@@ -215,16 +215,43 @@ def news_items(items, limit=None):
 
 
 # ---------- 오전 데일리 ----------
+# '주요 지표' 제목 옆 주황 버튼 → 그날 미국 52주 신고가 페이지 (맵 버튼과 같은 모양·흔들리는 '터치!')
+NH_CSS = ("<style>.nh-btn{display:inline-block;margin-left:10px;padding:3px 10px;border-radius:8px;background:#F39800;color:#fff!important;"
+          "font-size:13px;font-weight:800;text-decoration:none;vertical-align:2px;letter-spacing:0}"
+          ".nh-hint{display:inline-block;margin-left:6px;color:#F39800;font-size:13px;font-weight:800;vertical-align:2px;"
+          "animation:nhwig 1s ease-in-out infinite}@keyframes nhwig{0%,100%{transform:translateX(0)}50%{transform:translateX(-6px)}}</style>")
+
+
+def newhighs_count(day_dir):
+    try:
+        m = re.search(r'신고가 종목</span><b[^>]*>(\d+)', (day_dir / "newhighs.html").read_text(encoding="utf-8"))
+        return int(m.group(1)) if m else None
+    except OSError:
+        return None
+
+
+def with_newhighs(html, href, n):
+    btn = (f'<a class="nh-btn" href="{href}" target="_top">🚀 52주 신고가{f" {n}종목" if n else ""}</a>'
+           '<span class="nh-hint">&lt;--- 터치!</span>')
+    html, k = re.subn(r'(<h2 class="ind-h">[^<]*)', lambda m: m.group(1) + btn, html, count=1)
+    if not k:
+        return html
+    return re.sub(r"</head>", lambda _: NH_CSS + "</head>", html, count=1, flags=re.I)
+
+
 def build_daily():
     out = OUT / "daily"
     days = dated_dirs(DAILY)
     for p in days:
         dest = out / p.name
         dest.mkdir(parents=True, exist_ok=True)
+        nh = (p / "newhighs.html").exists()
         for f in p.iterdir():
             if f.suffix == ".html":
-                dest.joinpath(f.name).write_text(with_nav(daily_grid3(f.read_text(encoding="utf-8")), "../../", "daily/"),
-                                                 encoding="utf-8")
+                html = daily_grid3(f.read_text(encoding="utf-8"))
+                if nh and f.name == "index.html":
+                    html = with_newhighs(html, "newhighs.html", newhighs_count(p))
+                dest.joinpath(f.name).write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
             elif f.is_file():
                 shutil.copy(f, dest / f.name)
     rows = "".join(f'<li><a href="{p.name}/">{label(p.name)}'
@@ -242,7 +269,10 @@ def build_daily():
     kr = re.findall(r'<section class="panel kr">.*?</section>', html, re.S)
     kr_titles = re.findall(r'<li><a [^>]*>(.*?)</a>', kr[0], re.S) if kr else []
     if html:
-        (out / p.name / "embed.html").write_text(embed_html(daily_grid3(html), btc_live=True), encoding="utf-8")
+        eh = daily_grid3(html)
+        if (p / "newhighs.html").exists():
+            eh = with_newhighs(eh, "newhighs.html", newhighs_count(p))
+        (out / p.name / "embed.html").write_text(embed_html(eh, btc_live=True), encoding="utf-8")
     return dict(day=p.name, headline=unescape(m.group(1)) if m else "", kr=[unescape(t) for t in kr_titles],
                 embed=f"daily/{p.name}/embed.html" if html else "",
                 newhighs=(p / "newhighs.html").exists())
@@ -269,6 +299,9 @@ def build_live(now):
     dest = OUT / "daily" / "live"
     dest.mkdir(parents=True, exist_ok=True)
     html = daily_grid3(html)
+    nhd = next((p for p in dated_dirs(DAILY) if (p / "newhighs.html").exists()), None)
+    if nhd:
+        html = with_newhighs(html, f"../{nhd.name}/newhighs.html", newhighs_count(nhd))
     (dest / "index.html").write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
     (dest / "embed.html").write_text(embed_html(html, btc_live=True), encoding="utf-8")
     return dict(at=now, embed="daily/live/embed.html")
