@@ -726,10 +726,11 @@ def close_extra_lines(lines):
 
 FUT_CSS = """<style>
 .fut{font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;color:#1c2330}
-.fut .badge2{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;margin:0 0 10px}
+.fut .badge2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
 .fut .badge2>div{border-radius:12px;padding:9px 12px;background:#f4f5f8}.fut .badge2 .k{display:block;font-size:12.5px;font-weight:700;color:#6b7385}
 .fut .badge2 b{display:block;font-size:22px;letter-spacing:-.4px;line-height:1.25}.fut .badge2 .fg b{font-size:26px}
-.fut .badge2 .c{display:block;font-size:13px;font-weight:800}
+.fut .badge2 .c{display:block;font-size:13px;font-weight:800}.fut .badge2 .fu .c{white-space:nowrap;font-size:13.5px}
+.fut .badge2 .fu .k{color:#15803d;font-size:14px;font-weight:800}
 .fut .badge2 .up{background:#fff0f0}.fut .badge2 .up b,.fut .badge2 .up .c{color:#e03131}
 .fut .badge2 .dn{background:#eef4ff}.fut .badge2 .dn b,.fut .badge2 .dn .c{color:#1c6dd0}
 .fut .g.up{color:#e03131}.fut .g.dn{color:#1c6dd0}
