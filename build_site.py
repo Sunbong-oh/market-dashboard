@@ -867,8 +867,30 @@ LIVE_HOME_JS = """<script>
 </script>"""
 
 
+# 지수 미니차트: 리포트는 09:00~15:30 고정 축이라 장중엔 오른쪽이 비어 보인다 → 마지막 값까지만 그리도록 바꿔 끼운다
+MINI_JS = r"""<script>
+if(typeof drawMinis==='function'){drawMinis=function(){document.querySelectorAll('svg.mini').forEach(function(svg){
+ var d=intraday[svg.dataset.id],pts=((d&&d.points)||[]).filter(function(p){return p.c!=null});
+ var W=svg.clientWidth||200,H=64;svg.setAttribute('viewBox','0 0 '+W+' '+H);if(pts.length<2){svg.innerHTML='';return}
+ var t0=d.recorded?toMin(pts[0].t):540,t1=Math.max(toMin(pts[pts.length-1].t),t0+30);
+ var prev=d.prev_close!=null?d.prev_close:pts[0].c,vals=pts.map(function(p){return p.c}).concat([prev]);
+ var lo=Math.min.apply(0,vals),hi=Math.max.apply(0,vals),span=hi-lo||1;
+ var x=function(t){return 2+((toMin(t)-t0)/Math.max(1,t1-t0))*(W-4)},y=function(v){return H-14-((v-lo)/span)*(H-20)};
+ var last=pts[pts.length-1].c,color=last>=prev?'var(--up)':'var(--down)',line=pts.map(function(p){return x(p.t)+','+y(p.c)}).join(' '),lx=x(pts[pts.length-1].t);
+ svg.innerHTML='<polygon points="'+x(pts[0].t)+','+y(prev)+' '+line+' '+lx+','+y(prev)+'" fill="'+color+'" opacity=".12"/>'+
+  '<line x1="0" x2="'+W+'" y1="'+y(prev)+'" y2="'+y(prev)+'" stroke="var(--muted)" stroke-dasharray="3 3" opacity=".7"/>'+
+  '<polyline fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linejoin="round" points="'+line+'"/>'+
+  '<circle cx="'+lx+'" cy="'+y(last)+'" r="2.5" fill="'+color+'"/>'+
+  '<text x="2" y="'+(H-1)+'">'+(d.recorded?hhmm(pts[0].t):'09:00')+'</text>'+
+  '<text x="'+(W-2)+'" y="'+(H-1)+'" text-anchor="end">'+hhmm(pts[pts.length-1].t)+'</text>'})};try{drawMinis()}catch(e){}}
+</script>"""
+
+
 # 리포트 지수 목록에서 KOSPI200 선물 카드와 그 아래 등락 종목수 줄(#breadth)은 사이트에서 뺀다 (리포트가 15초마다 다시 그려서 계속 확인)
-HIDE_IDX_JS = """<style>#breadth{display:none!important}</style><script>setInterval(function(){document.querySelectorAll('#indices .index').forEach(function(e){
+HIDE_IDX_JS = """<style>#breadth{display:none!important}
+.bar-row{grid-template-columns:64px 1fr 112px!important;font-size:14px!important}.bar-row .val{font-size:17px!important;font-weight:800!important}
+.inv-cols.pair .bar-row{grid-template-columns:42px 1fr 58px!important;font-size:13px!important}.inv-cols.pair .bar-row .val{font-size:15.5px!important}
+</style>""" + MINI_JS + """<script>setInterval(function(){document.querySelectorAll('#indices .index').forEach(function(e){
  var n=e.querySelector('.n');if(n&&/KOSPI200/.test(n.textContent))e.style.display='none'})},500)</script>"""
 
 
