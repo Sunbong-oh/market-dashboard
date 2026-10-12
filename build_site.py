@@ -615,7 +615,7 @@ def build_theme():
         return None
     day = max(files)
     (OUT / "theme").mkdir(parents=True, exist_ok=True)
-    html = files[day].read_text(encoding="utf-8")
+    html = d.reshape_theme(files[day].read_text(encoding="utf-8"))[0]  # 첫 카드 빼고 AI 카드 2장 합치기 (데일리·텔레그램과 같게)
     # 카드는 540px 고정 폭이라 화면 폭에 맞춰 늘고 줄게 바꾸고, 지수 등락 박스(나스닥 등)는 뺀다
     # 카드는 한 장씩 세로로, 여백·글자를 줄여 한 장의 크기를 작게 한다
     fit = ("<style>html,body{margin:0!important;overflow:hidden}body{background:transparent!important}"
@@ -626,7 +626,7 @@ def build_theme():
            ".t{font-size:14.5px!important}.p{font-size:14px!important}.w{font-size:12.5px!important;margin-top:1px!important}"
            ".sub{font-size:12.5px!important;margin:8px 0 2px!important}.quiet{font-size:13px!important}.next div{font-size:13px!important;padding:5px 0!important}"
            ".next b{min-width:90px!important}.legend,.foot{font-size:11px!important}.b{width:24px!important;height:24px!important;font-size:13px!important}"
-           ".kpi{padding:7px 10px!important;margin-bottom:6px!important}.kpi .v{font-size:19px!important}.kpi .n{font-size:13px!important}.kpi .s{font-size:11.5px!important}"
+           ".sub2{font-size:15px!important;border-left-width:4px!important;padding-left:7px!important;margin:12px 0 4px!important}.kpi{padding:7px 10px!important;margin-bottom:6px!important}.kpi .v{font-size:19px!important}.kpi .n{font-size:13px!important}.kpi .s{font-size:11.5px!important}"
            "</style>")
     html = html.replace("</head>", fit + "</head>", 1) if "</head>" in html else fit + html
     html = re.sub(r'<div class="kpi"><div><div class="n">([^<]*)</div>.*?<div class="v[^"]*">[^<]*</div></div>',
