@@ -31,23 +31,17 @@ KST = timezone(timedelta(hours=9))
 # 서머타임 여부와 관계없이 모두 같은 미국 날짜로 떨어지도록 UTC-4로 고정한다.
 US_DAY_TZ = timezone(timedelta(hours=-4))
 
-# 코스피200 야간선물은 야후에 없다. 회사 PC(kb-market-report)가 KB증권 OpenAPI로 받아 night-live 브랜치에 올린 파일을 읽는다.
-NIGHT_SYM = "KOSPI200-NIGHT"
-NIGHT_SRC = ("https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/night-live/futures_night.json",
-             "https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/futures_night.json?ref=night-live")
-NIGHT_MAX_AGE = 14 * 3600  # 새벽 06시 마감 데이터가 오전 7시(+지연)에도 쓰이도록. 이보다 오래되면 지난 밤 값이라 쓰지 않는다
-
 # (표시명, 야후 티커, 종류, 접두/접미, Investing.com 링크)
 ITEMS = [
-    ("나스닥 종합", "^IXIC", "price", "", "https://www.investing.com/indices/nasdaq-composite"),
-    ("코스피 야간선물", NIGHT_SYM, "night", "", "https://finance.naver.com/sise/sise_index.naver?code=FUT"),
-    ("비트코인", "BTC-USD", "price", "$", "https://www.investing.com/crypto/bitcoin"),
-    ("금 (Gold)", "GC=F", "price", "$", "https://www.investing.com/commodities/gold"),
-    ("AMD", "AMD", "price", "$", "https://www.investing.com/equities/adv-micro-device"),
-    ("마이크론", "MU", "price", "$", "https://www.investing.com/equities/micron-tech"),
     ("미국 10년물 금리", "^TNX", "yield", "", "https://www.investing.com/rates-bonds/u.s.-10-year-bond-yield"),
     ("VIX 변동성지수", "^VIX", "vix", "", "https://www.investing.com/indices/volatility-s-p-500"),
     ("WTI 원유", "CL=F", "price", "$", "https://www.investing.com/commodities/crude-oil"),
+    ("나스닥 종합", "^IXIC", "price", "", "https://www.investing.com/indices/nasdaq-composite"),
+    ("금 (Gold)", "GC=F", "price", "$", "https://www.investing.com/commodities/gold"),
+    ("비트코인", "BTC-USD", "price", "$", "https://www.investing.com/crypto/bitcoin"),
+    ("AMD", "AMD", "price", "$", "https://www.investing.com/equities/adv-micro-device"),
+    ("마이크론", "MU", "price", "$", "https://www.investing.com/equities/micron-tech"),
+    ("SK하이닉스 ADR", "SKHY", "price", "$", "https://finance.yahoo.com/quote/SKHY"),
     ("팔로알토", "PANW", "price", "$", "https://www.investing.com/equities/palo-alto-networks"),
     ("스페이스X", "SPCX", "price", "$", "https://finance.yahoo.com/quote/SPCX"),
     ("루멘텀", "LITE", "price", "$", "https://www.investing.com/equities/lumentum-holdings-inc"),
@@ -68,38 +62,7 @@ def fetch_json(url, headers=None):
         return json.loads(r.read())
 
 
-def fetch_night(item):
-    """코스피200 야간선물: 직전 주간 종가(base) 대비 가장 최근 야간장 5분봉. pts=[(주간종가), (현재)] 두 점으로 두어
-    기존 등락 계산·텔레그램 요약이 그대로 동작하고, 야간 5분봉은 bars에 따로 둔다."""
-    name, sym, kind, unit, link = item
-    try:
-        d = None
-        for i, url in enumerate(NIGHT_SRC):
-            try:
-                h = {"Accept": "application/vnd.github.raw"} if i else {}
-                d = fetch_json(url + f"{'&' if i else '?'}t={int(datetime.now().timestamp())}", h)
-                break
-            except Exception:
-                continue
-        if d is None:
-            raise ValueError("야간선물 파일을 읽지 못함")
-        upd = datetime.fromisoformat(d["updated"]).timestamp()
-        if datetime.now().timestamp() - upd > NIGHT_MAX_AGE:
-            raise ValueError("야간선물 데이터가 오래됨 (회사 PC 서버가 꺼져 있었을 수 있음)")
-        bars = [(b["t"], b["c"]) for b in d.get("bars") or [] if b.get("c") is not None]
-        base = d.get("base")
-        if len(bars) < 2 or not base:
-            raise ValueError("야간 봉 또는 주간 종가 없음")
-        return dict(name=name, sym=sym, kind=kind, unit=unit, link=link, ok=True, night=True,
-                    pts=[(upd - 1, base), (upd, bars[-1][1])], bars=bars, base=base,
-                    fut=(d.get("futures") or {}).get("name", ""), meta={})
-    except Exception as e:
-        return dict(name=name, sym=sym, kind=kind, unit=unit, link=link, ok=False, err=str(e))
-
-
 def fetch_quote(item):
-    if item[1] == NIGHT_SYM:
-        return fetch_night(item)
     name, sym, kind, unit, link = item
     try:
         j = fetch_json(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=6mo&interval=1d")
@@ -584,8 +547,6 @@ def card(q):
         return (f'<article class="card"><header><h3>{escape(q["name"])}</h3>'
                 f'<span class="sym">{escape(q["sym"])}</span></header>'
                 f'<p class="err">데이터를 가져오지 못했습니다<br><small>{escape(q["err"])}</small></p></article>')
-    if q.get("night"):
-        return night_card(q)
     pts = q["pts"]
     last, prev = pts[-1][1], pts[-2][1]
     is_yield = q["kind"] == "yield"
@@ -627,30 +588,6 @@ def card(q):
   {sparkline(vals, color_cls=trend_cls)}
   <div class="range"><span>{fmt(lo)}</span><div class="bar"><i style="left:{pos:.0f}%"></i></div><span>{fmt(hi)}</span></div>
   <div class="range-cap">3개월 범위 내 위치</div>
-  <div class="chips">{chips}</div>
-</article>'''
-
-
-def night_card(q):
-    """코스피200 야간선물 카드. 등락은 직전 주간 종가(15:45) 대비, 차트는 야간 5분봉."""
-    base, vals = q["base"], [c for _, c in q["bars"]]
-    last = vals[-1]
-    d1, d1p = last - base, (last / base - 1) * 100
-    lo, hi = min(vals), max(vals)
-    pos = (last - lo) / ((hi - lo) or 1) * 100
-    t = q["bars"][-1][0]
-    sub = (f'<span class="{cls(d1)}">{"▲" if d1 > 0 else "▼" if d1 < 0 else "–"} '
-           f'{fnum(abs(d1))} ({"+" if d1p > 0 else ""}{d1p:.2f}%)</span>')
-    chips = "".join((chg_chip("고가", (hi / base - 1) * 100), chg_chip("저가", (lo / base - 1) * 100),
-                     chg_chip("시초", (vals[0] / base - 1) * 100)))
-    return f'''<article class="card">
-  <header><h3><a href="{q["link"]}" target="_blank" rel="noopener">{escape(q["name"])}</a></h3>
-  <span class="sym">KOSPI200 선물 · {t[:2]}:{t[2:]}</span></header>
-  <div class="price">{fnum(last)}</div>
-  <div class="delta">{sub}</div>
-  {sparkline(vals, color_cls=cls(d1))}
-  <div class="range"><span>{fnum(lo)}</span><div class="bar"><i style="left:{pos:.0f}%"></i></div><span>{fnum(hi)}</span></div>
-  <div class="range-cap">야간 범위 내 위치 · 등락은 주간 종가 {fnum(base)} 대비</div>
   <div class="chips">{chips}</div>
 </article>'''
 
@@ -1291,7 +1228,7 @@ def main():
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
 <footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 기사 제목). 글로벌 뉴스 · 종목 영향의 ▲▼는 추정치입니다. 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
-스페이스X는 나스닥 SPCX 기준. 코스피200 야간선물은 KB증권 OpenAPI 야간장(18:00~06:00) 5분봉이며 직전 주간 종가 대비입니다.
+SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
 투자 판단의 근거가 아닌 참고용입니다.{"<br>수집 실패: " + ", ".join(failed) if failed else ""}</footer>
 </div><script>{JS}</script>
 <script>document.documentElement.dataset.h=Math.ceil(document.querySelector('.wrap').getBoundingClientRect().bottom)</script></body></html>'''
