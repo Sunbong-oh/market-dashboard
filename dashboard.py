@@ -660,12 +660,17 @@ def kr_block(items):
     return f'<section class="panel kr"><div class="tag">오늘 한국 시장 영향</div>{body}</section>'
 
 
-def cal_block(events):
-    """오늘의 증시 캘린더 패널. 이슈가 없으면 빈 문자열(패널 자체를 넣지 않는다)."""
-    if not events:
-        return ""
-    lis = "".join(f'<li>{"<b class=hot>★</b> " if e.startswith("★") else ""}{escape(e.lstrip("★"))}</li>' for e in events)
-    return f'<section class="panel cal"><div class="tag">오늘의 증시 캘린더</div><ol class="items">{lis}</ol></section>'
+def cal_block(events, weekly=()):
+    """오늘의 증시 캘린더 + 그 아래 '금주의 증시 캘린더'(테마 뉴스 '다음 체크'). 둘 다 없으면 빈 문자열."""
+    out = ""
+    if events:
+        lis = "".join(f'<li>{"<b class=hot>★</b> " if e.startswith("★") else ""}{escape(e.lstrip("★"))}</li>' for e in events)
+        out += f'<section class="panel cal"><div class="tag">오늘의 증시 캘린더</div><ol class="items">{lis}</ol></section>'
+    if weekly:
+        rows = "".join(f'<li><b class="wk-d">{escape(d)}</b><span{" class=hot" if hot else ""}>{escape(t)}</span></li>'
+                       for d, t, hot in weekly)
+        out += f'<section class="panel cal wk"><div class="tag">금주의 증시 캘린더</div><ul class="wk-l">{rows}</ul></section>'
+    return out
 
 
 def _usd(v):
@@ -761,13 +766,13 @@ def putcall_block(cnn):
     return f'<section class="panel pc-solo">{putcall_badge(cnn)}</section>'
 
 
-def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact=""):
+def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact="", weekly=()):
     return f'''<section class="fg driver">
   {headline_block(news, quotes)}
 </section>
 {earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
 {impact}
-{cal_block(cal)}'''
+{cal_block(cal, weekly)}'''
 
 
 # ---------- 텔레그램 ----------
@@ -988,11 +993,70 @@ def theme_news_page(now):
     return None
 
 
+def _strip_tags(t):
+    return re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", "", t))).strip()
+
+
+def reshape_theme(html):
+    """테마 뉴스(모바일 카드판) 손질 - 텔레그램 사진과 웹사이트 공용.
+    - 첫 카드(제목·지수·'다음 체크')는 빼고, 그 안의 '다음 체크' 일정은 따로 돌려준다(데일리 '금주의 증시 캘린더')
+    - 'AI 밸류체인' 카드와 '메가테크 · AI 기업' 카드를 한 장으로 합친다
+    반환: (손질한 html, [(날짜, 내용, 핵심여부), ...]). 구조가 예상과 다르면 손대지 않는다."""
+    i, end = html.find('<div class="card"'), html.rfind("</body>")
+    if i < 0 or end < 0:
+        return html, []
+    head, body, tail = html[:i], html[i:end], html[end:]
+    cards = [c for c in re.split(r'(?=<div class="card")', body) if c.strip()]
+    weekly = []
+    if cards and ("<h1" in cards[0] or "THEME NEWS" in cards[0]):
+        first = cards.pop(0)
+        j = first.find('class="next"')
+        if j >= 0:
+            seg = first[j:first.find('class="legend"', j) if 'class="legend"' in first[j:] else len(first)]
+            for d, t in re.findall(r"<div><b>(.*?)</b>(.*?)</div>", seg, re.S):
+                weekly.append((_strip_tags(d), _strip_tags(t), 'class="hot"' in t))
+    ai = next((k for k, c in enumerate(cards) if "AI 밸류체인" in c), None)
+    big = next((k for k, c in enumerate(cards) if re.search(r"<h2>[^<]*(AI 기업|메가테크)", c)), None)
+    if ai is not None and big is not None and ai != big:
+        a, b = cards[ai], cards[big]
+        lb, sb = b.find('<div class="list">'), b.find('<div class="sub">')
+        q_a, q_b = re.search(r'<div class="quiet">(.*?)</div>', a, re.S), re.search(r'<div class="quiet">(.*?)</div>', b, re.S)
+        if lb >= 0 and sb > lb:
+            title_b = _strip_tags(re.search(r"<h2>(.*?)<small", b, re.S).group(1)) if re.search(r"<h2>(.*?)<small", b, re.S) else "AI 기업"
+            add = f'<div class="sub2">{escape(title_b)}</div>' + b[lb:sb]
+            sa = a.find('<div class="sub">')
+            a = a[:sa] + add + a[sa:] if sa >= 0 else a.rstrip()[:-6] + add + "</div>"
+            if q_a and q_b:
+                a = a.replace(q_a.group(0), f'<div class="quiet">{q_a.group(1).strip()} · {q_b.group(1).strip()}</div>', 1)
+            a = re.sub(r"<h2>AI 밸류체인<small>(.*?)</small>", lambda m: f"<h2>AI 밸류체인 · AI 기업<small>{m.group(1)} · "
+                       + (_strip_tags(re.search(r"<small>(.*?)</small>", b, re.S).group(1)) if "<small>" in b else "") + "</small>", a, 1)
+            cards[ai] = a
+            cards.pop(big)
+    n = len(cards)
+    cards = [re.sub(r"· \d+/\d+</div>", f"· {k + 1}/{n}</div>", c, 1) for k, c in enumerate(cards)]
+    css = ('<style>.sub2{font-size:19px;font-weight:800;margin:16px 0 6px;padding-left:10px;'
+           'border-left:6px solid var(--brand,#F39800);line-height:1.3}</style>')
+    head = head.replace("</head>", css + "</head>", 1) if "</head>" in head else css + head
+    return head + "".join(cards) + tail, weekly
+
+
+def theme_weekly(now):
+    """오늘 테마 뉴스의 '다음 체크' 일정 (데일리 '금주의 증시 캘린더'). 없으면 빈 리스트."""
+    src = theme_news_page(now)
+    if not src:
+        return []
+    try:
+        return reshape_theme(src.read_text(encoding="utf-8"))[1]
+    except Exception as e:
+        print("금주 일정 읽기 실패:", type(e).__name__, e, file=sys.stderr)
+        return []
+
+
 def theme_news_pngs(src):
     """테마 뉴스 HTML을 PNG로 찍는다. 실패하면 빈 리스트.
     모바일판(class="card" 카드 여러 장)이면 카드마다 한 장씩(폰에서 글씨가 읽히는 540px 폭),
     아니면 A4 가로 한 장 전체를 THEME_W 폭으로 찍는다."""
-    html = src.read_text(encoding="utf-8")
+    html = reshape_theme(src.read_text(encoding="utf-8"))[0]
     n_cards = len(re.findall(r'class="card"', html))
     if n_cards:
         # #shot-<번호>로 열면 그 카드만 남기고 여백 없이 보여 준다
@@ -1120,6 +1184,8 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .pcb-a{font-size:13px;font-weight:800;background:#fff;color:#c92a2a;padding:2px 10px;border-radius:99px;white-space:nowrap}
 .pc-solo{display:flex;justify-content:flex-end}
 .wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
+.wk-l{list-style:none;margin:0;padding:0}.wk-l li{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:16px;line-height:1.4}
+.wk-l li:first-child{border-top:0}.wk-d{flex:0 0 auto;min-width:96px}.panel.cal+.panel.cal{margin-top:10px}
 .panel.cal{border-left:6px solid var(--hd2)}.panel.cal .tag{background:var(--hd2)}.panel.cal .items li{font-size:18px}.hot{color:var(--accent)}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
 .panel.ni{border-left:6px solid var(--accent);padding-bottom:10px}.panel.ni .tag{background:var(--accent);color:#fff;margin-bottom:4px}
@@ -1225,7 +1291,7 @@ def main():
 <div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now), impact)}
+{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now), impact, theme_weekly(now))}
 </div>
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
