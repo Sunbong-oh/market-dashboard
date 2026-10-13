@@ -1310,6 +1310,43 @@ def target_home(target):
             f'<section class="panel report">{inner}</section></section>')
 
 
+# 오늘의 핵심 이슈: kb-market-report 실시간 작업이 평일 08:00~16:05 5분마다 올리는 flow-live/issues.json
+# (네이버 증권 주요뉴스를 같은 이야기끼리 묶어 기사가 가장 몰린 이슈 + 관련 종목·업종 등락). 평일 07:00~17:00, 오늘 것만 맨 위에.
+ISSUE_SRC = [u.replace("snapshot.json", "issues.json") for u in SNAP_SRC]
+ISSUE_CSS = """
+#issue{order:-2}.close-first .home #issue+#daily{margin-top:22px}
+.iss{background:var(--card);border:1px solid var(--line);border-left:5px solid #F39800;border-radius:14px;padding:14px 16px}
+.iss h2{margin:0 0 4px;font-size:18px}.iss h2 small{font-size:12px;color:var(--muted);font-weight:600;margin-left:6px}
+.iss .it{padding:10px 0;border-top:1px solid var(--line)}.iss .it:first-of-type{border-top:0}
+.iss .tt{font-size:16.5px;font-weight:800;line-height:1.4}.iss .it.main .tt{font-size:19px}
+.iss .rk{display:inline-block;min-width:20px;height:20px;line-height:20px;text-align:center;border-radius:6px;background:#F39800;color:#fff;font-size:12px;margin-right:6px;vertical-align:2px}
+.iss .chips{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:7px}.iss .chips span{font-size:13px;background:var(--bg);border-radius:7px;padding:3px 8px;font-weight:700}
+.iss .chips .sec{background:#fff1dc;color:#1c2330}.iss .up{color:var(--up)}.iss .down{color:var(--down)}
+.iss .src{margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.6}.iss .src a{color:var(--muted)}
+.iss .note{font-size:12px;color:var(--muted);margin-top:6px}
+"""
+ISSUE_JS = r"""<script>
+(function(){var SRC=%s,box=document.getElementById('issue');if(!box)return;
+ function kst(){var n=new Date(Date.now()+9*3600e3);return {d:n.toISOString().slice(0,10).replace(/-/g,''),hm:n.toISOString().slice(11,16),wd:n.getUTCDay()}}
+ function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='07:00'&&k.hm<'17:00'}
+ function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function pc(v){return v==null?'':'<b class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+Number(v).toFixed(2)+'%%</b>'}
+ function draw(j){if(!j||j.date!==kst().d||!j.data||!j.data.length||!on()){box.hidden=true;return}
+  var pre=j.time<'09:00',h='<div class="iss"><h2>🔥 오늘의 핵심 이슈<small>'+e(j.time)+' 기준 · 네이버 증권 주요뉴스</small></h2>';
+  j.data.forEach(function(g,i){h+='<div class="it'+(i?'':' main')+'"><div class="tt"><span class="rk">'+(i+1)+'</span>'+e(g.title)+'</div><div class="chips">'+
+   (g.sector?'<span class="sec">'+e(g.sector.s)+' '+pc(g.sector.p)+'</span>':'')+
+   (g.stocks||[]).map(function(s){return '<span>'+e(s.n)+' '+pc(s.p)+'</span>'}).join('')+'</div>'+
+   '<div class="src">기사 '+g.n+'건 · 언론사 '+g.offices+'곳 — '+(g.articles||[]).slice(0,2).map(function(a){return '<a href="'+e(a.url)+'" target="_blank" rel="noopener">'+e(a.o)+' '+e(a.dt.slice(8,10)+':'+a.dt.slice(10,12))+'</a>'}).join(' · ')+'</div></div>'});
+  h+=(pre?'<div class="note">장 시작 전: 종목·업종 등락은 전일 종가 기준입니다. 9시부터 실시간으로 바뀝니다.</div>':'')+'</div>';
+  box.innerHTML=h;box.hidden=false}
+ function load(i){i=i||0;if(i>=SRC.length||!on()){if(!on())box.hidden=true;return}
+  fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
+  .then(function(r){if(!r.ok)throw 0;return r.json()}).then(draw).catch(function(){load(i+1)})}
+ load();setInterval(function(){if(!document.hidden)load()},180000);
+ document.addEventListener('visibilitychange',function(){if(!document.hidden)load()})})();
+</script>""" % json.dumps(ISSUE_SRC)
+
+
 def build_home(now, daily, news, close, live=None, stocks=None, target=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
@@ -1322,7 +1359,8 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None):
         more3 = f'<a href="close/">{label(close["day"])}</a>'
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
-    body = (f'<style>{HOME_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
+    body = (f'<style>{HOME_CSS}{ISSUE_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
+            f'<section class="sec" id="issue" hidden></section>'
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
@@ -1330,7 +1368,7 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None):
             f'<section class="sec" id="mystocks"><div class="sec-h"><h2>📌 관심 종목 뉴스</h2>'
             f'<a href="stocks/">{stocks["at"]:%m/%d %H:%M} 수집</a></div>{stocks["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
-            f'{FIT_JS}{LIVE_HOME_JS}')
+            f'{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
