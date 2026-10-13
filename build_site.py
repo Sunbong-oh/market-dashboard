@@ -61,6 +61,7 @@ a.card:hover{transform:translateY(-2px);border-color:var(--accent)}
 .items{list-style:none;margin:0;padding:0;counter-reset:i}
 .items li{counter-increment:i;position:relative;padding:10px 0 10px 34px;font-size:17px;font-weight:700;line-height:1.45}
 .items li+li{border-top:1px solid var(--line)}
+.items .rel{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:6px;background:#fff1dc;color:#c25e00;font-size:12px;font-weight:800;vertical-align:2px}
 .items li:before{content:counter(i);position:absolute;left:0;top:12px;width:24px;height:24px;border-radius:50%;
   background:var(--accent);color:#fff;font-size:13px;font-weight:800;text-align:center;line-height:24px}
 .items a{text-decoration:none}.items a:hover{text-decoration:underline}
@@ -211,7 +212,7 @@ def dated_dirs(base):
 def news_items(items, limit=None):
     if not items:
         return '<p class="err">관련 뉴스를 찾지 못했습니다.</p>'
-    lis = "".join(f'<li><a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
+    lis = "".join(f'<li>{"<span class=rel>관련주</span>" if n.get("rel") else ""}<a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
                   f'<div class="src">{escape(n["src"])} · {datetime.fromtimestamp(n["ts"], d.KST):%m/%d %H:%M}</div></li>'
                   for n in items[:limit])
     return f'<ol class="items">{lis}</ol>'
@@ -690,19 +691,23 @@ def build_news(now, theme_doc=None):
             return []
     kr = safe(d.fetch_kr_news, n=5)  # dashboard.market_news로 주가 관련 기사만 후보에 들어간다
     theme = safe(theme_news, limit=5)
+    # 한 목록으로: 시장 영향 뉴스와 관련주 기사를 번갈아 넣고(같은 이야기는 하나만) 5개
+    merged = []
+    for pair in zip(kr + [None] * 5, theme + [None] * 5):
+        for it in pair:
+            if it and len(merged) < 5 and all(len(d._grams(it["title"]) & d._grams(m["title"])) < 4 for m in merged):
+                merged.append(dict(it, rel=it in theme))
     body = (f'{theme_block(theme_doc, "")}'
-            f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스</div>'
-            f'<p class="meta">직전 한국 장 마감(15:30) 이후 뉴스 중 주가·실적·금리·환율·유가·관세·업종과 직접 관련된 것만,'
-            f' 여러 언론이 크게 다룬 순 (정치·사회 기사 제외)</p>{news_items(kr)}</section>'
-            f'<section class="panel"><div class="tag n">관련주</div>'
-            f'<p class="meta">최근 24시간 · 주가 등락 나열, 칼럼·종목 추천성 기사 제외</p>{news_items(theme)}</section>')
+            f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스 · 관련주</div>'
+            f'<p class="meta">직전 한국 장 마감 이후 여러 언론이 크게 다룬 시장 뉴스와 관련주 기사 중 5개'
+            f' (정치·사회, 칼럼·종목 추천성 기사 제외)</p>{news_items(merged)}</section>')
     (OUT / "news").mkdir(parents=True, exist_ok=True)
     news_page_body = (body.replace(f'src="{theme_doc["path"]}"', f'src="../{theme_doc["path"]}"')
                       if theme_doc else body)
     (OUT / "news" / "index.html").write_text(
         page("돈이 되는 뉴스", f'<style>{HOME_CSS}</style>' + news_page_body + FIT_JS, "../", "news/", "MONEY NEWS",
              f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 하루 여러 번 자동 갱신"), encoding="utf-8")
-    return dict(kr=kr, theme=theme, at=now, body=body)
+    return dict(kr=merged, theme=[], at=now, body=body)
 
 
 # ---------- 장마감 리포트 ----------
