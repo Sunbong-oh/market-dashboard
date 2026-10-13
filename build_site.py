@@ -734,6 +734,11 @@ def build_news(now, theme_doc=None):
 IMG_ORDER = ("1_시장", "2_수급", "3_강세테마", "3_강세업종")
 
 
+def star_red(s):
+    """일정의 ★ 핵심 항목은 빨간 굵은 글씨로."""
+    return re.sub(r"★([^·]+)", r'<b style="color:#e03131">★\1</b>', s)
+
+
 def report_text(txt):
     """블로그 본문(■ 제목 / - 항목 / 문장)을 HTML로."""
     out, ul = [], []
@@ -750,7 +755,7 @@ def report_text(txt):
             flush()
             out.append(f"<h3>{escape(s.lstrip('■ '))}</h3>")
         elif s.startswith("- ") or re.match(r"^\d+\. ", s):
-            ul.append(escape(s[2:] if s.startswith("- ") else s))
+            ul.append(star_red(escape(s[2:] if s.startswith("- ") else s)))
         else:
             flush()
             out.append(f"<p>{escape(s)}</p>")
