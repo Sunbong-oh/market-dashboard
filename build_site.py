@@ -1122,9 +1122,14 @@ TARGET_CSS = """
 .up{color:var(--up)}.down{color:var(--down)}
 .tp-one{font-size:16px;font-weight:800;background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:10px;padding:10px 12px;margin-top:12px}
 .tp .m{display:none}
+.src-n{font-size:11px;font-weight:700;color:#fff;background:#03c75a;border-radius:6px;padding:0 5px}
 .tp-q{width:100%;padding:9px 12px;margin:2px 0 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px}
 @media (max-width:520px){.tp{font-size:14px}.tp .ti{display:none}.tp .m{display:block}.tp .co{white-space:normal}}
 """
+
+
+def src_tag(it):
+    return ' <span class="src-n">네이버</span>' if it.get("source") == "네이버" else ""
 
 
 def _won(v):
@@ -1138,7 +1143,7 @@ def target_rows(items, cls, limit=None):
         title = escape(it.get("title") or "")
         if it.get("pdf"):
             title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>'
-        rows.append(f'<tr><td class="co">{escape(it["company"])}<div class="t">{escape(it["broker"])} · {op}</div>'
+        rows.append(f'<tr><td class="co">{escape(it["company"])}<div class="t">{escape(it["broker"])}{src_tag(it)} · {op}</div>'
                     f'<div class="t m">{title}</div></td><td class="ti">{title}</td><td class="px">{_won(it.get("prev_target"))} →<br><b>{_won(it.get("target"))}</b></td>'
                     f'<td class="pct {cls}">{it["pct"]:+.1f}%</td></tr>')
     return f'<table class="tp">{"".join(rows)}</table>' if rows else '<p class="err">없음</p>'
@@ -1164,7 +1169,7 @@ def all_reports(items):
         if it.get("pdf"):
             title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>'
         key = escape(f'{it["company"]} {it.get("code", "")} {it["broker"]}'.lower())
-        rows.append(f'<tr data-k="{key}"><td class="co">{escape(it["company"])}<div class="t">{escape(it["broker"])} · '
+        rows.append(f'<tr data-k="{key}"><td class="co">{escape(it["company"])}<div class="t">{escape(it["broker"])}{src_tag(it)} · '
                     f'{escape(it.get("opinion") or "-")}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>'
                     f'<td class="px">{_won(it.get("target"))}</td><td class="pct">{change(it)}</td></tr>')
     return (f'<section class="panel report" id="all"><h3>📋 전체 리포트 ({len(items)}건)</h3>'
@@ -1202,7 +1207,7 @@ def build_target():
                 f'<li>{escape(i["company"])}: {escape(i.get("prev_opinion") or "")} → {escape(i["opinion"])} · {escape(i["broker"])}</li>'
                 for i in opch) + '</ul></section>')
         body += all_reports(items)
-        sub = f'{label(p.stem)} · {escape(doc.get("made", ""))} 기준 · 같은 증권사 직전 리포트 대비 · 데이터: 한경 컨센서스'
+        sub = f'{label(p.stem)} · {escape(doc.get("made", ""))} 기준 · 같은 증권사 직전 리포트 대비 · 데이터: 한경 컨센서스·네이버 증권 리서치'
         title = f'{label(p.stem)} 목표주가 변동'
         for dest, root in ((out / p.stem, "../../"),) + (((out, "../"),) if i == 0 else ()):
             dest.mkdir(parents=True, exist_ok=True)
