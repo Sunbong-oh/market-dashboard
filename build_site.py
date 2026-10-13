@@ -954,7 +954,7 @@ if(typeof drawMinis==='function'){drawMinis=function(){document.querySelectorAll
 
 
 # 리포트 지수 목록에서 KOSPI200 선물 카드와 그 아래 등락 종목수 줄(#breadth)은 사이트에서 뺀다 (리포트가 15초마다 다시 그려서 계속 확인)
-HIDE_IDX_JS = """<style>#breadth{display:none!important}
+HIDE_IDX_JS = """<style>#breadth{display:none!important}.hts{display:none!important}
 #indices .index .v{display:inline-block;margin-right:8px}#indices .index .v+div{display:inline-block;font-weight:700}
 #investors .inv-group:first-child h4::after{content:"단위: 억원";float:right;font-size:13px;font-weight:600;color:#7a828c}#investors>p.muted{display:none!important}
 .bar-row{grid-template-columns:64px 1fr 112px!important;font-size:14px!important}.bar-row .val{font-size:17px!important;font-weight:800!important}
