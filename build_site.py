@@ -877,6 +877,26 @@ FUT_MOVE_JS = """<style>.fut.in-report{border:0;border-top:1px solid #e3e6ec;bor
 </script>"""
 
 
+def final_flows(raw, day_dir):
+    """KB 실시간 투자자별 선물 순매수는 15:35 동시호가부터 멈췄다가 장 뒤에 최종값으로 바뀐다(예: 15:35~45 -44억 → 최종 +3,897억).
+    장마감 리포트(장 뒤 작성)의 투자자별 값을 15:45 마지막 점과 현재값으로 넣어 리포트 수치와 맞춘다."""
+    h = next(day_dir.glob("*.html"), None)
+    txt = h.read_text(encoding="utf-8") if h else ""
+    i = txt.find('"/api/market": {')
+    if i < 0:
+        return
+    m = json.JSONDecoder().raw_decode(txt[txt.index("{", i):])[0]
+    fin = {r.get("name"): r.get("futures") for r in m.get("investors") or [] if r.get("futures") is not None}
+    if not fin:
+        return
+    cur = raw.setdefault("current_flows", {})
+    cur.update({k: v for k, v in fin.items()})
+    fl = raw.get("flows") or []
+    keys = ("외국인", "기관계", "개인")
+    last = {"t": "1545", **{k: fin[k] for k in keys if k in fin}}
+    raw["flows"] = [r for r in fl if r.get("t", "") < "1545"] + [last]
+
+
 def futures_chart(day_dir):
     """회사 PC 서버가 올린 futures_flow.json으로 KOSPI200 선물(좌축)과 외국인 선물 순매수 누적(우축) 교차 차트."""
     f = day_dir / "futures_flow.json"
@@ -890,6 +910,7 @@ def futures_chart(day_dir):
             if i < 0:
                 return ""
             raw = json.JSONDecoder().raw_decode(txt[txt.index("{", i):])[0]
+        final_flows(raw, day_dir)
         data = json.dumps(_fut_data(raw), ensure_ascii=False).replace("</", "<\\/")
     except (ValueError, KeyError, TypeError, AttributeError):
         return ""
@@ -959,7 +980,8 @@ HIDE_IDX_JS = """<style>#breadth{display:none!important}.hts{display:none!import
 #investors .inv-group:first-child h4::after{content:"단위: 억원";float:right;font-size:13px;font-weight:600;color:#7a828c}#investors>p.muted{display:none!important}
 .bar-row{grid-template-columns:64px 1fr 112px!important;font-size:14px!important}.bar-row .val{font-size:17px!important;font-weight:800!important}
 .inv-cols.pair .bar-row{grid-template-columns:42px 1fr 58px!important;font-size:13px!important}.inv-cols.pair .bar-row .val{font-size:15.5px!important}
-</style>""" + MINI_JS + """<script>setInterval(function(){document.querySelectorAll('#indices .index').forEach(function(e){
+</style>""" + MINI_JS + """<script>document.querySelectorAll('.card-head h2').forEach(function(h){if(/투자자별 순매수/.test(h.textContent))h.textContent=h.textContent.replace('투자자별 순매수','투자자별 매매동향')});
+setInterval(function(){document.querySelectorAll('#indices .index').forEach(function(e){
  var n=e.querySelector('.n');if(n&&/KOSPI200/.test(n.textContent))e.style.display='none'})},500)</script>"""
 
 
