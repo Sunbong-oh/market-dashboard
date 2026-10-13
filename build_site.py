@@ -887,7 +887,7 @@ def final_flows(raw, day_dir):
         return
     m = json.JSONDecoder().raw_decode(txt[txt.index("{", i):])[0]
     fin = {r.get("name"): r.get("futures") for r in m.get("investors") or [] if r.get("futures") is not None}
-    if not fin:
+    if not any(fin.get(k) for k in ("외국인", "기관계", "개인")):  # 장 마감 약 1시간 뒤 KB가 0으로 초기화한 값은 쓰지 않는다
         return
     cur = raw.setdefault("current_flows", {})
     cur.update({k: v for k, v in fin.items()})
