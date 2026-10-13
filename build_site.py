@@ -7,6 +7,7 @@
   /daily/       오전 데일리 (미국 데일리 마켓) — archive/daily/YYYY-MM-DD/ (daily-dashboard.yml이 매일 저장)
   /news/        돈이 되는 뉴스 — 빌드할 때마다 Google 뉴스에서 새로 수집 (dashboard.py의 뉴스 로직 재사용)
   /close/       장마감 리포트 (국내 장마감 수급체크) — kb-market-report 저장소의 archive/ (환경변수 CLOSE_REPO)
+  /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 08:00) — kb-market-report 저장소의 consensus/*.json
 """
 import json
 import os
@@ -26,6 +27,7 @@ VER = datetime.now().strftime("%y%m%d%H%M%S")
 OUT = Path(os.environ.get("SITE_OUT", ROOT / "_site"))
 DAILY = ROOT / "archive" / "daily"
 CLOSE = Path(os.environ.get("CLOSE_REPO", ROOT.parent / "kb-market-report")) / "archive"
+CONSENSUS = CLOSE.parent / "consensus"
 SITE_NAME = "Brian's 투자노트"
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 WD = "월화수목금토일"
@@ -83,7 +85,8 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
              "padding:8px 12px;background:#1c2330;font:600 14px/1.2 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif")
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
-MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("stocks/", "관심 종목"), ("close/", "장마감 리포트"))
+MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("stocks/", "관심 종목"), ("target/", "목표주가"),
+        ("close/", "장마감 리포트"))
 
 
 def nav(root, active):
@@ -1054,6 +1057,97 @@ def build_close():
     return first
 
 
+# ---------- 목표주가 변동 (증권사 리포트 상향·하향) ----------
+# kb-market-report Actions가 평일 08:00에 consensus/YYYY-MM-DD.json 을 올린다 (consensus_report.py).
+TARGET_CSS = """
+.tp-sum{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
+.tp-sum b{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:14px}
+.tp-sum b.up{color:#fff;background:var(--up);border-color:var(--up)}.tp-sum b.down{color:#fff;background:var(--down);border-color:var(--down)}
+.tp{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.tp td{padding:9px 6px;border-top:1px solid var(--line);vertical-align:top}
+.tp .co{font-weight:800;white-space:nowrap}.tp .pct{font-weight:800;text-align:right;white-space:nowrap}
+.tp .px{white-space:nowrap;text-align:right}.tp .t{font-size:13px;color:var(--muted);margin-top:2px}
+.up{color:var(--up)}.down{color:var(--down)}
+.tp-one{font-size:16px;font-weight:800;background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:10px;padding:10px 12px;margin-top:12px}
+.tp .m{display:none}
+@media (max-width:520px){.tp{font-size:14px}.tp .ti{display:none}.tp .m{display:block}.tp .co{white-space:normal}}
+"""
+
+
+def _won(v):
+    return f"{v:,}" if v else "-"
+
+
+def target_rows(items, cls, limit=None):
+    rows = []
+    for it in items[:limit]:
+        op = f'{escape(it.get("prev_opinion") or "")}→{escape(it["opinion"])}' if it.get("opinion_changed") else escape(it.get("opinion") or "")
+        title = escape(it.get("title") or "")
+        if it.get("pdf"):
+            title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>'
+        rows.append(f'<tr><td class="co">{escape(it["company"])}<div class="t">{escape(it["broker"])} · {op}</div>'
+                    f'<div class="t m">{title}</div></td><td class="ti">{title}</td><td class="px">{_won(it.get("prev_target"))} →<br><b>{_won(it.get("target"))}</b></td>'
+                    f'<td class="pct {cls}">{it["pct"]:+.1f}%</td></tr>')
+    return f'<table class="tp">{"".join(rows)}</table>' if rows else '<p class="err">없음</p>'
+
+
+def target_split(items):
+    up = sorted((i for i in items if i.get("pct") is not None and i["pct"] > 0), key=lambda i: -i["pct"])
+    down = sorted((i for i in items if i.get("pct") is not None and i["pct"] < 0), key=lambda i: i["pct"])
+    return up, down
+
+
+def build_target():
+    out = OUT / "target"
+    files = sorted((p for p in CONSENSUS.glob("*.json") if DATE_RE.match(p.stem)), key=lambda p: p.stem, reverse=True) \
+        if CONSENSUS.is_dir() else []
+    first = None
+    dates = "".join(f'<li><a href="{{root}}{p.stem}/">{label(p.stem)}</a></li>' for p in files[:30])
+    for i, p in enumerate(files[:60]):
+        try:
+            doc = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        items = doc.get("items", [])
+        up, down = target_split(items)
+        keep = [i for i in items if i.get("pct") == 0]
+        new = [i for i in items if i.get("pct") is None]
+        opch = [i for i in items if i.get("opinion_changed")]
+        one = next((ln.split(":", 1)[1].strip() for ln in doc.get("body", "").splitlines() if "한 줄 요약" in ln), "")
+        body = (f'<style>{TARGET_CSS}</style>'
+                f'<section class="panel"><div class="tp-sum"><b>리포트 {len(items)}건</b><b class="up">상향 {len(up)}</b>'
+                f'<b class="down">하향 {len(down)}</b><b>유지 {len(keep)}</b><b>신규·비교불가 {len(new)}</b></div>'
+                + (f'<div class="tp-one">▶ {escape(one)}</div>' if one else "") + '</section>'
+                f'<section class="panel report"><h3>🔺 목표주가 상향 ({len(up)})</h3>{target_rows(up, "up")}</section>'
+                f'<section class="panel report"><h3>🔻 목표주가 하향 ({len(down)})</h3>{target_rows(down, "down")}</section>')
+        if opch:
+            body += ('<section class="panel report"><h3>투자의견 변경</h3><ul>' + "".join(
+                f'<li>{escape(i["company"])}: {escape(i.get("prev_opinion") or "")} → {escape(i["opinion"])} · {escape(i["broker"])}</li>'
+                for i in opch) + '</ul></section>')
+        if new or keep:
+            body += ('<section class="panel report">'
+                     + (f'<h3>신규 커버리지·직전 비교불가 ({len(new)})</h3><p>' + " · ".join(
+                         f'{escape(i["company"])}({escape(i["broker"])}{", TP " + _won(i.get("target")) if i.get("target") else ""})'
+                         for i in new) + '</p>' if new else "")
+                     + (f'<h3>목표주가 유지 ({len(keep)})</h3><p>' + " · ".join(
+                         f'{escape(i["company"])}({escape(i["broker"])} {_won(i.get("target"))})' for i in keep) + '</p>' if keep else "")
+                     + '</section>')
+        sub = f'{label(p.stem)} · {escape(doc.get("made", ""))} 기준 · 같은 증권사 직전 리포트 대비 · 데이터: 한경 컨센서스'
+        title = f'{label(p.stem)} 목표주가 변동'
+        for dest, root in ((out / p.stem, "../../"),) + (((out, "../"),) if i == 0 else ()):
+            dest.mkdir(parents=True, exist_ok=True)
+            more = f'<section class="panel"><h3 style="margin:0 0 8px">지난 리포트</h3><ul class="dates">{dates.replace("{root}", "" if dest == out else "../")}</ul></section>'
+            (dest / "index.html").write_text(page(title, body + more, root, "target/", "TARGET PRICE", sub), encoding="utf-8")
+        if first is None:
+            first = dict(day=p.stem, made=doc.get("made", ""), up=up, down=down, n=len(items), one=one)
+    if first is None:
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "index.html").write_text(page("목표주가 변동", '<p class="err">목표주가 변동 리포트를 불러오지 못했습니다.</p>',
+                                             "../", "target/", "TARGET PRICE", "평일 오전 8시, 증권사 리포트 목표주가 상향·하향"),
+                                        encoding="utf-8")
+    return first
+
+
 # ---------- 맵 (업종별 등락 트리맵) ----------
 # kb-market-report Actions가 장중 5분마다 flow-live/map.json(네이버 증권 업종별 종목 등락)을 올린다.
 # 업종 넓이 = 시가총액 합, 종목 넓이 = 시가총액, 색 = 등락률(-3%~+3%, 빨강 상승·파랑 하락).
@@ -1185,7 +1279,19 @@ addEventListener('resize',function(){document.querySelectorAll('iframe.embed').f
 </script>"""
 
 
-def build_home(now, daily, news, close, live=None, stocks=None):
+def target_home(target):
+    if not target:
+        return ""
+    up, down = target["up"], target["down"]
+    inner = (f'<div class="tp-sum"><b>리포트 {target["n"]}건</b><b class="up">상향 {len(up)}</b><b class="down">하향 {len(down)}</b></div>'
+             f'<h3>🔺 상향 상위</h3>{target_rows(up, "up", 5)}<h3>🔻 하향 상위</h3>{target_rows(down, "down", 5)}'
+             + (f'<div class="tp-one">▶ {escape(target["one"])}</div>' if target["one"] else ""))
+    return (f'<section class="sec" id="target"><style>{TARGET_CSS}</style><div class="sec-h"><h2>🎯 목표주가 변동</h2>'
+            f'<a href="target/">{label(target["day"])} {escape(target["made"][-5:])} · 전체 보기</a></div>'
+            f'<section class="panel report">{inner}</section></section>')
+
+
+def build_home(now, daily, news, close, live=None, stocks=None, target=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
@@ -1201,6 +1307,7 @@ def build_home(now, daily, news, close, live=None, stocks=None):
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
+            f'{target_home(target)}'
             f'<section class="sec" id="mystocks"><div class="sec-h"><h2>📌 관심 종목 뉴스</h2>'
             f'<a href="stocks/">{stocks["at"]:%m/%d %H:%M} 수집</a></div>{stocks["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
@@ -1220,11 +1327,12 @@ def main():
     theme_doc = build_theme()
     news = build_news(now, theme_doc)
     close = build_close()
+    target = build_target()
     live = build_live(now)
     stocks = build_stocks(now)
     build_map()
-    build_home(now, daily, news, close, live, stocks)
-    print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"],
+    build_home(now, daily, news, close, live, stocks, target)
+    print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "live": bool(live),
                       "news": [len(news["kr"]), len(news["theme"])], "stocks": stocks["n"]}, ensure_ascii=False))
 
