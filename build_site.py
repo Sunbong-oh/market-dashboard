@@ -1332,7 +1332,7 @@ ISSUE_CSS = """
 .iss .pin{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:6px;background:#F39800;color:#fff;font-size:12px;vertical-align:3px}
 .iss .kw{display:flex;gap:6px;margin:8px 0 2px}.iss .kw input{flex:1;min-width:0;font:15px inherit;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text)}
 .iss .kw button{font:700 14px inherit;padding:8px 14px;border:0;border-radius:9px;background:#F39800;color:#fff;cursor:pointer}
-.iss .kwh{font-size:12px;color:var(--muted)}
+.iss .kwh{font-size:12px;color:var(--muted)}.iss .hl{font-size:14px;color:var(--muted);margin-top:3px;line-height:1.45}
 """
 ISSUE_JS = r"""<script>
 (function(){var SRC=%s,box=document.getElementById('issue');if(!box)return;
@@ -1342,16 +1342,16 @@ ISSUE_JS = r"""<script>
  function pc(v){return v==null?'':'<b class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+Number(v).toFixed(2)+'%%</b>'}
  var ADM=false;try{ADM=localStorage.getItem('brian-admin')==='1'}catch(x){}
  /* 관리자: 키워드를 넣고 반영 → GitHub '새 파일' 화면(내용 채워짐)에서 Commit만 누르면 1분 안에 1번 이슈로 고정 */
- function kwBox(cur){if(!ADM)return '';return '<div class="kw"><input id="kwin" placeholder="오늘의 핵심 키워드 (쉼표로 여러 개, 비우면 해제)" value="'+e(cur||'')+'"><button id="kwgo">반영</button></div>'+
+ function kwBox(cur){if(!ADM)return '';return '<div class="kw"><input id="kwin" placeholder="키워드 (쉼표로 여러 개) 또는 제목 | 키워드, 비우면 해제" value="'+e(cur||'')+'"><button id="kwgo">반영</button></div>'+
   '<div class="kwh">반영을 누르면 GitHub 화면이 열립니다 → 초록 Commit changes 버튼만 누르세요 (1분 안에 갱신)</div>'}
  function kwBind(){var b=document.getElementById('kwgo');if(!b)return;b.onclick=function(){var v=document.getElementById('kwin').value.trim(),k=kst();
   var u='https://github.com/Sunbong-oh/kb-market-report/new/main?filename='+encodeURIComponent('issue_keywords/'+k.d+'-'+k.hm.replace(':','')+'.txt')+
-   '&value='+encodeURIComponent(v||' ')+'&message='+encodeURIComponent('핵심 이슈 키워드: '+(v||'해제'));window.open(u,'_blank')}}
+   '&value='+encodeURIComponent(v.indexOf('|')>=0?('제목: '+v.split('|')[0].trim()+'\n'+v.split('|').slice(1).join(',').trim()):(v||' '))+'&message='+encodeURIComponent('핵심 이슈 키워드: '+(v||'해제'));window.open(u,'_blank')}}
  function draw(j){if(document.activeElement&&document.activeElement.id==='kwin')return;  /* 입력 중에는 다시 그리지 않음 */
   var ok=j&&j.date===kst().d&&j.data&&j.data.length&&on();
   if(!ok){if(ADM&&on()){box.innerHTML='<div class="iss"><h2>🔥 오늘의 핵심 이슈<small>아직 자료 없음</small></h2>'+kwBox('')+'</div>';box.hidden=false;kwBind()}else box.hidden=true;return}
   var pin=j.data[0].pin||'',pre=j.time<'09:00',h='<div class="iss"><h2>🔥 오늘의 핵심 이슈<small>'+e(j.time)+' 기준 · 네이버 증권 주요뉴스</small></h2>'+kwBox(pin);
-  j.data.forEach(function(g,i){h+='<div class="it'+(i?'':' main')+'"><div class="tt"><span class="rk">'+(i+1)+'</span>'+(g.pin?'<span class="pin">📌 '+e(g.pin)+'</span>':'')+e(g.title)+'</div><div class="chips">'+
+  j.data.forEach(function(g,i){h+='<div class="it'+(i?'':' main')+'"><div class="tt"><span class="rk">'+(i+1)+'</span>'+(g.pin?'<span class="pin">📌 '+e(g.pin)+'</span>':'')+e(g.title)+'</div>'+(g.headline?'<div class="hl">'+e(g.headline)+'</div>':'')+'<div class="chips">'+
    (g.sector?'<span class="sec">'+e(g.sector.s)+' '+pc(g.sector.p)+'</span>':'')+
    (g.stocks||[]).map(function(s){return '<span>'+e(s.n)+' '+pc(s.p)+'</span>'}).join('')+'</div>'+
    '<div class="src">기사 '+g.n+'건 · 언론사 '+g.offices+'곳 — '+(g.articles||[]).slice(0,2).map(function(a){return '<a href="'+e(a.url)+'" target="_blank" rel="noopener">'+e(a.o)+' '+e(a.dt.slice(8,10)+':'+a.dt.slice(10,12))+'</a>'}).join(' · ')+'</div></div>'});
