@@ -602,11 +602,11 @@ def stocks_block(stocks):
             price_html = (f'<div class="px {cls}"><b>{pr["price"]:,.0f}원</b> <span>{arrow} {abs(pr["chg"]):,.0f} '
                           f'({pr["pct"]:+.2f}%)</span><small>{when} 기준{" · 장 마감" if pr["status"] == "CLOSE" else ""}</small></div>')
         else:
-            price_html = ""
+            price_html = '<div class="px"></div>' if x["code"] else ""
 
         rep_html = f'<h4>📝 증권사 리포트</h4>{_mini(rep, "")}' if rep else ""
         cards.append(
-            f'<div class="card stk" data-name="{escape(x["name"])}"><h3>{escape(x["name"])}{code}'
+            f'<div class="card stk" data-name="{escape(x["name"])}" data-code="{escape(x["code"] or "")}"><h3>{escape(x["name"])}{code}'
             f'<label class="adm"><input type="checkbox"> 이 손님 종목</label>'
             f'<a class="x adm" href="{REPO_URL}/delete/main/watchlist/{escape(x["fname"])}" target="_blank" rel="noopener">삭제</a></h3>{price_html}'
             f'<h4>📰 뉴스 (최근 1주일)</h4>{_mini(news, "최근 30일 기사 없음")}'
@@ -619,7 +619,25 @@ def stocks_block(stocks):
             f'<p class="meta adm">추가를 누르면 GitHub 저장 화면이 열려요 → 초록색 <b>Commit changes</b>를 누르면 2~3분 뒤 1주일 뉴스·최근 공시가 붙어요 (🔴 = 수주·공급계약 공시). '
             f'손님 구분은 이 핸드폰에만 저장되고 사이트에는 종목 이름만 보여요.</p>'
             f'<div class="cus adm"></div><p class="err none adm" hidden>이 손님에게 고른 종목이 없어요. "종목 고르기"를 눌러 체크하세요.</p>'
-            f'<div class="stks">{cards}</div>{empty}</section>{STOCK_JS}')
+            f'<div class="stks">{cards}</div>{empty}</section>{STOCK_JS}{PRICE_JS % json.dumps([u.replace("snapshot.json", "prices.json") for u in SNAP_SRC])}')
+
+
+# 관심 종목 현재가: kb-market-report 실시간 작업이 평일 08:00~16:05 1분마다 flow-live/prices.json 에 올린다
+# (종목 목록은 사이트가 만드는 stocks/codes.json). 사이트를 다시 빌드하지 않아도 1분마다 카드의 가격을 바꾼다.
+PRICE_JS = r"""<script>
+(function(){var SRC=%s;
+ function f0(v){return Math.round(v).toLocaleString('ko-KR')}
+ function apply(j){var P=(j&&j.data)||{};document.querySelectorAll('.card.stk[data-code]').forEach(function(c){
+  var q=P[c.dataset.code],el=c.querySelector('.px');if(!q||!el||q.p==null)return;
+  var cls=q.c>0?'up':q.c<0?'dn':'',ar=q.c>0?'▲':q.c<0?'▼':'-',at=String(q.at||'');
+  el.className='px '+cls;el.innerHTML='<b>'+f0(q.p)+'원</b> <span>'+ar+' '+f0(Math.abs(q.c))+' ('+(q.r>0?'+':'')+Number(q.r).toFixed(2)+'%%)</span><small>'+
+   (at.length>=12?at.slice(4,6)+'/'+at.slice(6,8)+' '+at.slice(8,10)+':'+at.slice(10,12)+' 기준':'')+(q.st==='CLOSE'?' · 장 마감':' · 실시간')+'</small>'})}
+ function load(i){i=i||0;if(i>=SRC.length)return;
+  fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
+  .then(function(r){if(!r.ok)throw 0;return r.json()}).then(apply).catch(function(){load(i+1)})}
+ load();setInterval(function(){if(!document.hidden)load()},60000);
+ document.addEventListener('visibilitychange',function(){if(!document.hidden)load()})})();
+</script>"""
 
 
 def build_stocks(now):
@@ -629,6 +647,8 @@ def build_stocks(now):
         stocks = list(ex.map(lambda nf: stock_info(*nf), names))
     body = stocks_block(stocks)
     (OUT / "stocks").mkdir(parents=True, exist_ok=True)
+    # 실시간 작업이 1분마다 현재가를 받을 종목 코드 목록
+    (OUT / "stocks" / "codes.json").write_text(json.dumps(sorted({x["code"] for x in stocks if x["code"]})), encoding="utf-8")
     (OUT / "stocks" / "index.html").write_text(
         page("관심 종목 뉴스", body, "../", "stocks/", "MY STOCKS",
              f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 종목별 공시·리포트·최근 7일 기사"), encoding="utf-8")
