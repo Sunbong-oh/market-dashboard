@@ -1070,6 +1070,7 @@ TARGET_CSS = """
 .up{color:var(--up)}.down{color:var(--down)}
 .tp-one{font-size:16px;font-weight:800;background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:10px;padding:10px 12px;margin-top:12px}
 .tp .m{display:none}
+.tp-q{width:100%;padding:9px 12px;margin:2px 0 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px}
 @media (max-width:520px){.tp{font-size:14px}.tp .ti{display:none}.tp .m{display:block}.tp .co{white-space:normal}}
 """
 
@@ -1095,6 +1096,30 @@ def target_split(items):
     up = sorted((i for i in items if i.get("pct") is not None and i["pct"] > 0), key=lambda i: -i["pct"])
     down = sorted((i for i in items if i.get("pct") is not None and i["pct"] < 0), key=lambda i: i["pct"])
     return up, down
+
+
+def all_reports(items):
+    """그날 정리한 리포트 전체(상향·하향·유지·신규·비교불가) - 종목·증권사 검색 가능."""
+    def change(it):
+        if it.get("pct") is None:
+            return '<span class="t">신규·비교불가</span>'
+        if it["pct"] == 0:
+            return '<span class="t">유지</span>'
+        return f'<b class="{"up" if it["pct"] > 0 else "down"}">{it["pct"]:+.1f}%</b>'
+    rows = []
+    for it in sorted(items, key=lambda i: (i["company"], i["broker"])):
+        title = escape(it.get("title") or "")
+        if it.get("pdf"):
+            title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>'
+        key = escape(f'{it["company"]} {it.get("code", "")} {it["broker"]}'.lower())
+        rows.append(f'<tr data-k="{key}"><td class="co">{escape(it["company"])}<div class="t">{escape(it["broker"])} · '
+                    f'{escape(it.get("opinion") or "-")}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>'
+                    f'<td class="px">{_won(it.get("target"))}</td><td class="pct">{change(it)}</td></tr>')
+    return (f'<section class="panel report" id="all"><h3>📋 전체 리포트 ({len(items)}건)</h3>'
+            '<input class="tp-q" type="search" placeholder="종목·증권사 검색 (예: 에이피알, 메리츠)" '
+            'oninput="var q=this.value.trim().toLowerCase();document.querySelectorAll(\'#all tr\').forEach(function(r){'
+            'r.style.display=!q||r.dataset.k.indexOf(q)>=0?\'\':\'none\'})">'
+            f'<table class="tp">{"".join(rows)}</table></section>')
 
 
 def build_target():
@@ -1124,14 +1149,7 @@ def build_target():
             body += ('<section class="panel report"><h3>투자의견 변경</h3><ul>' + "".join(
                 f'<li>{escape(i["company"])}: {escape(i.get("prev_opinion") or "")} → {escape(i["opinion"])} · {escape(i["broker"])}</li>'
                 for i in opch) + '</ul></section>')
-        if new or keep:
-            body += ('<section class="panel report">'
-                     + (f'<h3>신규 커버리지·직전 비교불가 ({len(new)})</h3><p>' + " · ".join(
-                         f'{escape(i["company"])}({escape(i["broker"])}{", TP " + _won(i.get("target")) if i.get("target") else ""})'
-                         for i in new) + '</p>' if new else "")
-                     + (f'<h3>목표주가 유지 ({len(keep)})</h3><p>' + " · ".join(
-                         f'{escape(i["company"])}({escape(i["broker"])} {_won(i.get("target"))})' for i in keep) + '</p>' if keep else "")
-                     + '</section>')
+        body += all_reports(items)
         sub = f'{label(p.stem)} · {escape(doc.get("made", ""))} 기준 · 같은 증권사 직전 리포트 대비 · 데이터: 한경 컨센서스'
         title = f'{label(p.stem)} 목표주가 변동'
         for dest, root in ((out / p.stem, "../../"),) + (((out, "../"),) if i == 0 else ()):
@@ -1285,7 +1303,8 @@ def target_home(target):
     up, down = target["up"], target["down"]
     inner = (f'<div class="tp-sum"><b>리포트 {target["n"]}건</b><b class="up">상향 {len(up)}</b><b class="down">하향 {len(down)}</b></div>'
              f'<h3>🔺 상향 상위</h3>{target_rows(up, "up", 5)}<h3>🔻 하향 상위</h3>{target_rows(down, "down", 5)}'
-             + (f'<div class="tp-one">▶ {escape(target["one"])}</div>' if target["one"] else ""))
+             + (f'<div class="tp-one">▶ {escape(target["one"])}</div>' if target["one"] else "")
+             + f'<a class="btn" href="target/#all">전체 리포트 {target["n"]}건 보기 (신규·유지 포함)</a>')
     return (f'<section class="sec" id="target"><style>{TARGET_CSS}</style><div class="sec-h"><h2>🎯 목표주가 변동</h2>'
             f'<a href="target/">{label(target["day"])} {escape(target["made"][-5:])} · 전체 보기</a></div>'
             f'<section class="panel report">{inner}</section></section>')
