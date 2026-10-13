@@ -1160,11 +1160,11 @@ def map_btn(href):
 # 홈 한 페이지에서 스크롤만으로 오전 데일리 → 돈이 되는 뉴스 → 장마감 수급을 모두 본다.
 # 데일리·장마감은 원본 HTML을 iframe에 넣고 내용 높이만큼 늘려 안쪽 스크롤이 생기지 않게 한다.
 CLOSE_FIRST_JS = """<script>(function(){function f(){var n=new Date(Date.now()+9*3600e3),wd=n.getUTCDay(),hm=n.toISOString().slice(11,16);
- document.documentElement.classList.toggle('close-first',wd>0&&wd<6&&hm>='08:50'&&hm<'16:00')}f();setInterval(f,60000)})();</script>"""
+ document.documentElement.classList.toggle('close-first',wd>0&&wd<6&&hm>='08:30'&&hm<'17:00')}f();setInterval(f,60000)})();</script>"""
 HOME_CSS = """
 .sec{scroll-margin-top:56px;margin-top:22px}
 .home{display:flex;flex-direction:column}.home>.sec:first-child{margin-top:0}
-/* 평일 08:50~16:00: 수급(실시간)을 맨 위로 - 순서만 바꾸므로 iframe을 다시 불러오지 않는다 */
+/* 평일 08:30~17:00: 수급(실시간)을 맨 위로 - 순서만 바꾸므로 iframe을 다시 불러오지 않는다 */
 .close-first .home #close{order:-1;margin-top:0}.close-first .home #daily{margin-top:22px}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 10px}
 .sec-h h2{margin:0}.sec-h a{font-size:13px;color:var(--muted)}
