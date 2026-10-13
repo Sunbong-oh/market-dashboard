@@ -61,6 +61,7 @@ a.card:hover{transform:translateY(-2px);border-color:var(--accent)}
 .items{list-style:none;margin:0;padding:0;counter-reset:i}
 .items li{counter-increment:i;position:relative;padding:10px 0 10px 34px;font-size:17px;font-weight:700;line-height:1.45}
 .items li+li{border-top:1px solid var(--line)}
+.items .rel{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:6px;background:#fff1dc;color:#c25e00;font-size:12px;font-weight:800;vertical-align:2px}
 .items li:before{content:counter(i);position:absolute;left:0;top:12px;width:24px;height:24px;border-radius:50%;
   background:var(--accent);color:#fff;font-size:13px;font-weight:800;text-align:center;line-height:24px}
 .items a{text-decoration:none}.items a:hover{text-decoration:underline}
@@ -211,7 +212,7 @@ def dated_dirs(base):
 def news_items(items, limit=None):
     if not items:
         return '<p class="err">관련 뉴스를 찾지 못했습니다.</p>'
-    lis = "".join(f'<li><a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
+    lis = "".join(f'<li>{"<span class=rel>관련주</span>" if n.get("rel") else ""}<a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
                   f'<div class="src">{escape(n["src"])} · {datetime.fromtimestamp(n["ts"], d.KST):%m/%d %H:%M}</div></li>'
                   for n in items[:limit])
     return f'<ol class="items">{lis}</ol>'
@@ -690,19 +691,23 @@ def build_news(now, theme_doc=None):
             return []
     kr = safe(d.fetch_kr_news, n=5)  # dashboard.market_news로 주가 관련 기사만 후보에 들어간다
     theme = safe(theme_news, limit=5)
+    # 한 목록으로: 시장 영향 뉴스와 관련주 기사를 번갈아 넣고(같은 이야기는 하나만) 5개
+    merged = []
+    for pair in zip(kr + [None] * 5, theme + [None] * 5):
+        for it in pair:
+            if it and len(merged) < 5 and all(len(d._grams(it["title"]) & d._grams(m["title"])) < 4 for m in merged):
+                merged.append(dict(it, rel=it in theme))
     body = (f'{theme_block(theme_doc, "")}'
-            f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스</div>'
-            f'<p class="meta">직전 한국 장 마감(15:30) 이후 뉴스 중 주가·실적·금리·환율·유가·관세·업종과 직접 관련된 것만,'
-            f' 여러 언론이 크게 다룬 순 (정치·사회 기사 제외)</p>{news_items(kr)}</section>'
-            f'<section class="panel"><div class="tag n">관련주</div>'
-            f'<p class="meta">최근 24시간 · 주가 등락 나열, 칼럼·종목 추천성 기사 제외</p>{news_items(theme)}</section>')
+            f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스 · 관련주</div>'
+            f'<p class="meta">직전 한국 장 마감 이후 여러 언론이 크게 다룬 시장 뉴스와 관련주 기사 중 5개'
+            f' (정치·사회, 칼럼·종목 추천성 기사 제외)</p>{news_items(merged)}</section>')
     (OUT / "news").mkdir(parents=True, exist_ok=True)
     news_page_body = (body.replace(f'src="{theme_doc["path"]}"', f'src="../{theme_doc["path"]}"')
                       if theme_doc else body)
     (OUT / "news" / "index.html").write_text(
         page("돈이 되는 뉴스", f'<style>{HOME_CSS}</style>' + news_page_body + FIT_JS, "../", "news/", "MONEY NEWS",
              f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 하루 여러 번 자동 갱신"), encoding="utf-8")
-    return dict(kr=kr, theme=theme, at=now, body=body)
+    return dict(kr=merged, theme=[], at=now, body=body)
 
 
 # ---------- 장마감 리포트 ----------
@@ -1324,6 +1329,10 @@ ISSUE_CSS = """
 .iss .chips .sec{background:#fff1dc;color:#1c2330}.iss .up{color:var(--up)}.iss .down{color:var(--down)}
 .iss .src{margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.6}.iss .src a{color:var(--muted)}
 .iss .note{font-size:12px;color:var(--muted);margin-top:6px}
+.iss .pin{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:6px;background:#F39800;color:#fff;font-size:12px;vertical-align:3px}
+.iss .kw{display:flex;gap:6px;margin:8px 0 2px}.iss .kw input{flex:1;min-width:0;font:15px inherit;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text)}
+.iss .kw button{font:700 14px inherit;padding:8px 14px;border:0;border-radius:9px;background:#F39800;color:#fff;cursor:pointer}
+.iss .kwh{font-size:12px;color:var(--muted)}
 """
 ISSUE_JS = r"""<script>
 (function(){var SRC=%s,box=document.getElementById('issue');if(!box)return;
@@ -1331,14 +1340,23 @@ ISSUE_JS = r"""<script>
  function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='07:00'&&k.hm<'17:00'}
  function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function pc(v){return v==null?'':'<b class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+Number(v).toFixed(2)+'%%</b>'}
- function draw(j){if(!j||j.date!==kst().d||!j.data||!j.data.length||!on()){box.hidden=true;return}
-  var pre=j.time<'09:00',h='<div class="iss"><h2>🔥 오늘의 핵심 이슈<small>'+e(j.time)+' 기준 · 네이버 증권 주요뉴스</small></h2>';
-  j.data.forEach(function(g,i){h+='<div class="it'+(i?'':' main')+'"><div class="tt"><span class="rk">'+(i+1)+'</span>'+e(g.title)+'</div><div class="chips">'+
+ var ADM=false;try{ADM=localStorage.getItem('brian-admin')==='1'}catch(x){}
+ /* 관리자: 키워드를 넣고 반영 → GitHub '새 파일' 화면(내용 채워짐)에서 Commit만 누르면 1분 안에 1번 이슈로 고정 */
+ function kwBox(cur){if(!ADM)return '';return '<div class="kw"><input id="kwin" placeholder="오늘의 핵심 키워드 (쉼표로 여러 개, 비우면 해제)" value="'+e(cur||'')+'"><button id="kwgo">반영</button></div>'+
+  '<div class="kwh">반영을 누르면 GitHub 화면이 열립니다 → 초록 Commit changes 버튼만 누르세요 (1분 안에 갱신)</div>'}
+ function kwBind(){var b=document.getElementById('kwgo');if(!b)return;b.onclick=function(){var v=document.getElementById('kwin').value.trim(),k=kst();
+  var u='https://github.com/Sunbong-oh/kb-market-report/new/main?filename='+encodeURIComponent('issue_keywords/'+k.d+'-'+k.hm.replace(':','')+'.txt')+
+   '&value='+encodeURIComponent(v||' ')+'&message='+encodeURIComponent('핵심 이슈 키워드: '+(v||'해제'));window.open(u,'_blank')}}
+ function draw(j){if(document.activeElement&&document.activeElement.id==='kwin')return;  /* 입력 중에는 다시 그리지 않음 */
+  var ok=j&&j.date===kst().d&&j.data&&j.data.length&&on();
+  if(!ok){if(ADM&&on()){box.innerHTML='<div class="iss"><h2>🔥 오늘의 핵심 이슈<small>아직 자료 없음</small></h2>'+kwBox('')+'</div>';box.hidden=false;kwBind()}else box.hidden=true;return}
+  var pin=j.data[0].pin||'',pre=j.time<'09:00',h='<div class="iss"><h2>🔥 오늘의 핵심 이슈<small>'+e(j.time)+' 기준 · 네이버 증권 주요뉴스</small></h2>'+kwBox(pin);
+  j.data.forEach(function(g,i){h+='<div class="it'+(i?'':' main')+'"><div class="tt"><span class="rk">'+(i+1)+'</span>'+(g.pin?'<span class="pin">📌 '+e(g.pin)+'</span>':'')+e(g.title)+'</div><div class="chips">'+
    (g.sector?'<span class="sec">'+e(g.sector.s)+' '+pc(g.sector.p)+'</span>':'')+
    (g.stocks||[]).map(function(s){return '<span>'+e(s.n)+' '+pc(s.p)+'</span>'}).join('')+'</div>'+
    '<div class="src">기사 '+g.n+'건 · 언론사 '+g.offices+'곳 — '+(g.articles||[]).slice(0,2).map(function(a){return '<a href="'+e(a.url)+'" target="_blank" rel="noopener">'+e(a.o)+' '+e(a.dt.slice(8,10)+':'+a.dt.slice(10,12))+'</a>'}).join(' · ')+'</div></div>'});
   h+=(pre?'<div class="note">장 시작 전: 종목·업종 등락은 전일 종가 기준입니다. 9시부터 실시간으로 바뀝니다.</div>':'')+'</div>';
-  box.innerHTML=h;box.hidden=false}
+  box.innerHTML=h;box.hidden=false;kwBind()}
  function load(i){i=i||0;if(i>=SRC.length||!on()){if(!on())box.hidden=true;return}
   fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
   .then(function(r){if(!r.ok)throw 0;return r.json()}).then(draw).catch(function(){load(i+1)})}
