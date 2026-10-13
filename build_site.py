@@ -790,14 +790,11 @@ function futChart(el,d,live){
  var F=d.futures||{},prev=(F.price!=null&&F.change!=null)?F.price-F.change:null;
  /* 장중에는 가로축을 08:45~(마지막 기록+30분)으로 줄여 지금까지의 흐름을 넓게 보여 준다. 장 마감 뒤엔 하루 전체 */
  var lastM=Math.max(lf[0],hf?fl[fl.length-1][0]:0),END=live?Math.min(420,Math.max(lastM+30,90)):420;
- var W=640,H=310,L=92,R=548,T=14,B=262,x=function(m){return L+(R-L)*m/END};
- var sc=function(v){var lo=Math.min.apply(0,v),hi=Math.max.apply(0,v);if(hi==lo){hi+=1;lo-=1}var pd=(hi-lo)*.06;lo-=pd;hi+=pd;
+ var W=640,H=400,L=84,R=556,T=12,B=352,x=function(m){return L+(R-L)*m/END};
+ var sc=function(v){var lo=Math.min.apply(0,v),hi=Math.max.apply(0,v);if(hi==lo){hi+=1;lo-=1}var pd=(hi-lo)*.04;lo-=pd;hi+=pd;
    return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
  var sf=sc(bars.map(function(p){return p[1]})),sg=hf?sc(fl.map(function(p){return p[1]})):null;
- /* 두 축의 비율 고정: 선물 지수 2포인트 = 외국인 200억(1포인트 = 100억). 더 크게 움직인 쪽에 맞춰 둘 다 같은 비율로 */
- if(hf){var RATIO=100,span=Math.max(sf.hi-sf.lo,(sg.hi-sg.lo)/RATIO),fm=(sf.hi+sf.lo)/2,gm=(sg.hi+sg.lo)/2;
-  var mk=function(lo,hi){return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
-  sf=mk(fm-span/2,fm+span/2);sg=mk(gm-span*RATIO/2,gm+span*RATIO/2)}
+ /* HTS(투자자별매매동향-추이)처럼 두 선을 각자 범위로 위아래 꽉 차게 (비율 고정 없음) */
  var path=function(ps,y){return 'M'+ps.map(function(p){return x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)}).join(' L')};
  var n0=function(v){return Math.round(v).toLocaleString('ko-KR')},sg0=function(v){return (v>0?'+':v<0?'-':'')+n0(Math.abs(v))};
  var f2=function(v){return v.toLocaleString('ko-KR',{minimumFractionDigits:2,maximumFractionDigits:2})};
@@ -805,18 +802,21 @@ function futChart(el,d,live){
  for(var m=15;m<=END;m+=step){var hm=m+525;tk.push(('0'+Math.floor(hm/60)).slice(-2)+('0'+hm%60).slice(-2))}
  var grid=tk.map(function(t){var X=x(tm(t));return '<line x1="'+X+'" y1="'+T+'" x2="'+X+'" y2="'+B+'" stroke="#e3e6ec"/>'+
   '<text x="'+X+'" y="'+(B+24)+'" text-anchor="middle">'+t.slice(0,2)+':'+t.slice(2)+'</text>'}).join('');
+ /* 눈금: 보기 좋은 간격(1·2·2.5·5×10^n)으로 5개 안팎 */
+ var yt=function(sc,lab,lines){var r=(sc.hi-sc.lo)/5,p=Math.pow(10,Math.floor(Math.log10(r))),st=[1,2,2.5,5,10].map(function(k){return k*p}).filter(function(v){return v>=r})[0],o='';
+  for(var v=Math.ceil(sc.lo/st)*st;v<=sc.hi;v+=st){var Y=sc.y(v);if(Y<T+6||Y>B-4)continue;
+   o+=(lines?'<line x1="'+L+'" y1="'+Y.toFixed(1)+'" x2="'+R+'" y2="'+Y.toFixed(1)+'" stroke="#eceef2"/>':'')+lab(v)}return o};
  var fsvg='';
  if(hf){var yz=sg.y(0);
   var z0=sg.lo<0&&sg.hi>0;  /* 외국인 선은 자기 범위로 꽉 차게(0을 억지로 넣지 않음), 0선은 범위 안일 때만 */
   fsvg=(z0?'<line x1="'+L+'" y1="'+yz.toFixed(1)+'" x2="'+R+'" y2="'+yz.toFixed(1)+'" stroke="#e03131" stroke-dasharray="4 4" opacity=".45"/>':'')+
-   '<text x="'+(R+6)+'" y="'+(T+12)+'" fill="#e03131">'+sg0(sg.hi)+'</text><text x="'+(R+6)+'" y="'+(B+4)+'" fill="#e03131">'+sg0(sg.lo)+'</text>'+
-   (z0&&yz-T>=24&&B-yz>=20?'<text x="'+(R+6)+'" y="'+(yz+5).toFixed(1)+'" fill="#e03131">0</text>':'')+
-   '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#e03131" stroke-width="3.2" stroke-linejoin="round"/>'+
+   yt(sg,function(v){return '<text x="'+(R+6)+'" y="'+(sg.y(v)+5).toFixed(1)+'" fill="#e03131">'+sg0(v)+'</text>'})+
+   '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#e03131" stroke-width="2.8" stroke-linejoin="round"/>'+
    '<circle cx="'+x(fl[fl.length-1][0]).toFixed(1)+'" cy="'+sg.y(fl[fl.length-1][1]).toFixed(1)+'" r="5" fill="#e03131"/>'}
  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="KOSPI200 선물과 외국인 선물 순매수 누적 교차 차트" style="font:15px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'+
   '<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(B-T)+'" fill="#fafbfc" stroke="#e3e6ec"/>'+grid+
-  '<text x="'+(L-6)+'" y="'+(T+12)+'" text-anchor="end">'+f2(sf.hi)+'</text><text x="'+(L-6)+'" y="'+(B+4)+'" text-anchor="end">'+f2(sf.lo)+'</text>'+
-  '<path d="'+path(bars,sf.y)+'" fill="none" stroke="#1c2330" stroke-width="1.4" stroke-linejoin="round" opacity=".7"/>'+fsvg+'</svg>';
+  yt(sf,function(v){return '<text x="'+(L-6)+'" y="'+(sf.y(v)+5).toFixed(1)+'" text-anchor="end">'+f2(v)+'</text>'},true)+
+  '<path d="'+path(bars,sf.y)+'" fill="none" stroke="#111" stroke-width="2.2" stroke-linejoin="round"/>'+fsvg+'</svg>';
  var ch=prev!=null?last-prev:null,pct=ch!=null&&prev?ch/prev*100:0,cls=ch>0?'up':ch<0?'dn':'';
  var back=hf?fl.filter(function(p){return p[0]<=fl[fl.length-1][0]-30}):[],d30=back.length?fg-back[back.length-1][1]:null;
  var gc=fg>0?'up':fg<0?'dn':'';
