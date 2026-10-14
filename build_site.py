@@ -1234,6 +1234,7 @@ US_CSS = """
 .us .op.dn{color:var(--down)}.us .op.upg{color:var(--up)}
 .us .tp .tk{font-size:12px;font-weight:700;color:var(--muted);margin-left:4px}
 .us .tp .tm{font-size:13px;color:var(--muted);white-space:nowrap}
+.usf{vertical-align:-0.08em;margin-right:2px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
 .us .tp .ds{font-size:13px;font-weight:600;color:var(--text);margin-top:3px;white-space:normal;line-height:1.45}
 .us .tp .pr{width:1%;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
 .us .tp .pr b{display:block;font-size:16px}.us .tp .pr .pc{display:block;font-weight:800;font-size:15px}
@@ -1244,6 +1245,15 @@ US_CSS = """
  background:#fff1dc;color:#1c2330;vertical-align:1px}
 """
 
+
+# 국기 이모지(🇺🇸)는 윈도우 PC에서 'US' 글자로 보여서, 작은 SVG 국기를 직접 그린다
+US_FLAG = ('<svg class="usf" viewBox="0 0 19 10" width="1.35em" height="0.72em" role="img" aria-label="미국">'
+           + "".join(f'<rect y="{i * 10 / 13:.3f}" width="19" height="{10 / 13:.3f}" fill="{"#b22234" if i % 2 == 0 else "#fff"}"/>'
+                     for i in range(13))
+           + '<rect width="7.6" height="5.385" fill="#3c3b6e"/>'
+           + "".join(f'<circle cx="{0.63 + c * 1.27 + (0.63 if r % 2 else 0):.2f}" cy="{0.54 + r * 1.07:.2f}" r="0.28" fill="#fff"/>'
+                     for r in range(5) for c in range(6 if r % 2 == 0 else 5))
+           + '</svg>')
 
 def us_op(it):
     """종목명 아래 줄에 붙는 투자의견(제목에 있을 때)·리포트 종류."""
@@ -1340,7 +1350,7 @@ def build_us():
                 f'<section class="panel"><div class="tp-sum"><b>리포트 {len(items)}건</b><b class="up">종목 {len(stocks)}</b>'
                 f'<b>산업·시황 {len(others)}</b></div>' + (f'<div class="tp-one">▶ {escape(one)}</div>' if one else "")
                 + f'{search}</section>'
-                f'<section class="panel report"><h3>🇺🇸 종목 리포트 ({len(stocks)})</h3>{us_rows(stocks)}</section>'
+                f'<section class="panel report"><h3>{US_FLAG} 종목 리포트 ({len(stocks)})</h3>{us_rows(stocks)}</section>'
                 f'<section class="panel report"><h3>🌐 산업·시황 ({len(others)})</h3>{us_rows(others, stock=False)}'
                 '<p class="t" style="margin-top:8px">제목을 누르면 리포트 원문(PDF)이 열립니다. 의견은 제목에 적힌 경우만 표시합니다. '
                 f'오른쪽은 현재가 → 목표주가(애널리스트 평균 컨센서스, Yahoo Finance)와 상승여력이며 {escape(doc.get("made", "")[-5:])} 조회 기준입니다. '
@@ -1366,10 +1376,10 @@ def us_home(us):
     if not us or not us["stocks"]:
         return ""
     inner = (f'<div class="tp-sum"><b>리포트 {us["n"]}건</b><b class="up">종목 {len(us["stocks"])}</b></div>'
-             f'<h3>🇺🇸 최신 종목 리포트</h3>{us_rows(us["stocks"], 5)}'
+             f'<h3>{US_FLAG} 최신 종목 리포트</h3>{us_rows(us["stocks"], 5)}'
              + (f'<div class="tp-one">▶ {escape(us["one"])}</div>' if us["one"] else "")
              + f'<a class="btn" href="us/">해외주식 리포트 {us["n"]}건 전체 보기</a>')
-    return (f'<section class="sec" id="us"><style>{TARGET_CSS}{US_CSS}</style><div class="sec-h"><h2>🇺🇸 해외주식 리포트</h2>'
+    return (f'<section class="sec" id="us"><style>{TARGET_CSS}{US_CSS}</style><div class="sec-h"><h2>{US_FLAG} 해외주식 리포트</h2>'
             f'<a href="us/">{escape(us["day"][5:].replace("-", "/"))} {escape(us["made"][-5:])} · 전체</a></div>'
             f'<section class="panel report us">{inner}</section></section>')
 
