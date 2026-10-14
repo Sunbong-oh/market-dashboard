@@ -64,6 +64,7 @@ def parse(r):
     if not headline or re.fullmatch(r"[\d.\s/-]+", headline):   # 데일리류는 요약 제목 칸에 날짜만 들어 있다
         headline = m.group("rest") if m else title
     headline = KIND_RE.sub("", headline).strip(" -")
+    headline = OPINION_RE.sub("", headline).strip(" ,-·") or headline   # 의견은 따로 보여 준다
     bullets = [re.sub(r"^[-·•\s]+", "", unescape(re.sub(r"<[^>]+>", "", b))).strip()
                for b in re.split(r"<br\s*/?>", r.get("summaryHtml") or "", flags=re.I)]
     op = OPINION_RE.search(title)

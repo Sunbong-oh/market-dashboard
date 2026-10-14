@@ -1228,53 +1228,52 @@ def build_target():
 # ---------- 해외주식 리포트 (국내 증권사 미국주식 리포트 요약) ----------
 # us_reports.py 가 us_reports/YYYY-MM-DD.json 을 만든다 (연합인포맥스 글로벌모니터 목록 = 한국투자증권 미국주식 리서치 메뉴).
 US_CSS = """
-.us-sum{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
-.us-sum b{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:14px}
-.us-sum b.on{color:#fff;background:var(--accent);border-color:var(--accent)}
-.us-it{padding:12px 0;border-top:1px solid var(--line)}.us-it:first-of-type{border-top:0}
-.us-co{font-size:17px;font-weight:800}.us-co small{font-size:13px;color:var(--muted);font-weight:700;margin-left:4px}
-.us-meta{font-size:13px;color:var(--muted);margin-top:2px}
-.us-tag{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:4px;vertical-align:1px;
- background:var(--bg);border:1px solid var(--line);color:var(--text)}
-.us-tag.op{background:#fff1dc;border-color:#f6c77d;color:#1c2330}.us-tag.dn{background:var(--down);border-color:var(--down);color:#fff}
-.us-tag.upg{background:var(--up);border-color:var(--up);color:#fff}
-.us-hl{font-size:15.5px;font-weight:700;margin-top:6px;line-height:1.45}.us-hl a{color:var(--text)}
-.us-it ul{margin:6px 0 0;padding-left:18px}.us-it li{font-size:14.5px;line-height:1.55;color:var(--text)}
-.us-it.mini .us-hl{font-size:15px}.us-it.mini li{font-size:14px;color:var(--muted)}
-.us-q{width:100%;padding:9px 12px;margin:2px 0 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px}
-.us-note{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.6}
+.us .tp .op{white-space:nowrap;text-align:right;font-weight:800}
+.us .tp .op .k{display:block;font-size:12px;font-weight:700;color:var(--muted)}
+.us .op.dn{color:var(--down)}.us .op.upg{color:var(--up)}
+.us .tp .tk{font-size:12px;font-weight:700;color:var(--muted);margin-left:4px}
+.us .tp .tm{font-size:13px;color:var(--muted);white-space:nowrap}
 """
 
 
-def us_tags(it):
-    tags = ""
-    if it.get("kind"):
-        tags += f'<span class="us-tag">{escape(it["kind"])}</span>'
-    if it.get("opinion"):
-        chg = it.get("opinion_change") or ""
-        cls = "dn" if chg == "하향" else "upg" if chg == "상향" else "op"
-        tags += f'<span class="us-tag {cls}">{escape(it["opinion"])}{(" " + escape(chg)) if chg else ""}</span>'
-    return tags
+def us_op(it):
+    """오른쪽 칸: 투자의견(제목에 있을 때) + 리포트 종류."""
+    chg = it.get("opinion_change") or ""
+    cls = " dn" if chg == "하향" else " upg" if chg == "상향" else ""
+    op = escape(f'{it.get("opinion", "")} {chg}'.strip())
+    kind = f'<span class="k">{escape(it["kind"])}</span>' if it.get("kind") else ""
+    return f'<td class="op{cls}">{op}{kind}</td>'
 
 
-def us_item(it, mini=False, bullets=3):
-    who = f'{escape(it["broker"])}{(" " + escape(it["writer"])) if it.get("writer") else ""} · {escape(it["date"][5:].replace("-", "/"))} {escape(it.get("time", ""))}'
-    head = escape(it["headline"])
-    if it.get("pdf"):
-        head = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{head}</a>'
-    top = (f'<div class="us-co">{escape(it["company"])}<small>{escape(it["ticker"])}</small>{us_tags(it)}</div>'
-           if it.get("ticker") else "")
-    lis = "".join(f"<li>{escape(b)}</li>" for b in it.get("summary", [])[:bullets])
-    key = escape(f'{it.get("company", "")} {it.get("ticker", "")} {it["broker"]} {it["headline"]}'.lower())
-    return (f'<div class="us-it{" mini" if mini else ""}" data-k="{key}">{top}<div class="us-meta">{who}</div>'
-            f'<div class="us-hl">{head}</div>{f"<ul>{lis}</ul>" if lis else ""}</div>')
+def us_rows(items, limit=None, stock=True):
+    rows = []
+    for it in items[:limit]:
+        title = escape(it["headline"])
+        if it.get("pdf"):
+            title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>'
+        who = f'{escape(it["broker"])} · {escape(it["date"][5:].replace("-", "/"))} {escape(it.get("time", ""))}'
+        key = escape(f'{it.get("company", "")} {it.get("ticker", "")} {it["broker"]} {it["headline"]}'.lower())
+        if stock:
+            rows.append(f'<tr data-k="{key}"><td class="co">{escape(it["company"])}<span class="tk">{escape(it["ticker"])}</span>'
+                        f'<div class="t">{who}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>{us_op(it)}</tr>')
+        else:
+            rows.append(f'<tr data-k="{key}"><td>{title}<div class="t">{who}</div></td></tr>')
+    return f'<table class="tp">{"".join(rows)}</table>' if rows else '<p class="err">없음</p>'
 
 
-US_SEARCH = ('<input class="us-q" type="search" placeholder="종목·티커·증권사 검색 (예: 엔비디아, NVDA, 키움)" '
-             'oninput="var q=this.value.trim().toLowerCase();document.querySelectorAll(\'.us-it\').forEach(function(r){'
-             'r.style.display=!q||r.dataset.k.indexOf(q)>=0?\'\':\'none\'})">')
-US_NOTE = ('<p class="us-note">요약 문장은 각 증권사가 리포트에 붙인 핵심 요약이며, 제목을 누르면 리포트 원문(PDF)이 열립니다. '
-           '자료: 연합인포맥스 글로벌모니터(한국투자증권 미국주식 리서치 메뉴). 저작권은 각 증권사에 있습니다.</p>')
+def us_one(items, stocks):
+    """한 줄 요약: 종목 리포트 수, 가장 많이 낸 증권사, 의견 하향, 실적 프리뷰·리뷰 수."""
+    if not items:
+        return ""
+    top = max({x["broker"] for x in items}, key=lambda b: sum(x["broker"] == b for x in items))
+    parts = [f'종목 리포트 {len(stocks)}건', f'{top} 최다({sum(x["broker"] == top for x in items)}건)']
+    pv = sum(x.get("kind") in ("Preview", "Review") for x in stocks)
+    if pv:
+        parts.append(f'실적 프리뷰·리뷰 {pv}건')
+    dn = [x["company"] for x in stocks if x.get("opinion_change") == "하향"]
+    if dn:
+        parts.append("의견 하향 " + ", ".join(dn[:3]))
+    return ", ".join(parts)
 
 
 def build_us():
@@ -1283,6 +1282,9 @@ def build_us():
         if US_REPORTS.is_dir() else []
     first = None
     dates = "".join(f'<li><a href="{{root}}{p.stem}/">{label(p.stem)}</a></li>' for p in files[:30])
+    search = ('<input class="tp-q" type="search" placeholder="종목·티커·증권사 검색 (예: 마벨, MRVL, 키움)" '
+              'oninput="var q=this.value.trim().toLowerCase();document.querySelectorAll(\'.us tr[data-k]\').forEach(function(r){'
+              'r.style.display=!q||r.dataset.k.indexOf(q)>=0?\'\':\'none\'})">')
     for i, p in enumerate(files[:60]):
         try:
             doc = json.loads(p.read_text(encoding="utf-8"))
@@ -1291,15 +1293,15 @@ def build_us():
         items = doc.get("items", [])
         stocks = [x for x in items if x.get("ticker")]
         others = [x for x in items if not x.get("ticker")]
-        brokers = len({x["broker"] for x in items})
-        body = (f'<style>{US_CSS}</style>'
-                f'<section class="panel"><div class="us-sum"><b>리포트 {len(items)}건</b><b class="on">종목 {len(stocks)}</b>'
-                f'<b>산업·시황 {len(others)}</b><b>증권사 {brokers}곳</b></div>{US_SEARCH}</section>'
-                f'<section class="panel report"><h3>🇺🇸 종목 리포트 ({len(stocks)})</h3>'
-                + ("".join(us_item(x) for x in stocks) or '<p class="err">없음</p>') + '</section>'
-                f'<section class="panel report"><h3>🌐 산업·시황·데일리 ({len(others)})</h3>'
-                + ("".join(us_item(x, mini=True, bullets=2) for x in others) or '<p class="err">없음</p>')
-                + f'{US_NOTE}</section>')
+        one = us_one(items, stocks)
+        body = (f'<style>{TARGET_CSS}{US_CSS}</style><div class="us">'
+                f'<section class="panel"><div class="tp-sum"><b>리포트 {len(items)}건</b><b class="up">종목 {len(stocks)}</b>'
+                f'<b>산업·시황 {len(others)}</b></div>' + (f'<div class="tp-one">▶ {escape(one)}</div>' if one else "")
+                + f'{search}</section>'
+                f'<section class="panel report"><h3>🇺🇸 종목 리포트 ({len(stocks)})</h3>{us_rows(stocks)}</section>'
+                f'<section class="panel report"><h3>🌐 산업·시황 ({len(others)})</h3>{us_rows(others, stock=False)}'
+                '<p class="t" style="margin-top:8px">제목을 누르면 리포트 원문(PDF)이 열립니다. 의견은 제목에 적힌 경우만 표시합니다. '
+                '자료: 연합인포맥스 글로벌모니터(한국투자증권 미국주식 리서치), 저작권은 각 증권사에 있습니다.</p></section></div>')
         sub = (f'{escape(doc.get("made", ""))} 기준 · {label(doc.get("since", p.stem))}부터 발간분 · '
                '국내 증권사 미국주식 리포트')
         title = f'{label(p.stem)} 해외주식 리포트'
@@ -1308,11 +1310,11 @@ def build_us():
             more = f'<section class="panel"><h3 style="margin:0 0 8px">지난 리포트</h3><ul class="dates">{dates.replace("{root}", "" if dest == out else "../")}</ul></section>'
             (dest / "index.html").write_text(page(title, body + more, root, "us/", "US EQUITY RESEARCH", sub), encoding="utf-8")
         if first is None:
-            first = dict(day=p.stem, made=doc.get("made", ""), stocks=stocks, n=len(items))
+            first = dict(day=p.stem, made=doc.get("made", ""), stocks=stocks, n=len(items), one=one)
     if first is None:
         out.mkdir(parents=True, exist_ok=True)
         (out / "index.html").write_text(page("해외주식 리포트", '<p class="err">해외주식 리포트를 불러오지 못했습니다.</p>',
-                                             "../", "us/", "US EQUITY RESEARCH", "국내 증권사 미국주식 리포트 요약"),
+                                             "../", "us/", "US EQUITY RESEARCH", "국내 증권사 미국주식 리포트"),
                                         encoding="utf-8")
     return first
 
@@ -1320,11 +1322,13 @@ def build_us():
 def us_home(us):
     if not us or not us["stocks"]:
         return ""
-    inner = "".join(us_item(x, bullets=2) for x in us["stocks"][:5]) + \
-        f'<a class="btn" href="us/">해외주식 리포트 {us["n"]}건 전체 보기</a>'
-    return (f'<section class="sec" id="us"><style>{US_CSS}</style><div class="sec-h"><h2>🇺🇸 해외주식 리포트</h2>'
+    inner = (f'<div class="tp-sum"><b>리포트 {us["n"]}건</b><b class="up">종목 {len(us["stocks"])}</b></div>'
+             f'<h3>🇺🇸 최신 종목 리포트</h3>{us_rows(us["stocks"], 5)}'
+             + (f'<div class="tp-one">▶ {escape(us["one"])}</div>' if us["one"] else "")
+             + f'<a class="btn" href="us/">해외주식 리포트 {us["n"]}건 전체 보기</a>')
+    return (f'<section class="sec" id="us"><style>{TARGET_CSS}{US_CSS}</style><div class="sec-h"><h2>🇺🇸 해외주식 리포트</h2>'
             f'<a href="us/">{label(us["day"])} {escape(us["made"][-5:])} · 전체 보기</a></div>'
-            f'<section class="panel report">{inner}</section></section>')
+            f'<section class="panel report us">{inner}</section></section>')
 
 
 # ---------- 맵 (업종별 등락 트리맵) ----------
