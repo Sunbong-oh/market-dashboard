@@ -1414,17 +1414,23 @@ MAP_CSS = """
 .mp-info{min-height:22px;text-align:center;font-size:14px;font-weight:700;margin-top:6px}
 @media (max-width:520px){#map{width:calc(100% + 32px);margin:0 -16px;border-radius:0}.mp-leg span{min-width:38px}}
 """
-# 업종 분류에는 2차전지가 없어(전기제품·화학·전자장비 등에 흩어짐) 맵에서 이 종목들을 원래 업종에서 빼
-# '2차전지(테마)' 칸 하나로 모은다. 이름은 네이버 증권 표기와 같아야 한다 (없는 이름은 그냥 건너뜀).
-BATTERY_THEME = [
-    # 셀
-    "LG에너지솔루션", "삼성SDI", "SK이노베이션",
-    # 양극재·전구체·소재
-    "포스코퓨처엠", "에코프로비엠", "에코프로", "에코프로머티", "엘앤에프", "LG화학", "코스모신소재", "코스모화학",
-    "금양", "엔켐", "천보", "나노신소재", "대주전자재료", "솔루스첨단소재", "롯데에너지머티리얼즈", "SKC",
-    "SK아이이테크놀로지", "더블유씨피", "후성", "레이크머티리얼즈", "에코앤드림", "포스코엠텍",
-    # 장비·부품·리사이클
-    "피엔티", "하나기술", "윤성에프앤씨", "성일하이텍", "신흥에스이씨", "상신이디피", "LS머트리얼즈",
+# 맵의 테마 묶음: 네이버 업종과 다르게 보고 싶은 종목을 원래 업종에서 빼 테마 칸 하나로 모은다.
+#   sectors: 이 업종의 종목은 전부 테마로 / names: 다른 업종에 있어도 테마로 (네이버 증권 표기 이름, 없으면 건너뜀)
+#   한 종목은 위에 적힌 테마 하나에만 들어간다.
+MAP_THEMES = [
+    {"name": "🔋 2차전지(테마)", "sectors": [], "names": [
+        # 셀
+        "LG에너지솔루션", "삼성SDI", "SK이노베이션",
+        # 양극재·전구체·소재
+        "포스코퓨처엠", "에코프로비엠", "에코프로", "에코프로머티", "엘앤에프", "LG화학", "코스모신소재", "코스모화학",
+        "금양", "엔켐", "천보", "나노신소재", "대주전자재료", "솔루스첨단소재", "롯데에너지머티리얼즈", "SKC",
+        "SK아이이테크놀로지", "더블유씨피", "후성", "레이크머티리얼즈", "에코앤드림", "포스코엠텍",
+        # 장비·부품·리사이클
+        "피엔티", "하나기술", "윤성에프앤씨", "성일하이텍", "신흥에스이씨", "상신이디피", "LS머트리얼즈"]},
+    {"name": "⚓ 조선(테마)", "sectors": ["조선"], "names": [
+        # 조선 업종 밖의 기자재·해양플랜트
+        "동성화인텍", "성광벤드", "태광", "하이록코리아", "HJ중공업", "SK오션플랜트"]},
+    {"name": "🛡️ 방산(테마)", "sectors": ["우주항공과국방"], "names": ["풍산", "SNT다이내믹스"]},
 ]
 
 MAP_JS = r"""<script>
@@ -1432,14 +1438,15 @@ MAP_JS = r"""<script>
  /* 칸 크기: sqrt=시총 제곱근(기본, 대형주 쏠림 완화) / cap=시총 그대로 / eq=업종 같은 크기 */
  var SZ='sqrt';try{SZ=localStorage.getItem('map-size')||'sqrt'}catch(x){}
  function sz(v){return SZ=='cap'?v:Math.sqrt(v)}
- var THEME=%s,TSET={};THEME.forEach(function(n){TSET[n]=1});
- /* 2차전지 종목을 원래 업종에서 빼 '2차전지(테마)' 칸으로 모은다. 남은 업종의 시총·등락률은 남은 종목으로 다시 계산 */
+ var THEMES=%s;
+ function themeOf(x,sec){for(var i=0;i<THEMES.length;i++){var t=THEMES[i];if(t.names.indexOf(x.n)>=0||t.sectors.indexOf(sec)>=0)return i}return -1}
+ /* 테마 종목을 원래 업종에서 빼 테마 칸으로 모은다. 남은 업종의 시총·등락률은 남은 종목으로 다시 계산 */
  function wavg(st){var v=0,s=0;st.forEach(function(x){if(x.v>0){v+=x.v;s+=x.v*x.p}});return v?s/v:(st.length?st.reduce(function(t,x){return t+x.p},0)/st.length:0)}
- function regroup(data){var pick=[],out=[];
-  data.forEach(function(s){var keep=[],moved=false;(s.st||[]).forEach(function(x){if(TSET[x.n]){pick.push(x);moved=true}else keep.push(x)});
+ function regroup(data){var pick=THEMES.map(function(){return []}),out=[];
+  data.forEach(function(s){var keep=[],moved=false;(s.st||[]).forEach(function(x){var t=themeOf(x,s.s);if(t>=0){pick[t].push(x);moved=true}else keep.push(x)});
    if(!moved){out.push(s);return}
    if(keep.length)out.push({s:s.s,st:keep,v:keep.reduce(function(t,x){return t+(x.v||0)},0),p:Math.round(wavg(keep)*100)/100})});
-  if(pick.length)out.push({s:'🔋 2차전지(테마)',theme:1,st:pick,v:pick.reduce(function(t,x){return t+(x.v||0)},0),p:Math.round(wavg(pick)*100)/100});
+  pick.forEach(function(st,i){if(st.length)out.push({s:THEMES[i].name,theme:1,st:st,v:st.reduce(function(t,x){return t+(x.v||0)},0),p:Math.round(wavg(st)*100)/100})});
   return out}
  var NAME={kospi:'KOSPI',kosdaq:'KOSDAQ'};
  function col(p){var t=Math.min(Math.abs(p)/3,1),a=[64,68,78],b=p>0?[230,44,52]:[30,98,214];if(Math.abs(p)<0.05)t=0;
@@ -1456,6 +1463,14 @@ MAP_JS = r"""<script>
    row.forEach(function(r){var len=r.a/thick;out[r.i]=w>=h?{x:x,y:y+o,w:thick,h:len}:{x:x+o,y:y,w:len,h:thick};o+=len});
    if(w>=h){x+=thick;w-=thick}else{y+=thick;h-=thick}}
   return out}
+ /* 순서를 지키는 배치(앞쪽이 왼쪽 위): 합이 반이 되는 곳에서 목록을 둘로 나누고 긴 변을 자른다 */
+ function ordered(vals,x,y,w,h){var out=[];
+  (function go(lo,hi,x,y,w,h){if(hi<=lo)return;if(hi-lo==1){out[lo]={x:x,y:y,w:w,h:h};return}
+   var tot=0,i,acc=0,k=lo+1,best=1e18;for(i=lo;i<hi;i++)tot+=vals[i];
+   for(i=lo;i<hi-1;i++){acc+=vals[i];var d=Math.abs(acc-tot/2);if(d<best){best=d;k=i+1}}
+   var left=0;for(i=lo;i<k;i++)left+=vals[i];var f=tot?left/tot:0.5;
+   if(w>=h){go(lo,k,x,y,w*f,h);go(k,hi,x+w*f,y,w*(1-f),h)}else{go(lo,k,x,y,w,h*f);go(k,hi,x,y+h*f,w,h*(1-f))}})(0,vals.length,x,y,w,h);
+  return out}
  function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function draw(){var data=MAP&&MAP.data&&MAP.data[MK];document.querySelectorAll('.mp-tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.m==MK)});
   idx();if(!data||!data.length){el.style.height='200px';el.innerHTML='<p style="color:#ccc;padding:20px">맵 데이터를 불러오는 중입니다…</p>';return}
@@ -1463,8 +1478,9 @@ MAP_JS = r"""<script>
   var secs=regroup(data).filter(function(s){return s.st&&s.st.length}),useCap=secs.every(function(s){return s.v>0});
   secs.forEach(function(s){s.kids=s.st.filter(function(x){return !useCap||x.v>0}).map(function(x){return {x:x,a:useCap?sz(x.v):1}})
    .sort(function(a,b){return b.a-a.a});s.a=!useCap?s.st.length:SZ=='eq'?1:SZ=='cap'?s.v:s.kids.reduce(function(t,k){return t+k.a},0)});
-  secs=secs.slice().sort(function(a,b){return b.a-a.a});hot(secs);
-  var sv=secs.map(function(s){return s.a}),rs=squarify(sv,0,0,W,H),html='';
+  /* 상승률이 높은 업종(테마)부터 왼쪽 위에 놓는다 */
+  secs=secs.slice().sort(function(a,b){return b.p-a.p||b.a-a.a});hot(secs);
+  var sv=secs.map(function(s){return s.a}),rs=ordered(sv,0,0,W,H),html='';
   secs.forEach(function(s,i){var r=rs[i];if(!r)return;var head=r.w>=46&&r.h>=40,top=head?17:0;
    html+='<div class="sec'+(s.theme?' thm':'')+'" style="left:'+r.x+'px;top:'+r.y+'px;width:'+r.w+'px;height:'+r.h+'px;background:'+col(s.p)+'" title="'+esc(s.s)+' '+sgn(s.p)+'" data-i="'+esc(s.s+' '+sgn(s.p))+'">';
    if(head){html+='<div class="sh">'+esc(s.s)+' '+sgn(s.p)+'</div>';
@@ -1510,7 +1526,7 @@ def build_map():
             f'<div class="mp-sz"><span>칸 크기</span><button data-z="sqrt" class="on">완만하게</button><button data-z="cap">시가총액</button>'
             f'<button data-z="eq">업종 같은 크기</button></div><div class="mp-hot"></div>'
             f'<div id="map"></div><div class="mp-info"></div><div class="mp-leg"></div>'
-            f'<div class="mp-time" style="text-align:center"></div>' + MAP_JS % (json.dumps(MAP_SRC), json.dumps(BATTERY_THEME, ensure_ascii=False)))
+            f'<div class="mp-time" style="text-align:center"></div>' + MAP_JS % (json.dumps(MAP_SRC), json.dumps(MAP_THEMES, ensure_ascii=False)))
     dest = OUT / "map"
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "index.html").write_text(page("🗺️ 맵 · 업종별 등락", body, "../", "map/", hero=False), encoding="utf-8")
