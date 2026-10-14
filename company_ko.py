@@ -23,6 +23,20 @@ COMPANY_KO = {
     "SMTC": "고속 신호 반도체·IoT 무선(LoRa) 모듈",
     "ARW": "반도체·IT 부품 유통(제조사에 공급)",
     "TXG": "단일세포 분석 장비·시약(Chromium)",
+    # 해외주식 리포트(국내 증권사 미국주식 리포트)에 나온 종목
+    "ABT": "의료기기(연속혈당측정기 리브레)·진단키트·영양식",
+    "ARWR": "RNA 간섭(RNAi) 방식 신약 개발 바이오",
+    "BRK.A": "버핏의 지주회사: 보험(GEICO)·철도·에너지·주식 투자",
+    "BRK.B": "버핏의 지주회사: 보험(GEICO)·철도·에너지·주식 투자",
+    "CPNG": "한국 1위 이커머스(로켓배송)·쿠팡이츠",
+    "DAL": "미국 대형 항공사(델타항공)",
+    "FLR": "에너지·인프라·광산 플랜트 설계·건설(EPC)",
+    "IMAX": "대형 스크린 영화 상영 기술·시스템",
+    "IONQ": "이온트랩 방식 양자컴퓨터",
+    "JBL": "전자제품 위탁생산(EMS)·AI 데이터센터 장비 조립",
+    "KOD": "망막 질환(습성 황반변성) 신약 개발 바이오",
+    "VG": "미국 LNG(액화천연가스) 수출 터미널 운영",
+    "XPEV": "중국 전기차(샤오펑)·자율주행",
     # 자주 나올 만한 대형주
     "NVDA": "AI용 GPU(Blackwell)·CUDA·데이터센터 가속기",
     "AAPL": "아이폰·맥·아이패드·앱스토어·애플 서비스",
@@ -219,6 +233,19 @@ INDUSTRY_KO = {
     "Consulting Services": "컨설팅",
     "Specialty Business Services": "기업 지원 서비스",
 }
+
+
+# 야후 섹터(영문 11개) → 한국어
+SECTOR_KO = {
+    "Technology": "기술", "Communication Services": "커뮤니케이션", "Consumer Cyclical": "경기소비재",
+    "Consumer Defensive": "필수소비재", "Financial Services": "금융", "Healthcare": "헬스케어",
+    "Industrials": "산업재", "Energy": "에너지", "Basic Materials": "소재", "Utilities": "유틸리티",
+    "Real Estate": "부동산",
+}
+
+
+def sector_ko(sector):
+    return SECTOR_KO.get(sector, sector or "")
 
 
 def describe(sym, industry):
