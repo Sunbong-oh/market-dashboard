@@ -191,6 +191,37 @@ fetch(SRC[i]+'/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=2').then(function(
 load(0);setInterval(function(){load(0)},60000)})()</script>"""
 
 
+# 미국 데일리 주요지표 실시간: us-live.yml이 미국 장 전후(한국 17:00~09:05) 1분마다 올리는 us-live/quotes.json 으로
+# 카드의 가격·전일 대비 등락과 맨 위 나스닥·S&P500 등락을 바꾼다. 리포트(오전 7시)보다 오래된 시세는 쓰지 않는다.
+US_LIVE_SRC = ("https://api.github.com/repos/Sunbong-oh/market-dashboard/contents/quotes.json?ref=us-live",
+               "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/us-live/quotes.json")
+US_LIVE_JS = r"""<script>(function(){var SRC=%s,SINCE='__SINCE__';
+function f(v,d){return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function c(v){return v>0?'up':v<0?'down':'flat'}
+function apply(j){if(!j||!j.data||!(j.time>=SINCE))return;var hm=j.time.slice(5,16).replace('-','/');
+ document.querySelectorAll('article.card').forEach(function(card){var s=card.querySelector('.sym');if(!s)return;
+  var sym=s.textContent.split('\u00B7')[0].trim(),q=j.data[sym];if(!q)return;
+  var y=sym==='^TNX',p=q.p,d=p-q.pc,pc=(p/q.pc-1)*100,pr=card.querySelector('.price'),b=pr.querySelector('.badge'),u=pr.querySelector('small');
+  if(b&&sym==='^VIX')b.textContent=p<15?'\uc548\uc815':p<20?'\ubcf4\ud1b5':p<30?'\ubd88\uc548':'\uacf5\ud3ec';
+  pr.innerHTML=(y?f(p,3)+'<small>%%</small>':'<small>'+(u?u.textContent:'')+'</small>'+f(p,2))+(b?' '+b.outerHTML:'');
+  card.querySelector('.delta').innerHTML='<span class="'+c(d)+'">'+(y?(d>0?'+':'')+(d*100).toFixed(1)+'bp ':(d>0?'\u25B2':d<0?'\u25BC':'\u2013')+' '+f(Math.abs(d),2)+' ')+
+   '('+(pc>0?'+':'')+pc.toFixed(2)+'%%)</span> <small class="lv">\u00B7 \uc2e4\uc2dc\uac04 '+hm+'</small>'});
+ var IX={'\ub098\uc2a4\ub2e5':'^IXIC','S&P500':'^GSPC'};
+ document.querySelectorAll('.ix').forEach(function(x){var k=x.dataset.sym||IX[(x.firstChild&&x.firstChild.nodeValue||'').trim()],q=j.data[k],b=x.querySelector('b');if(!q||!b)return;
+  var v=(q.p/q.pc-1)*100;b.className=c(v);b.textContent=(v>0?'+':'')+v.toFixed(2)+'%%'})}
+function load(i){i=i||0;if(i>=SRC.length)return;
+ fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
+ .then(function(r){if(!r.ok)throw 0;return r.json()}).then(apply).catch(function(){load(i+1)})}
+load();setInterval(function(){if(!document.hidden)load()},60000)})()</script>""" % json.dumps(list(US_LIVE_SRC))
+
+
+def with_us_live(html, since):
+    """since: 'YYYY-MM-DD HH:MM'(KST) — 이보다 오래된 실시간 시세는 무시 (지난 리포트를 덮어쓰지 않게)."""
+    js = US_LIVE_JS.replace("__SINCE__", since)
+    i = html.lower().rfind("</body>")
+    return html[:i] + js + html[i:] if i >= 0 else html + js
+
+
 def embed_html(html, btc_live=False):
     """홈 화면에 통째로 끼워 넣을 원본 리포트 (메뉴 없이, 링크는 바깥 창에서 열림)."""
     if btc_live:
@@ -258,6 +289,8 @@ def build_daily():
                 html = daily_grid3(f.read_text(encoding="utf-8"))
                 if nh and f.name == "index.html":
                     html = with_newhighs(html, "newhighs.html", newhighs_count(p))
+                if p == days[0] and f.name == "index.html":
+                    html = with_us_live(html, f"{p.name} 06:30")
                 dest.joinpath(f.name).write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
             elif f.is_file():
                 shutil.copy(f, dest / f.name)
@@ -279,7 +312,7 @@ def build_daily():
         eh = daily_grid3(html)
         if (p / "newhighs.html").exists():
             eh = with_newhighs(eh, "newhighs.html", newhighs_count(p))
-        (out / p.name / "embed.html").write_text(embed_html(eh, btc_live=True), encoding="utf-8")
+        (out / p.name / "embed.html").write_text(embed_html(with_us_live(eh, f"{p.name} 06:30"), btc_live=True), encoding="utf-8")
     return dict(day=p.name, headline=unescape(m.group(1)) if m else "", kr=[unescape(t) for t in kr_titles],
                 embed=f"daily/{p.name}/embed.html" if html else "",
                 newhighs=(p / "newhighs.html").exists())
