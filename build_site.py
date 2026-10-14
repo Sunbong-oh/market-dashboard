@@ -1653,6 +1653,9 @@ EARN_CSS = """
 #earn-live{order:-2}.earn.auto{border-left-color:#e03131}.earn .cal{font-size:13px;color:var(--muted);margin:2px 0 6px}
 .earn .cons{font-size:14.5px;font-weight:800;margin:3px 0}.earn.auto ul{margin-top:6px}.earn.auto li{margin:3px 0}
 .earn.auto li a{color:var(--text);text-decoration:none;font-weight:600}.earn.auto li span{font-size:12px;color:var(--muted)}
+.earn .px{background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0}.earn .pxh{font-size:13.5px;font-weight:800;margin-bottom:3px}
+.earn .pxr{font-size:13.5px;line-height:1.6}.earn .pl{font-weight:700}.earn .ps,.earn .pr{font-size:12px;color:var(--muted)}
+.earn .up{color:var(--up)}.earn .down{color:var(--down)}
 """
 EARN_JS = """<script>(function(){var n=new Date(Date.now()+9*3600e3),t=n.toISOString().slice(0,10),y=new Date(n-864e5).toISOString().slice(0,10);
 document.querySelectorAll('.earn[data-day]').forEach(function(c){if(c.dataset.day!==t&&c.dataset.day!==y)c.remove()});
@@ -1666,12 +1669,18 @@ EARN_LIVE_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/conte
 EARN_LIVE_JS = r"""<script>
 (function(){var SRC=%s,box=document.getElementById('earn-live');if(!box)return;
  function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
- function draw(j){var now=Date.now(),manual={};document.querySelectorAll('.earn[data-key]').forEach(function(c){manual[c.dataset.key]=1});
-  var its=(j&&j.items||[]).filter(function(i){var t=Date.parse(i.detected.replace(' ','T')+':00+09:00');return now-t<36*3600e3&&!manual[i.key]});
+ function pc(v){return v==null?'':'<b class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+Number(v).toFixed(2)+'%%</b>'}
+ function px(i){if(!(i.px||[]).length)return '';return '<div class="px"><div class="pxh">📈 실적 발표 후 주가 반응</div>'+i.px.map(function(r){
+   return '<div class="pxr"><span class="pl">'+e(r.l)+'</span> <span class="ps">'+e(r.s)+' '+e(r.t||'')+'</span> <b>'+e(r.p)+'</b> '+
+    (r.c!=null?'<span class="pr">'+e(r.ref)+' 대비</span> '+pc(r.c):'')+(r.d1!=null?' <span class="pr">· 첫 정규장</span> '+pc(r.d1):'')+'</div>'}).join('')+'</div>'}
+ function draw(j){var now=Date.now(),manual={};document.querySelectorAll('.earn[data-key]').forEach(function(c){manual[c.dataset.key]=c});
+  (j&&j.items||[]).forEach(function(i){var c=manual[i.key];if(!c)return;var o=c.querySelector('.px');if(o)o.remove();
+   var h=px(i);if(h){var t=c.querySelector('table');(t||c.querySelector('.vd')).insertAdjacentHTML('afterend',h)}});  /* 수동 카드에는 주가 반응만 */
+  var its=(j&&j.items||[]).filter(function(i){var t=Date.parse(i.detected.replace(' ','T')+':00+09:00');return now-t<72*3600e3&&!manual[i.key]});
   if(!its.length){box.hidden=true;return}
   box.innerHTML=its.map(function(i){return '<div class="earn auto"><h2>⚡ 실적 발표 · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
    (i.item!==i.name?'<div class="cal">캘린더: '+e(i.item)+'</div>':'')+
-   (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+
+   (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+px(i)+
    '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
   box.hidden=false}
  function load(i){i=i||0;if(i>=SRC.length)return;
