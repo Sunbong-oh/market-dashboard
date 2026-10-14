@@ -1237,12 +1237,29 @@ US_CSS = """
 
 
 def us_op(it):
-    """오른쪽 칸: 투자의견(제목에 있을 때) + 리포트 종류."""
+    """종목명 아래 줄에 붙는 투자의견(제목에 있을 때)·리포트 종류."""
     chg = it.get("opinion_change") or ""
-    cls = " dn" if chg == "하향" else " upg" if chg == "상향" else ""
-    op = escape(f'{it.get("opinion", "")} {chg}'.strip())
-    kind = f'<span class="k">{escape(it["kind"])}</span>' if it.get("kind") else ""
-    return f'<td class="op{cls}">{op}{kind}</td>'
+    op = f'{it.get("opinion", "")} {chg}'.strip()
+    if op:
+        cls = "down" if chg == "하향" else "up" if chg == "상향" else ""
+        op = f' · <b class="{cls}">{escape(op)}</b>'
+    return op + (f' · {escape(it["kind"])}' if it.get("kind") else "")
+
+
+def _usd(v):
+    return f"{v:,.2f}" if v else "-"
+
+
+def us_px(it):
+    """현재가 → 컨센서스 목표주가, 상승여력."""
+    q = it.get("quote") or {}
+    if not q.get("price"):
+        return '<td class="px">-</td><td class="pct"></td>'
+    cur = "$" if q.get("currency", "USD") == "USD" else ""
+    tgt = f'<b>{cur}{_usd(q["target"])}</b>' if q.get("target") else '<span class="t">목표가 없음</span>'
+    up = q.get("upside")
+    pct = f'<td class="pct {"up" if up > 0 else "down"}">{up:+.1f}%</td>' if up is not None else '<td class="pct"></td>'
+    return f'<td class="px">{cur}{_usd(q["price"])} →<br>{tgt}</td>{pct}'
 
 
 def us_rows(items, limit=None, stock=True):
@@ -1255,7 +1272,7 @@ def us_rows(items, limit=None, stock=True):
         key = escape(f'{it.get("company", "")} {it.get("ticker", "")} {it["broker"]} {it["headline"]}'.lower())
         if stock:
             rows.append(f'<tr data-k="{key}"><td class="co">{escape(it["company"])}<span class="tk">{escape(it["ticker"])}</span>'
-                        f'<div class="t">{who}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>{us_op(it)}</tr>')
+                        f'<div class="t">{who}{us_op(it)}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>{us_px(it)}</tr>')
         else:
             rows.append(f'<tr data-k="{key}"><td>{title}<div class="t">{who}</div></td></tr>')
     return f'<table class="tp">{"".join(rows)}</table>' if rows else '<p class="err">없음</p>'
@@ -1301,6 +1318,7 @@ def build_us():
                 f'<section class="panel report"><h3>🇺🇸 종목 리포트 ({len(stocks)})</h3>{us_rows(stocks)}</section>'
                 f'<section class="panel report"><h3>🌐 산업·시황 ({len(others)})</h3>{us_rows(others, stock=False)}'
                 '<p class="t" style="margin-top:8px">제목을 누르면 리포트 원문(PDF)이 열립니다. 의견은 제목에 적힌 경우만 표시합니다. '
+                f'오른쪽은 현재가 → 목표주가(애널리스트 평균 컨센서스, Yahoo Finance)와 상승여력이며 {escape(doc.get("made", "")[-5:])} 조회 기준입니다. '
                 '자료: 연합인포맥스 글로벌모니터(한국투자증권 미국주식 리서치), 저작권은 각 증권사에 있습니다.</p></section></div>')
         sub = (f'{escape(doc.get("made", ""))} 기준 · {label(doc.get("since", p.stem))}부터 발간분 · '
                '국내 증권사 미국주식 리포트')
