@@ -2,7 +2,8 @@
 
 미국 장 전후(한국 17:00 ~ 다음 날 09:05, 월~금 미국 거래일) 1분마다 야후 시세를 받아
 us-live 브랜치의 quotes.json 으로 올린다. 데일리 페이지(US_LIVE_JS)가 이 파일을 읽어 카드의 가격·등락을 바꾼다.
-한 번 실행은 최대 5시간 40분(Actions 6시간 제한) — 시간이 남으면 out/relay 를 남겨 워크플로가 다음 실행을 띄운다.
+한 번 실행은 최대 5시간 40분(Actions 6시간 제한) — 끝나면 out/relay 를 남겨 워크플로가 다음 실행을 띄운다(늘 떠 있음).
+평일 아침에는 목표주가 변동 리포트(kb-market-report, 07:00)가 올라오면 사이트 빌드도 요청한다.
 """
 
 from __future__ import annotations
@@ -88,27 +89,48 @@ def push(data: dict) -> None:
             print("  올리기 실패:", r.stderr.decode()[-200:], flush=True)
 
 
+_site = {"day": ""}
+CONSENSUS_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/main/consensus/{}.json"
+
+
+def kick_site(now: datetime) -> None:
+    """평일 아침: kb-market-report의 목표주가 변동 리포트(07:00 실행)가 올라오면 사이트를 바로 다시 빌드한다
+    (빌드 때 해외주식 리포트도 새로 모은다). 07:20까지 안 올라오면 그때 한 번 빌드. 하루 한 번."""
+    hm, d = now.strftime("%H:%M"), now.strftime("%Y-%m-%d")
+    if now.weekday() >= 5 or not ("07:00" <= hm < "09:00") or _site["day"] == d:
+        return
+    ready = hm >= "07:20"
+    if not ready:
+        try:
+            urllib.request.urlopen(urllib.request.Request(CONSENSUS_URL.format(d) + f"?t={int(time.time())}", headers=UA), timeout=10)
+            ready = True
+        except Exception:
+            pass
+    if not ready:
+        return
+    _site["day"] = d
+    r = subprocess.run(["gh", "workflow", "run", "site.yml", "--ref", "main"], cwd=ROOT, capture_output=True, timeout=60)
+    print(hm, "사이트 빌드 요청(목표주가·해외주식 리포트):", r.returncode, r.stderr.decode(errors="replace")[-200:], flush=True)
+
+
 def main() -> None:
+    """늘 떠 있는다(이어달리기): 미국 장 전후 창에서는 1분마다 시세, 평일 아침엔 목표주가 리포트 반영 빌드."""
     start = datetime.now(KST)
-    if not in_window(start):
-        nxt = start.replace(hour=17, minute=0, second=0, microsecond=0)
-        if timedelta(0) < nxt - start <= timedelta(minutes=40) and start.weekday() <= 4:
-            print("17:00까지 대기", flush=True)
-            time.sleep((nxt - start).total_seconds())
-        else:
-            print("시간 밖 → 종료", flush=True)
-            return
     hl = None
     while True:
         now = datetime.now(KST)
-        if not in_window(now):
-            print("창 종료", flush=True)
-            return
         if now - start >= MAX_RUN:
             (ROOT / "out").mkdir(exist_ok=True)
             (ROOT / "out" / "relay").write_text("1")
             print("다음 실행으로 넘김", flush=True)
             return
+        try:
+            kick_site(now)
+        except Exception as e:
+            print("  사이트 빌드 요청 실패:", type(e).__name__, e, flush=True)
+        if not in_window(now):
+            time.sleep(60)
+            continue
         data = {k: v for k, v in ((s, quote(s)) for s in SYMS) if v}
         if now.minute % 5 == 0 or hl is None:  # 헤드라인은 5분마다
             hl = headline(now) or hl

@@ -2,10 +2,11 @@ name: 미국 실시간 시세
 
 # 미국 장 전후(한국 17:00 ~ 다음 날 09:05, 미국 거래일) 1분마다 데일리 주요지표 시세를 us-live 브랜치 quotes.json 으로 올린다.
 # 데일리 페이지가 이 파일을 읽어 카드 숫자를 바꾼다(build_site.py US_LIVE_JS).
-# 한 번 실행은 최대 5시간 40분 → 창이 남았으면 마지막 단계에서 다음 실행을 띄운다(예약이 늦게 도는 일이 있어 이어 달리기).
+# 한 번 실행은 최대 5시간 40분 → 마지막 단계에서 다음 실행을 띄운다(늘 떠 있음, 예약이 늦게 도는 일이 있어 이어 달리기).
+# 평일 아침에는 목표주가 변동 리포트(kb-market-report, 07:00)가 올라오면 사이트 빌드(site.yml)도 요청한다.
 on:
   schedule:
-    - cron: "0 8 * * 1-5"    # 17:00 KST
+    - cron: "0 8 * * 1-5"    # 17:00 KST (이어달리기가 끊겼을 때 다시 시작)
   workflow_dispatch:
 
 permissions:
@@ -30,6 +31,7 @@ jobs:
       - name: 1분마다 시세 올리기
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}   # 평일 아침 사이트 빌드 요청(gh workflow run site.yml)
           PYTHONIOENCODING: utf-8
         run: python us_live.py
       - name: 다음 실행 이어 띄우기
