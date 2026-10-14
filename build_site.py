@@ -7,7 +7,7 @@
   /daily/       오전 데일리 (미국 데일리 마켓) — archive/daily/YYYY-MM-DD/ (daily-dashboard.yml이 매일 저장)
   /news/        돈이 되는 뉴스 — 빌드할 때마다 Google 뉴스에서 새로 수집 (dashboard.py의 뉴스 로직 재사용)
   /close/       장마감 리포트 (국내 장마감 수급체크) — kb-market-report 저장소의 archive/ (환경변수 CLOSE_REPO)
-  /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 07:00) — kb-market-report 저장소의 consensus/*.json
+  /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 08:40·21:00) — kb-market-report 저장소의 consensus/*.json
   /us/          해외주식 리포트 (국내 증권사 미국주식 리포트 요약) — us_reports/*.json (us_reports.py)
 """
 import json
@@ -1151,7 +1151,7 @@ def build_close():
 
 
 # ---------- 목표주가 변동 (증권사 리포트 상향·하향) ----------
-# kb-market-report Actions가 평일 07:00에 consensus/YYYY-MM-DD.json 을 올린다 (consensus_report.py).
+# kb-market-report Actions가 평일 08:40·21:00에 consensus/YYYY-MM-DD.json 을 올린다 (consensus_report.py).
 TARGET_CSS = """
 .tp-sum{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
 .tp-sum b{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:14px}
@@ -1259,7 +1259,7 @@ def build_target():
     if first is None:
         out.mkdir(parents=True, exist_ok=True)
         (out / "index.html").write_text(page("목표주가 변동", '<p class="err">목표주가 변동 리포트를 불러오지 못했습니다.</p>',
-                                             "../", "target/", "TARGET PRICE", "평일 오전 7시, 증권사 리포트 목표주가 상향·하향"),
+                                             "../", "target/", "TARGET PRICE", "평일 오전 8시 40분·오후 9시, 증권사 리포트 목표주가 상향·하향"),
                                         encoding="utf-8")
     return first
 

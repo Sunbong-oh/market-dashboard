@@ -3,7 +3,7 @@
 미국 장 전후(한국 17:00 ~ 다음 날 09:05, 월~금 미국 거래일) 1분마다 야후 시세를 받아
 us-live 브랜치의 quotes.json 으로 올린다. 데일리 페이지(US_LIVE_JS)가 이 파일을 읽어 카드의 가격·등락을 바꾼다.
 한 번 실행은 최대 5시간 40분(Actions 6시간 제한) — 끝나면 out/relay 를 남겨 워크플로가 다음 실행을 띄운다(늘 떠 있음).
-평일 아침에는 07:20과, 목표주가 변동 리포트(kb-market-report, 07:00·07:40·08:20)가 올라올 때마다 사이트 빌드도 요청한다.
+평일 07:20과, 목표주가 변동 리포트(kb-market-report, 08:40·21:00)가 올라올 때마다 사이트 빌드도 요청한다.
 """
 
 from __future__ import annotations
@@ -94,23 +94,24 @@ CONSENSUS_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/m
 
 
 def kick_site(now: datetime) -> None:
-    """평일 아침 사이트 빌드 요청: 07:20에 한 번(해외주식 리포트 새로 모음), 그리고 09:30까지 kb-market-report의
-    오늘 목표주가 변동 리포트(07:00·07:40·08:20 실행)가 새로 올라오거나 바뀔 때마다."""
+    """평일 사이트 빌드 요청: 07:20에 한 번(해외주식 리포트 새로 모음), 그리고 kb-market-report의 오늘
+    목표주가 변동 리포트(08:40·21:00 실행)가 새로 올라오거나 바뀔 때(08:30~10:00, 20:50~22:30 사이 확인)."""
     hm, d = now.strftime("%H:%M"), now.strftime("%Y-%m-%d")
-    if now.weekday() >= 5 or not ("07:00" <= hm < "09:30"):
+    if now.weekday() >= 5:
         return
     if _site["day"] != d:
         _site.update(day=d, base=False, hash=None)
     why = ""
-    try:
-        body = urllib.request.urlopen(urllib.request.Request(CONSENSUS_URL.format(d) + f"?t={int(time.time())}", headers=UA),
-                                      timeout=10).read()
-        h = hash(body)
-        if h != _site["hash"]:
-            _site["hash"], why = h, "목표주가 리포트 갱신"
-    except Exception:
-        pass
-    if not why and hm >= "07:20" and not _site["base"]:
+    if "08:30" <= hm < "10:00" or "20:50" <= hm < "22:30":
+        try:
+            body = urllib.request.urlopen(urllib.request.Request(CONSENSUS_URL.format(d) + f"?t={int(time.time())}", headers=UA),
+                                          timeout=10).read()
+            h = hash(body)
+            if h != _site["hash"]:
+                _site["hash"], why = h, "목표주가 리포트 갱신"
+        except Exception:
+            pass
+    if not why and "07:20" <= hm < "09:00" and not _site["base"]:
         why = "해외주식 리포트"
     if not why:
         return
