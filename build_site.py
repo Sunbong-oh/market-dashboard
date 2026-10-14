@@ -1394,6 +1394,12 @@ MAP_CSS = """
  background:var(--card);color:var(--text);cursor:pointer}.mp-tabs button.on{background:#1c2330;color:#fff;border-color:#1c2330}
 .mp-idx{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}.mp-idx b{font-size:20px;margin-right:6px}
 .mp-time{font-size:12.5px;color:var(--muted)}
+.mp-sz{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.mp-sz span{font-weight:700;margin-right:2px}.mp-sz button{font:700 13px/1 inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);
+ background:var(--card);color:var(--text);cursor:pointer}.mp-sz button.on{background:#F39800;border-color:#F39800;color:#fff}
+.mp-hot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;font-size:14px}.mp-hot b{font-size:13px;margin-right:2px}
+.mp-hot span{background:var(--card);border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-weight:700}
+.mp-hot i{font-style:normal}.mp-hot em{font-style:normal;font-weight:800}.mp-hot .up{color:var(--up)}.mp-hot .down{color:var(--down)}
 #map{position:relative;width:100%;background:#1f232b;border-radius:10px;overflow:hidden;user-select:none}
 #map .sec{position:absolute;box-sizing:border-box;border:1px solid #1f232b;overflow:hidden}
 #map .sh{position:absolute;left:0;right:0;top:0;height:17px;padding:0 4px;font:700 11.5px/17px system-ui,sans-serif;color:#fff;
@@ -1409,6 +1415,9 @@ MAP_CSS = """
 """
 MAP_JS = r"""<script>
 (function(){var SRC=%s,MAP=null,IDX=null,MK=location.hash=='#kosdaq'?'kosdaq':'kospi',el=document.getElementById('map');
+ /* 칸 크기: sqrt=시총 제곱근(기본, 대형주 쏠림 완화) / cap=시총 그대로 / eq=업종 같은 크기 */
+ var SZ='sqrt';try{SZ=localStorage.getItem('map-size')||'sqrt'}catch(x){}
+ function sz(v){return SZ=='cap'?v:Math.sqrt(v)}
  var NAME={kospi:'KOSPI',kosdaq:'KOSDAQ'};
  function col(p){var t=Math.min(Math.abs(p)/3,1),a=[64,68,78],b=p>0?[230,44,52]:[30,98,214];if(Math.abs(p)<0.05)t=0;
   return 'rgb('+a.map(function(v,i){return Math.round(v+(b[i]-v)*Math.pow(t,0.75))}).join(',')+')'}
@@ -1429,11 +1438,14 @@ MAP_JS = r"""<script>
   idx();if(!data||!data.length){el.style.height='200px';el.innerHTML='<p style="color:#ccc;padding:20px">맵 데이터를 불러오는 중입니다…</p>';return}
   var W=el.clientWidth,H=Math.round(innerWidth<=640?Math.max(520,W*1.45):Math.max(560,W*0.62));el.style.height=H+'px';
   var secs=data.filter(function(s){return s.st&&s.st.length}),useCap=secs.every(function(s){return s.v>0});
-  var sv=secs.map(function(s){return useCap?s.v:s.st.length}),rs=squarify(sv,0,0,W,H),html='';
+  secs.forEach(function(s){s.kids=s.st.filter(function(x){return !useCap||x.v>0}).map(function(x){return {x:x,a:useCap?sz(x.v):1}})
+   .sort(function(a,b){return b.a-a.a});s.a=!useCap?s.st.length:SZ=='eq'?1:SZ=='cap'?s.v:s.kids.reduce(function(t,k){return t+k.a},0)});
+  secs=secs.slice().sort(function(a,b){return b.a-a.a});hot(secs);
+  var sv=secs.map(function(s){return s.a}),rs=squarify(sv,0,0,W,H),html='';
   secs.forEach(function(s,i){var r=rs[i];if(!r)return;var head=r.w>=46&&r.h>=40,top=head?17:0;
    html+='<div class="sec" style="left:'+r.x+'px;top:'+r.y+'px;width:'+r.w+'px;height:'+r.h+'px;background:'+col(s.p)+'" title="'+esc(s.s)+' '+sgn(s.p)+'" data-i="'+esc(s.s+' '+sgn(s.p))+'">';
    if(head){html+='<div class="sh">'+esc(s.s)+' '+sgn(s.p)+'</div>';
-    var st=s.st.filter(function(x){return !useCap||x.v>0}),vv=st.map(function(x){return useCap?x.v:1}),rr=squarify(vv,0,top,r.w-2,r.h-top-2);
+    var st=s.kids.map(function(k){return k.x}),vv=s.kids.map(function(k){return k.a}),rr=squarify(vv,0,top,r.w-2,r.h-top-2);
     st.forEach(function(x,j){var q=rr[j];if(!q)return;var nm=String(x.n||''),fs=Math.min(22,Math.sqrt(q.w*q.h)/5.2,(q.w-4)/nm.length);
      if(fs<9){fs=9;var c=Math.floor((q.w-4)/9)-1;nm=c>=2?nm.slice(0,c)+'…':''}
      var showN=nm&&q.h>fs*1.25,showP=showN&&q.h>fs*2.45;
@@ -1443,6 +1455,12 @@ MAP_JS = r"""<script>
    html+='</div>'});
   el.innerHTML=html;
   document.querySelector('.mp-time').textContent=(MAP.date?MAP.date.slice(4,6)+'/'+MAP.date.slice(6,8)+' ':'')+(MAP.time||'')+' 기준 · 네이버 증권 업종 · 5분마다 갱신'}
+ function hot(secs){var box=document.querySelector('.mp-hot');if(!box)return;
+  var top=secs.filter(function(s){return s.st.length>=3}).slice().sort(function(a,b){return b.p-a.p}).slice(0,5);
+  box.innerHTML='<b>오늘 강한 업종</b>'+top.map(function(s){return '<span><i>'+esc(s.s)+'</i> <em class="'+(s.p>0?'up':s.p<0?'down':'')+'">'+sgn(s.p)+'</em></span>'}).join('')}
+ function szBtns(){document.querySelectorAll('.mp-sz button').forEach(function(b){b.classList.toggle('on',b.dataset.z==SZ)})}
+ document.querySelectorAll('.mp-sz button').forEach(function(b){b.onclick=function(){SZ=b.dataset.z;try{localStorage.setItem('map-size',SZ)}catch(x){}szBtns();draw()}});
+ szBtns();
  function idx(){var box=document.querySelector('.mp-idx'),it=null;
   ((IDX&&IDX.indices)||[]).forEach(function(x){if(x.name==NAME[MK])it=x});
   if(!it){box.textContent=NAME[MK];return}
@@ -1466,6 +1484,8 @@ MAP_JS = r"""<script>
 def build_map():
     body = (f'<style>{MAP_CSS}</style><div class="mp-top"><div class="mp-tabs"><button data-m="kospi" class="on">코스피</button>'
             f'<button data-m="kosdaq">코스닥</button></div><div class="mp-idx"></div></div>'
+            f'<div class="mp-sz"><span>칸 크기</span><button data-z="sqrt" class="on">완만하게</button><button data-z="cap">시가총액</button>'
+            f'<button data-z="eq">업종 같은 크기</button></div><div class="mp-hot"></div>'
             f'<div id="map"></div><div class="mp-info"></div><div class="mp-leg"></div>'
             f'<div class="mp-time" style="text-align:center"></div>' + MAP_JS % json.dumps(MAP_SRC))
     dest = OUT / "map"
