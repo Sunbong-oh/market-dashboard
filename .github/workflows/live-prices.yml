@@ -70,11 +70,18 @@ jobs:
           repository: Sunbong-oh/kb-market-report
           token: ${{ secrets.CLOSE_REPO_TOKEN || github.token }}
           path: _close
-          sparse-checkout: archive
+          sparse-checkout: |
+            archive
+            consensus
       - uses: actions/setup-python@v5
         if: steps.wait.outputs.go == 'true'
         with:
           python-version: "3.12"
+      - name: 해외주식 리포트 (us-reports 브랜치 저장본)
+        if: steps.wait.outputs.go == 'true'
+        continue-on-error: true
+        run: |
+          git fetch -q --depth 1 origin us-reports && mkdir -p us_reports && git --work-tree=us_reports checkout FETCH_HEAD -- .
       - name: 사이트 생성 (실시간 시세)
         if: steps.wait.outputs.go == 'true'
         env:
