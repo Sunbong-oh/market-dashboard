@@ -1402,6 +1402,7 @@ MAP_CSS = """
 .mp-hot i{font-style:normal}.mp-hot em{font-style:normal;font-weight:800}.mp-hot .up{color:var(--up)}.mp-hot .down{color:var(--down)}
 #map{position:relative;width:100%;background:#1f232b;border-radius:10px;overflow:hidden;user-select:none}
 #map .sec{position:absolute;box-sizing:border-box;border:1px solid #1f232b;overflow:hidden}
+#map .sec.thm{border:3px solid #ffd43b;z-index:1}#map .sec.thm .sh{background:#ffd43b;color:#1c2330}
 #map .sh{position:absolute;left:0;right:0;top:0;height:17px;padding:0 4px;font:700 11.5px/17px system-ui,sans-serif;color:#fff;
  background:rgba(0,0,0,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #map .st{position:absolute;box-sizing:border-box;border:1px solid rgba(20,22,28,.55);color:#fff;display:flex;flex-direction:column;
@@ -1413,11 +1414,33 @@ MAP_CSS = """
 .mp-info{min-height:22px;text-align:center;font-size:14px;font-weight:700;margin-top:6px}
 @media (max-width:520px){#map{width:calc(100% + 32px);margin:0 -16px;border-radius:0}.mp-leg span{min-width:38px}}
 """
+# 업종 분류에는 2차전지가 없어(전기제품·화학·전자장비 등에 흩어짐) 맵에서 이 종목들을 원래 업종에서 빼
+# '2차전지(테마)' 칸 하나로 모은다. 이름은 네이버 증권 표기와 같아야 한다 (없는 이름은 그냥 건너뜀).
+BATTERY_THEME = [
+    # 셀
+    "LG에너지솔루션", "삼성SDI", "SK이노베이션",
+    # 양극재·전구체·소재
+    "포스코퓨처엠", "에코프로비엠", "에코프로", "에코프로머티", "엘앤에프", "LG화학", "코스모신소재", "코스모화학",
+    "금양", "엔켐", "천보", "나노신소재", "대주전자재료", "솔루스첨단소재", "롯데에너지머티리얼즈", "SKC",
+    "SK아이이테크놀로지", "더블유씨피", "후성", "레이크머티리얼즈", "에코앤드림", "포스코엠텍",
+    # 장비·부품·리사이클
+    "피엔티", "하나기술", "윤성에프앤씨", "성일하이텍", "신흥에스이씨", "상신이디피", "LS머트리얼즈",
+]
+
 MAP_JS = r"""<script>
 (function(){var SRC=%s,MAP=null,IDX=null,MK=location.hash=='#kosdaq'?'kosdaq':'kospi',el=document.getElementById('map');
  /* 칸 크기: sqrt=시총 제곱근(기본, 대형주 쏠림 완화) / cap=시총 그대로 / eq=업종 같은 크기 */
  var SZ='sqrt';try{SZ=localStorage.getItem('map-size')||'sqrt'}catch(x){}
  function sz(v){return SZ=='cap'?v:Math.sqrt(v)}
+ var THEME=%s,TSET={};THEME.forEach(function(n){TSET[n]=1});
+ /* 2차전지 종목을 원래 업종에서 빼 '2차전지(테마)' 칸으로 모은다. 남은 업종의 시총·등락률은 남은 종목으로 다시 계산 */
+ function wavg(st){var v=0,s=0;st.forEach(function(x){if(x.v>0){v+=x.v;s+=x.v*x.p}});return v?s/v:(st.length?st.reduce(function(t,x){return t+x.p},0)/st.length:0)}
+ function regroup(data){var pick=[],out=[];
+  data.forEach(function(s){var keep=[],moved=false;(s.st||[]).forEach(function(x){if(TSET[x.n]){pick.push(x);moved=true}else keep.push(x)});
+   if(!moved){out.push(s);return}
+   if(keep.length)out.push({s:s.s,st:keep,v:keep.reduce(function(t,x){return t+(x.v||0)},0),p:Math.round(wavg(keep)*100)/100})});
+  if(pick.length)out.push({s:'🔋 2차전지(테마)',theme:1,st:pick,v:pick.reduce(function(t,x){return t+(x.v||0)},0),p:Math.round(wavg(pick)*100)/100});
+  return out}
  var NAME={kospi:'KOSPI',kosdaq:'KOSDAQ'};
  function col(p){var t=Math.min(Math.abs(p)/3,1),a=[64,68,78],b=p>0?[230,44,52]:[30,98,214];if(Math.abs(p)<0.05)t=0;
   return 'rgb('+a.map(function(v,i){return Math.round(v+(b[i]-v)*Math.pow(t,0.75))}).join(',')+')'}
@@ -1437,13 +1460,13 @@ MAP_JS = r"""<script>
  function draw(){var data=MAP&&MAP.data&&MAP.data[MK];document.querySelectorAll('.mp-tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.m==MK)});
   idx();if(!data||!data.length){el.style.height='200px';el.innerHTML='<p style="color:#ccc;padding:20px">맵 데이터를 불러오는 중입니다…</p>';return}
   var W=el.clientWidth,H=Math.round(innerWidth<=640?Math.max(520,W*1.45):Math.max(560,W*0.62));el.style.height=H+'px';
-  var secs=data.filter(function(s){return s.st&&s.st.length}),useCap=secs.every(function(s){return s.v>0});
+  var secs=regroup(data).filter(function(s){return s.st&&s.st.length}),useCap=secs.every(function(s){return s.v>0});
   secs.forEach(function(s){s.kids=s.st.filter(function(x){return !useCap||x.v>0}).map(function(x){return {x:x,a:useCap?sz(x.v):1}})
    .sort(function(a,b){return b.a-a.a});s.a=!useCap?s.st.length:SZ=='eq'?1:SZ=='cap'?s.v:s.kids.reduce(function(t,k){return t+k.a},0)});
   secs=secs.slice().sort(function(a,b){return b.a-a.a});hot(secs);
   var sv=secs.map(function(s){return s.a}),rs=squarify(sv,0,0,W,H),html='';
   secs.forEach(function(s,i){var r=rs[i];if(!r)return;var head=r.w>=46&&r.h>=40,top=head?17:0;
-   html+='<div class="sec" style="left:'+r.x+'px;top:'+r.y+'px;width:'+r.w+'px;height:'+r.h+'px;background:'+col(s.p)+'" title="'+esc(s.s)+' '+sgn(s.p)+'" data-i="'+esc(s.s+' '+sgn(s.p))+'">';
+   html+='<div class="sec'+(s.theme?' thm':'')+'" style="left:'+r.x+'px;top:'+r.y+'px;width:'+r.w+'px;height:'+r.h+'px;background:'+col(s.p)+'" title="'+esc(s.s)+' '+sgn(s.p)+'" data-i="'+esc(s.s+' '+sgn(s.p))+'">';
    if(head){html+='<div class="sh">'+esc(s.s)+' '+sgn(s.p)+'</div>';
     var st=s.kids.map(function(k){return k.x}),vv=s.kids.map(function(k){return k.a}),rr=squarify(vv,0,top,r.w-2,r.h-top-2);
     st.forEach(function(x,j){var q=rr[j];if(!q)return;var nm=String(x.n||''),fs=Math.min(22,Math.sqrt(q.w*q.h)/5.2,(q.w-4)/nm.length);
@@ -1487,7 +1510,7 @@ def build_map():
             f'<div class="mp-sz"><span>칸 크기</span><button data-z="sqrt" class="on">완만하게</button><button data-z="cap">시가총액</button>'
             f'<button data-z="eq">업종 같은 크기</button></div><div class="mp-hot"></div>'
             f'<div id="map"></div><div class="mp-info"></div><div class="mp-leg"></div>'
-            f'<div class="mp-time" style="text-align:center"></div>' + MAP_JS % json.dumps(MAP_SRC))
+            f'<div class="mp-time" style="text-align:center"></div>' + MAP_JS % (json.dumps(MAP_SRC), json.dumps(BATTERY_THEME, ensure_ascii=False)))
     dest = OUT / "map"
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "index.html").write_text(page("🗺️ 맵 · 업종별 등락", body, "../", "map/", hero=False), encoding="utf-8")
