@@ -205,7 +205,9 @@ function apply(j){if(!j||!j.data||!(j.time>=SINCE))return;var hm=j.time.slice(5,
   if(b&&sym==='^VIX')b.textContent=p<15?'\uc548\uc815':p<20?'\ubcf4\ud1b5':p<30?'\ubd88\uc548':'\uacf5\ud3ec';
   pr.innerHTML=(y?f(p,3)+'<small>%%</small>':'<small>'+(u?u.textContent:'')+'</small>'+f(p,2))+(b?' '+b.outerHTML:'');
   card.querySelector('.delta').innerHTML='<span class="'+c(d)+'">'+(y?(d>0?'+':'')+(d*100).toFixed(1)+'bp ':(d>0?'\u25B2':d<0?'\u25BC':'\u2013')+' '+f(Math.abs(d),2)+' ')+
-   '('+(pc>0?'+':'')+pc.toFixed(2)+'%%)</span> <small class="lv">\u00B7 \uc2e4\uc2dc\uac04 '+hm+'</small>'});
+   '('+(pc>0?'+':'')+pc.toFixed(2)+'%%)</span> <small class="lv">\u00B7 \uc2e4\uc2dc\uac04 '+hm+'</small>'+
+   /* 장전·시간외: 최근 정규장 종가 대비 */
+   (q.x!=null?'<div class="xh" style="font-size:.86em;margin-top:3px"><b>'+q.xs+'</b> $'+f(q.x,2)+' <span class="'+c(q.x-p)+'">('+((q.x/p-1)*100>0?'+':'')+((q.x/p-1)*100).toFixed(2)+'%%)</span> <small>'+q.xt+'</small></div>':'')});
  var IX={'\ub098\uc2a4\ub2e5':'^IXIC','S&P500':'^GSPC'};
  document.querySelectorAll('.ix').forEach(function(x){var k=x.dataset.sym||IX[(x.firstChild&&x.firstChild.nodeValue||'').trim()],q=j.data[k],b=x.querySelector('b');if(!q||!b)return;
   var v=(q.p/q.pc-1)*100;b.className=c(v);b.textContent=(v>0?'+':'')+v.toFixed(2)+'%%'})}

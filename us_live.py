@@ -34,13 +34,25 @@ def in_window(now: datetime) -> bool:
 
 
 def quote(sym: str) -> dict | None:
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=1d&interval=5m"
+    """정규장 가격(p)·전일 종가(pc). 개별 종목은 장전·시간외 거래가 있으면 x(가격)·xs(세션)·xt(시각)도."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=1d&interval=1m&includePrePost=true"
     try:
-        m = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=15).read())["chart"]["result"][0]["meta"]
+        r = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=15).read())["chart"]["result"][0]
+        m = r["meta"]
         p, pc = m.get("regularMarketPrice"), m.get("chartPreviousClose") or m.get("previousClose")
         if p is None or not pc:
             return None
-        return {"p": p, "pc": pc, "t": m.get("regularMarketTime")}
+        out = {"p": p, "pc": pc, "t": m.get("regularMarketTime")}
+        if not sym.startswith("^") and "=" not in sym:  # 지수·선물은 장전·시간외가 따로 없다
+            pts = [(t, c) for t, c in zip(r.get("timestamp") or [], (r["indicators"]["quote"][0].get("close") or [])) if c is not None]
+            ctp = m.get("currentTradingPeriod") or {}
+            if pts and pts[-1][0] > (m.get("regularMarketTime") or 0):
+                t, c = pts[-1]
+                for key, name in (("pre", "프리마켓"), ("post", "애프터마켓")):
+                    per = ctp.get(key) or {}
+                    if per.get("start", 0) <= t < per.get("end", 0):
+                        out.update(x=round(c, 4), xs=name, xt=datetime.fromtimestamp(t, KST).strftime("%H:%M"))
+        return out
     except Exception as e:
         print("  시세 실패:", sym, type(e).__name__, e, flush=True)
         return None
