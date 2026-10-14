@@ -853,14 +853,14 @@ function futChart(el,d,live){
  var ch=prev!=null?last-prev:null,pct=ch!=null&&prev?ch/prev*100:0,cls=ch>0?'up':ch<0?'dn':'';
  var back=hf?fl.filter(function(p){return p[0]<=fl[fl.length-1][0]-30}):[],d30=back.length?fg-back[back.length-1][1]:null;
  var gc=fg>0?'up':fg<0?'dn':'';
- var badge='<div class="badge2">'+(fg!=null?'<div class="fg '+gc+'"><span class="k">외국인 선물 누적'+(hf?'':' (마감)')+'</span><b>'+sg0(fg)+'억</b>'+
+ var badge='<div class="badge2">'+(fg!=null?'<div class="fg '+gc+'"><span class="k">외국인 선물 누적 · 주간장'+(hf?'':' (마감)')+'</span><b>'+sg0(fg)+'억</b>'+
   '<span class="c">'+(fg>0?'순매수':fg<0?'순매도':'')+(d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+'억 '+(d30>0?'사는 중':d30<0?'파는 중':''):'')+'</span></div>':'')+
   (ch!=null?'<div class="fu '+cls+'"><span class="k">KOSPI200 선물</span><b>'+f2(last)+'</b><span class="c">'+(ch>0?'▲':ch<0?'▼':'')+
   f2(Math.abs(ch))+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</span></div>':'')+'</div>';
  var rest=hf?(d.flows||[]).slice(-1)[0]||{}:cf,oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])}).join(' · ');
  var hh=lf[0]+525,hhmm=Math.floor(hh/60)+':'+('0'+hh%60).slice(-2);
  el.innerHTML=badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) · ':'')+
-  '<b style="color:#495057">━ KOSPI200 선물</b> (좌) '+f2(last)+'</p>'+svg+
+  '<b style="color:#495057">━ KOSPI200 선물</b> (좌) '+f2(last)+'<br><span style="font-size:12px">※ 주간장 기준(08:45~15:45) · 야간장 미포함 — MTS·HTS 투자자동향(야간 포함)과 다를 수 있음</span></p>'+svg+
   '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 1분마다 기록, 화면은 1~2분마다 자동 갱신':
   (hf?'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)':'외국인 분 단위 추이는 회사 PC 기록이 있는 날부터 함께 그려집니다'))+'</p>';
  return true}
