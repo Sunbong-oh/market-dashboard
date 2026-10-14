@@ -1650,10 +1650,36 @@ EARN_CSS = """
 .earn td.c{color:var(--muted);font-size:12.5px;line-height:1.45}.earn .j{color:var(--text);font-size:13px}
 .earn h3{font-size:14.5px;margin:12px 0 4px}.earn ul{margin:0;padding-left:18px;line-height:1.55;font-size:14px}
 .earn .src{font-size:12px;color:var(--muted);margin-top:8px}.earn .src a{color:var(--muted)}
+#earn-live{order:-2}.earn.auto{border-left-color:#e03131}.earn .cal{font-size:13px;color:var(--muted);margin:2px 0 6px}
+.earn .cons{font-size:14.5px;font-weight:800;margin:3px 0}.earn.auto ul{margin-top:6px}.earn.auto li{margin:3px 0}
+.earn.auto li a{color:var(--text);text-decoration:none;font-weight:600}.earn.auto li span{font-size:12px;color:var(--muted)}
 """
 EARN_JS = """<script>(function(){var n=new Date(Date.now()+9*3600e3),t=n.toISOString().slice(0,10),y=new Date(n-864e5).toISOString().slice(0,10);
 document.querySelectorAll('.earn[data-day]').forEach(function(c){if(c.dataset.day!==t&&c.dataset.day!==y)c.remove()});
 var s=document.getElementById('earn');if(s&&!s.querySelector('.earn'))s.remove()})()</script>"""
+
+
+# 자동 실적 속보: kb-market-report earnings-watch 워크플로가 10분마다 갱신하는 earnings-live/earnings.json
+# (★ 실적·주요 반도체 실적 발표 감지 → 컨센서스 + 기사 제목). 수동 정리 카드(earnings_flash)가 있으면 그 회사는 뺀다.
+EARN_LIVE_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/earnings.json?ref=earnings-live",
+                 "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/earnings-live/earnings.json")
+EARN_LIVE_JS = r"""<script>
+(function(){var SRC=%s,box=document.getElementById('earn-live');if(!box)return;
+ function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function draw(j){var now=Date.now(),manual={};document.querySelectorAll('.earn[data-key]').forEach(function(c){manual[c.dataset.key]=1});
+  var its=(j&&j.items||[]).filter(function(i){var t=Date.parse(i.detected.replace(' ','T')+':00+09:00');return now-t<36*3600e3&&!manual[i.key]});
+  if(!its.length){box.hidden=true;return}
+  box.innerHTML=its.map(function(i){return '<div class="earn auto"><h2>⚡ 실적 발표 · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
+   (i.item!==i.name?'<div class="cal">캘린더: '+e(i.item)+'</div>':'')+
+   (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+
+   '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
+  box.hidden=false}
+ function load(i){i=i||0;if(i>=SRC.length)return;
+  fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
+  .then(function(r){if(!r.ok)throw 0;return r.json()}).then(draw).catch(function(){load(i+1)})}
+ load();setInterval(function(){if(!document.hidden)load()},300000);
+})();
+</script>""" % json.dumps(list(EARN_LIVE_SRC))
 
 
 def earnings_home(now):
@@ -1669,14 +1695,15 @@ def earnings_home(now):
                        f'{f"<b class=j>{escape(r[3])}</b><br>" if r[3] else ""}{escape(r[2])}</td></tr>' for r in e.get("rows") or [])
         guide = "".join(f"<li>{escape(g)}</li>" for g in e.get("guidance") or [])
         src = " · ".join(f'<a href="{escape(u)}" target="_blank" rel="noopener">{escape(t)}</a>' for t, u in e.get("sources") or [])
-        cards.append(f'<div class="earn" data-day="{escape(e["day"])}"><h2>📊 실적 속보 · {escape(e["company"])}'
+        cards.append(f'<div class="earn" data-day="{escape(e["day"])}" data-key="{escape(f.stem)}"><h2>📊 실적 속보 · {escape(e["company"])}'
                      f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time", ""))} 발표</small></h2>'
                      f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>'
                      + (f"<h3>향후 가이던스</h3><ul>{guide}</ul>" if guide else "")
                      + (f'<div class="src">출처: {src}</div>' if src else "") + "</div>")
+    live = f'<section class="sec" id="earn-live" hidden></section>'
     if not cards:
-        return ""
-    return f'<section class="sec" id="earn"><style>{EARN_CSS}</style>{"".join(cards)}</section>{EARN_JS}'
+        return f'<style>{EARN_CSS}</style>{live}{EARN_LIVE_JS}'
+    return f'<section class="sec" id="earn"><style>{EARN_CSS}</style>{"".join(cards)}</section>{EARN_JS}{live}{EARN_LIVE_JS}'
 
 
 def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=None):
