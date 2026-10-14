@@ -71,7 +71,8 @@ jobs:
           PYTHONIOENCODING: utf-8
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python dashboard.py ${{ (github.event_name == 'workflow_dispatch' && !inputs.telegram) && '' || '--notify' }} --no-open
+        # 주의: GitHub 식의 'A && '' || B'는 ''가 거짓으로 취급돼 항상 B가 된다. 그래서 빈 값 대신 '--no-telegram'을 넘긴다.
+        run: python dashboard.py ${{ (github.event_name == 'workflow_dispatch' && !inputs.telegram) && '--no-telegram' || '--notify' }} --no-open
       - name: Save to website archive (archive/daily/YYYY-MM-DD)
         # 웹사이트(site.yml)가 이 기록으로 '오전 데일리' 메뉴를 만든다. 실패해도 텔레그램 발송에는 영향 없음.
         if: steps.gate.outputs.send == '1'
