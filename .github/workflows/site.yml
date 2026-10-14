@@ -65,6 +65,13 @@ jobs:
           PYTHONIOENCODING: utf-8
           CLOSE_REPO: ${{ github.workspace }}/_close
         run: python build_site.py
+      - name: 출근길 음성 브리핑 붙이기 (podcast 브랜치 -> /podcast/feed.xml)
+        # daily-dashboard.yml이 만든 MP3·피드. 브랜치가 아직 없거나 실패해도 나머지는 배포한다.
+        continue-on-error: true
+        run: |
+          git fetch --depth 1 origin podcast
+          mkdir -p _site/podcast
+          git archive FETCH_HEAD | tar -x -C _site/podcast
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

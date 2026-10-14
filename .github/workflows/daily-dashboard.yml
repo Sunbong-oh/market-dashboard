@@ -93,6 +93,29 @@ jobs:
             sleep 5
           done
           exit 1
+      - name: 출근길 음성 브리핑 (MP3 + 팟캐스트 피드 -> podcast 브랜치)
+        # briefing.json(위 dashboard.py가 남김)을 5분 안팎 음성으로 만들어 podcast 브랜치에 최근 14회차만 둔다.
+        # 브랜치는 매번 커밋 하나로 덮어써(force push) MP3가 저장소 기록에 쌓이지 않게 한다.
+        # 사이트(site.yml)가 이 브랜치를 /podcast/ 로 붙여 배포하고, 휴대폰 팟캐스트 앱이 feed.xml을 구독한다.
+        # 실패해도 데일리 발송·사이트에는 영향 없음.
+        if: steps.gate.outputs.send == '1'
+        continue-on-error: true
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          pip install -q edge-tts
+          mkdir -p _pod
+          if git fetch --depth 1 origin podcast; then git archive FETCH_HEAD | tar -x -C _pod; fi
+          python briefing.py --pod _pod
+          day=$(date -u -d '+9 hours' +%Y-%m-%d)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/podcast.index"
+          rm -f "$GIT_INDEX_FILE"
+          git --work-tree=_pod add -A -f .
+          commit=$(git commit-tree "$(git write-tree)" -m "podcast: $day")
+          git push --force origin "$commit:refs/heads/podcast"
       - uses: actions/upload-artifact@v4
         if: always() && steps.gate.outputs.send == '1'
         with:
@@ -104,4 +127,6 @@ jobs:
             theme_news.html
             newhighs*.html
             newhighs_*.png
+            briefing.txt
+            briefing.mp3
           if-no-files-found: ignore

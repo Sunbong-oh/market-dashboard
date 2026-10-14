@@ -796,6 +796,35 @@ def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact="", weekly=()
 {cal_block(cal, weekly, done)}'''
 
 
+# ---------- 음성 브리핑용 데이터 ----------
+BRIEF_EXTRA = (("다우", "^DJI"),)  # 화면에는 없고 음성 브리핑에서만 읽는 지수
+BRIEF_JSON = OUT.with_name("briefing.json")
+
+
+def save_briefing_data(now, session_day, quotes, cnn, news, earnings, kr):
+    """briefing.py(출근길 음성 브리핑)가 읽을 재료를 briefing.json으로 남긴다. 실패해도 데일리에는 영향 없음."""
+    try:
+        qs = [dict(name=q["name"], sym=q["sym"], kind=q["kind"], last=q["pts"][-1][1], prev=q["pts"][-2][1],
+                   w1=pct_back(q["pts"], 7))
+              for q in quotes if q["ok"]]
+        pc, sig, _ = _putcall(cnn)
+        fg = (cnn or {}).get("fear_and_greed") or {}
+        hl = pick_headline(news)
+        data = dict(
+            now=now.isoformat(), session_day=f"{session_day:%Y-%m-%d}", quotes=qs,
+            fear_greed=dict(score=fg.get("score"), rating=CNN_KO.get(fg.get("rating"), fg.get("rating")),
+                            prev=fg.get("previous_close"), week=fg.get("previous_1_week")) if fg else None,
+            putcall=dict(value=pc, signal=sig) if pc is not None else None,
+            headline=headline_title(hl) if hl else None,
+            news=[n["title"] for n in news if n is not hl],
+            earnings={k: (str(v) if k == "day" else v) for k, v in earnings.items()} if earnings else None,
+            kr=[k["title"] for k in kr],
+            cal_done=calendar_done(now), cal_today=calendar_events(now))
+        BRIEF_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    except Exception as e:
+        print("브리핑 데이터 저장 실패:", type(e).__name__, e, file=sys.stderr)
+
+
 # ---------- 텔레그램 ----------
 def load_env(key):
     v = os.environ.get(key)
@@ -1312,7 +1341,8 @@ def main():
         cnn_f = ex.submit(fetch_cnn)
         quotes = list(ex.map(fetch_quote, ITEMS))
         have = {q["sym"] for q in quotes}
-        extra = list(ex.map(fetch_quote, [(n, sym, "price", "", "") for n, sym in INDEX_STRIP if sym not in have]))
+        extra = list(ex.map(fetch_quote, [(n, sym, "price", "", "") for n, sym in INDEX_STRIP + BRIEF_EXTRA
+                                          if sym not in have]))
         cnn = cnn_f.result()
     nas = next((q for q in quotes if q["ok"] and q["sym"] == "^IXIC"), None)
     # 일봉 타임스탬프는 개장 시각(13:30~14:30 UTC)이라 +6시간이면 마감 무렵이 된다
@@ -1347,6 +1377,7 @@ SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
 <script>document.documentElement.dataset.h=Math.ceil(document.querySelector('.wrap').getBoundingClientRect().bottom)</script></body></html>'''
     OUT.write_text(html, encoding="utf-8")
     print(f"생성 완료: {OUT}" + (f" (실패: {', '.join(failed)})" if failed else ""))
+    save_briefing_data(now, session_day, quotes + extra, cnn, news, earnings, kr)
     if "--notify" in sys.argv:
         notify(quotes, cnn, now)
     if "--no-open" not in sys.argv:
