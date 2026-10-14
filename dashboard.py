@@ -733,30 +733,38 @@ def earnings_block(e, pc=""):
             f'<div class="erows">{"".join(rows)}</div></div>')
 
 
-PC_LOW, PC_HIGH = 0.6, 1.0  # 이 범위를 벗어나면 경고 표시
+PC_LOW, PC_HIGH = 0.6, 1.0  # 0.6 이하 적극매도(파랑) · 1.0 이상 적극매수(빨강)
 
 
 def _putcall(cnn):
-    """(값, 경고문). 0.6 미만(콜 쏠림·과열)이나 1.0 초과(풋 쏠림·공포)면 경고문이 붙는다. 데이터 없으면 (None, "")."""
+    """(값, 신호, 설명). 0.6 이하(콜 쏠림·과열) → 적극매도, 1.0 이상(풋 쏠림·공포) → 적극매수. 데이터 없으면 (None, "", "")."""
     try:
         v = cnn["put_call_options"]["data"][-1]["y"]
     except (TypeError, KeyError, IndexError):
-        return None, ""
-    if v < PC_LOW:
-        return v, f"과열 경고 · {PC_LOW} 하회 (콜옵션 쏠림)"
-    if v > PC_HIGH:
-        return v, f"공포 경고 · {PC_HIGH} 상회 (풋옵션 쏠림)"
-    return v, ""
+        return None, "", ""
+    if round(v, 2) <= PC_LOW:
+        return v, "sell", f"{PC_LOW} 이하 · 콜옵션 쏠림(과열)"
+    if round(v, 2) >= PC_HIGH:
+        return v, "buy", f"{PC_HIGH} 이상 · 풋옵션 쏠림(공포)"
+    return v, "", ""
+
+
+def putcall_signal(v):
+    """텔레그램용 한 줄 꼬리표."""
+    if v is None:
+        return ""
+    return " 🔵 적극매도" if round(v, 2) <= PC_LOW else " 🔴 적극매수" if round(v, 2) >= PC_HIGH else ""
 
 
 def putcall_badge(cnn):
     """실적 칸 머리 오른쪽에 들어가는 작은 Put/Call 표시(CNN 5일 평균)."""
-    v, alert = _putcall(cnn)
+    v, sig, why = _putcall(cnn)
     if v is None:
         return '<div class="pcb"><span class="pcb-k">Put/Call</span><span class="pcb-n">데이터 없음</span></div>'
-    if alert:
-        return (f'<div class="pcb alert"><span class="pcb-k">⚠ Put/Call</span><b class="pcb-v">{v:.2f}</b>'
-                f'<span class="pcb-a">{alert}</span></div>')
+    if sig:
+        word = "적극매도" if sig == "sell" else "적극매수"
+        return (f'<div class="pcb {sig}"><span class="pcb-k">Put/Call</span><b class="pcb-v">{v:.2f}</b>'
+                f'<span class="pcb-a">{word}</span><span class="pcb-w">{why}</span></div>')
     return (f'<div class="pcb"><span class="pcb-k">Put/Call</span><b class="pcb-v">{v:.2f}</b>'
             f'<span class="pcb-n">정상 범위 {PC_LOW}~{PC_HIGH}</span></div>')
 
@@ -796,7 +804,7 @@ def build_summary(quotes, cnn, now):
         pc = cnn["put_call_options"]["data"][-1]["y"]
         lines.append(f"😨 공포탐욕 {round(fg['score'])} ({CNN_KO.get(fg['rating'], fg['rating'])})"
                      f" · 전일 {round(fg['previous_close'])} / 1주전 {round(fg['previous_1_week'])}")
-        lines.append(f"⚖️ Put/Call {pc:.2f}")
+        lines.append(f"⚖️ Put/Call {pc:.2f}{putcall_signal(pc)}")
         lines.append("")
     for q in quotes:
         if not q["ok"]:
@@ -1182,9 +1190,10 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
   padding:10px 16px;border-radius:12px;background:var(--bg);border:1px solid var(--line);text-align:right}
 .pcb-k{font-size:16px;font-weight:800}.pcb-v{grid-row:span 2;font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .pcb-n{font-size:12px;color:var(--muted)}
-.pcb.alert{background:#e03131;border-color:#e03131;color:#fff;box-shadow:0 0 0 4px rgba(224,49,49,.28),0 8px 22px -6px rgba(224,49,49,.7)}
-.pcb.alert .pcb-v{font-size:42px}
-.pcb-a{font-size:13px;font-weight:800;background:#fff;color:#c92a2a;padding:2px 10px;border-radius:99px;white-space:nowrap}
+.pcb.buy,.pcb.sell{grid-template-columns:auto auto}.pcb.buy .pcb-v,.pcb.sell .pcb-v{font-size:42px}
+.pcb.buy .pcb-v,.pcb.buy .pcb-a{color:#e03131}.pcb.sell .pcb-v,.pcb.sell .pcb-a{color:#1c6dd0}
+.pcb.buy{border-color:#e03131;box-shadow:0 0 0 3px rgba(224,49,49,.2)}.pcb.sell{border-color:#1c6dd0;box-shadow:0 0 0 3px rgba(28,109,208,.2)}
+.pcb-a{font-size:20px;font-weight:900;white-space:nowrap}.pcb-w{grid-column:2;font-size:11.5px;color:var(--muted)}
 .pc-solo{display:flex;justify-content:flex-end}
 .wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
 .wk-l{list-style:none;margin:0;padding:0}.wk-l li{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:16px;line-height:1.4}
@@ -1237,7 +1246,7 @@ footer{margin-top:24px;color:var(--muted);font-size:14px}
 .driver{padding:14px 16px;border-left-width:5px}.headline{font-size:24px;line-height:1.3}.hl-src{font-size:13px}.hl-foot{margin-top:8px}.ix{font-size:13px;padding:3px 8px}.ix b{font-size:15px}
 .driver+.panel,.panel+.panel,.panel+.fg{margin-top:10px}
 .panel{padding:14px}.tag{font-size:13px}
-.earn-head{gap:8px}.pcb{padding:8px 10px;column-gap:8px}.pcb-k{font-size:14px}.pcb-v{font-size:28px}.pcb-n{font-size:10.5px}.pcb.alert .pcb-v{font-size:32px}.pcb-a{font-size:11px;padding:1px 7px}.earn-co b{font-size:22px}.earn-co .tk{font-size:16px}.earn-co{font-size:13px}
+.earn-head{gap:8px}.pcb{padding:8px 10px;column-gap:8px}.pcb-k{font-size:14px}.pcb-v{font-size:28px}.pcb-n{font-size:10.5px}.pcb.buy .pcb-v,.pcb.sell .pcb-v{font-size:32px}.pcb-a{font-size:16px}.earn-co b{font-size:22px}.earn-co .tk{font-size:16px}.earn-co{font-size:13px}
 .erows{grid-template-columns:1fr 1fr;gap:8px;border-top:0;margin-top:10px}
 .er{background:var(--bg);border:0!important;border-radius:10px;padding:10px 12px!important;gap:3px}
 .ek{font-size:14px}.evv{font-size:21px}.evv small{font-size:12.5px}.ev{font-size:14px}.ev b{font-size:16px}.ev small{font-size:12px}
