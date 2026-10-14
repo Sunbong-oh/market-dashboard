@@ -630,7 +630,7 @@ def index_chips(quotes):
             continue
         last, prev = q["pts"][-1][1], q["pts"][-2][1]
         v = (last / prev - 1) * 100
-        out.append(f'<span class="ix">{label} <b class="{cls(v)}">{"+" if v > 0 else ""}{v:.2f}%</b></span>')
+        out.append(f'<span class="ix" data-sym="{escape(sym)}">{label} <b class="{cls(v)}">{"+" if v > 0 else ""}{v:.2f}%</b></span>')
     return f'<div class="ixs">{"".join(out)}</div>' if out else ""
 
 
