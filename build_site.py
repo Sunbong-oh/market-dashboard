@@ -21,6 +21,7 @@ from html import escape, unescape
 from pathlib import Path
 
 import dashboard as d
+from company_ko import describe, sector_ko
 
 ROOT = Path(__file__).resolve().parent
 # 빌드마다 바뀌는 값: iframe 주소 뒤에 붙여 폰이 예전 내용을 캐시에서 다시 쓰지 않게 한다 (GitHub Pages는 10분 캐시)
@@ -1233,6 +1234,9 @@ US_CSS = """
 .us .op.dn{color:var(--down)}.us .op.upg{color:var(--up)}
 .us .tp .tk{font-size:12px;font-weight:700;color:var(--muted);margin-left:4px}
 .us .tp .tm{font-size:13px;color:var(--muted);white-space:nowrap}
+.us .tp .ds{font-size:13px;font-weight:600;color:var(--text);margin-top:3px;white-space:normal;line-height:1.45}
+.us .tp .sk{display:inline-block;font-size:11.5px;font-weight:700;padding:0 6px;margin-right:5px;border-radius:5px;
+ background:#fff1dc;color:#1c2330;vertical-align:1px}
 """
 
 
@@ -1271,8 +1275,13 @@ def us_rows(items, limit=None, stock=True):
         who = f'{escape(it["broker"])} · {escape(it["date"][5:].replace("-", "/"))} {escape(it.get("time", ""))}'
         key = escape(f'{it.get("company", "")} {it.get("ticker", "")} {it["broker"]} {it["headline"]}'.lower())
         if stock:
-            rows.append(f'<tr data-k="{key}"><td class="co">{escape(it["company"])}<span class="tk">{escape(it["ticker"])}</span>'
-                        f'<div class="t">{who}{us_op(it)}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>{us_px(it)}</tr>')
+            q = it.get("quote") or {}
+            desc = describe(it["ticker"], q.get("industry", ""))
+            sec = sector_ko(q.get("sector", ""))
+            about = (f'<div class="ds">{f"<span class=sk>{escape(sec)}</span>" if sec else ""}{escape(desc)}</div>'
+                     if desc or sec else "")
+            rows.append(f'<tr data-k="{key} {escape(desc.lower())} {escape(sec)}"><td class="co">{escape(it["company"])}<span class="tk">{escape(it["ticker"])}</span>'
+                        f'{about}<div class="t">{who}{us_op(it)}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>{us_px(it)}</tr>')
         else:
             rows.append(f'<tr data-k="{key}"><td>{title}<div class="t">{who}</div></td></tr>')
     return f'<table class="tp">{"".join(rows)}</table>' if rows else '<p class="err">없음</p>'

@@ -114,13 +114,13 @@ def yahoo_prices(tickers):
     def one(t):
         sym = t.replace(".", "-")   # BRK.A -> BRK-A
         url = (f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{urllib.parse.quote(sym)}"
-               f"?modules=financialData,price&crumb={urllib.parse.quote(crumb)}")
+               f"?modules=financialData,price,assetProfile&crumb={urllib.parse.quote(crumb)}")
         try:
             r = json.loads(op.open(url, timeout=20).read())["quoteSummary"]["result"][0]
         except Exception as e:
             print("Yahoo 시세 실패:", t, type(e).__name__, file=sys.stderr)
             return t, None
-        fd, pr = r.get("financialData") or {}, r.get("price") or {}
+        fd, pr, ap = r.get("financialData") or {}, r.get("price") or {}, r.get("assetProfile") or {}
         price = d._raw(pr, "regularMarketPrice") or d._raw(fd, "currentPrice")
         target = d._raw(fd, "targetMeanPrice")
         if not price:
@@ -129,7 +129,8 @@ def yahoo_prices(tickers):
         return t, {"price": round(price, 2), "chg_pct": round(chg * 100, 2) if chg is not None else None,
                    "target": round(target, 2) if target else None,
                    "upside": round((target / price - 1) * 100, 1) if target else None,
-                   "analysts": d._raw(fd, "numberOfAnalystOpinions"), "currency": pr.get("currency") or "USD"}
+                   "analysts": d._raw(fd, "numberOfAnalystOpinions"), "currency": pr.get("currency") or "USD",
+                   "sector": ap.get("sector") or "", "industry": ap.get("industry") or ""}
 
     with ThreadPoolExecutor(max_workers=6) as ex:
         return {t: q for t, q in ex.map(one, tickers) if q}
