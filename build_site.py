@@ -208,6 +208,9 @@ function apply(j){if(!j||!j.data||!(j.time>=SINCE))return;var hm=j.time.slice(5,
    '('+(pc>0?'+':'')+pc.toFixed(2)+'%%)</span> <small class="lv">\u00B7 \uc2e4\uc2dc\uac04 '+hm+'</small>'+
    /* 장전·시간외: 최근 정규장 종가 대비 */
    (q.x!=null?'<div class="xh" style="font-size:.86em;margin-top:3px"><b>'+q.xs+'</b> $'+f(q.x,2)+' <span class="'+c(q.x-p)+'">('+((q.x/p-1)*100>0?'+':'')+((q.x/p-1)*100).toFixed(2)+'%%)</span> <small>'+q.xt+'</small></div>':'')});
+ var h=j.hl,a=document.querySelector('a.headline');  /* 실시간 헤드라인: 리포트 이후 기사일 때만 */
+ if(h&&a&&h.dt>=SINCE&&a.textContent!==h.t){a.textContent=h.t;a.href=h.u;var hs=document.querySelector('.hl-src');
+  if(hs)hs.textContent=h.s+' \u00B7 '+h.dt.slice(5).replace('-','/')+' \u00B7 \uc2e4\uc2dc\uac04'}
  var IX={'\ub098\uc2a4\ub2e5':'^IXIC','S&P500':'^GSPC'};
  document.querySelectorAll('.ix').forEach(function(x){var k=x.dataset.sym||IX[(x.firstChild&&x.firstChild.nodeValue||'').trim()],q=j.data[k],b=x.querySelector('b');if(!q||!b)return;
   var v=(q.p/q.pc-1)*100;b.className=c(v);b.textContent=(v>0?'+':'')+v.toFixed(2)+'%%'})}
