@@ -8,6 +8,7 @@
   /news/        돈이 되는 뉴스 — 빌드할 때마다 Google 뉴스에서 새로 수집 (dashboard.py의 뉴스 로직 재사용)
   /close/       장마감 리포트 (국내 장마감 수급체크) — kb-market-report 저장소의 archive/ (환경변수 CLOSE_REPO)
   /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 08:00) — kb-market-report 저장소의 consensus/*.json
+  /us/          해외주식 리포트 (국내 증권사 미국주식 리포트 요약) — us_reports/*.json (us_reports.py)
 """
 import json
 import os
@@ -28,6 +29,7 @@ OUT = Path(os.environ.get("SITE_OUT", ROOT / "_site"))
 DAILY = ROOT / "archive" / "daily"
 CLOSE = Path(os.environ.get("CLOSE_REPO", ROOT.parent / "kb-market-report")) / "archive"
 CONSENSUS = CLOSE.parent / "consensus"
+US_REPORTS = ROOT / "us_reports"
 SITE_NAME = "Brian's 투자노트"
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 WD = "월화수목금토일"
@@ -87,7 +89,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("stocks/", "관심 종목"), ("target/", "목표주가"),
-        ("close/", "장마감 리포트"))
+        ("us/", "해외주식"), ("close/", "장마감 리포트"))
 
 
 def nav(root, active):
@@ -1223,6 +1225,112 @@ def build_target():
     return first
 
 
+# ---------- 해외주식 리포트 (국내 증권사 미국주식 리포트 요약) ----------
+# us_reports.py 가 us_reports/YYYY-MM-DD.json 을 만든다 (연합인포맥스 글로벌모니터 목록 = 한국투자증권 미국주식 리서치 메뉴).
+US_CSS = """
+.us .tp .op{white-space:nowrap;text-align:right;font-weight:800}
+.us .tp .op .k{display:block;font-size:12px;font-weight:700;color:var(--muted)}
+.us .op.dn{color:var(--down)}.us .op.upg{color:var(--up)}
+.us .tp .tk{font-size:12px;font-weight:700;color:var(--muted);margin-left:4px}
+.us .tp .tm{font-size:13px;color:var(--muted);white-space:nowrap}
+"""
+
+
+def us_op(it):
+    """오른쪽 칸: 투자의견(제목에 있을 때) + 리포트 종류."""
+    chg = it.get("opinion_change") or ""
+    cls = " dn" if chg == "하향" else " upg" if chg == "상향" else ""
+    op = escape(f'{it.get("opinion", "")} {chg}'.strip())
+    kind = f'<span class="k">{escape(it["kind"])}</span>' if it.get("kind") else ""
+    return f'<td class="op{cls}">{op}{kind}</td>'
+
+
+def us_rows(items, limit=None, stock=True):
+    rows = []
+    for it in items[:limit]:
+        title = escape(it["headline"])
+        if it.get("pdf"):
+            title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>'
+        who = f'{escape(it["broker"])} · {escape(it["date"][5:].replace("-", "/"))} {escape(it.get("time", ""))}'
+        key = escape(f'{it.get("company", "")} {it.get("ticker", "")} {it["broker"]} {it["headline"]}'.lower())
+        if stock:
+            rows.append(f'<tr data-k="{key}"><td class="co">{escape(it["company"])}<span class="tk">{escape(it["ticker"])}</span>'
+                        f'<div class="t">{who}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>{us_op(it)}</tr>')
+        else:
+            rows.append(f'<tr data-k="{key}"><td>{title}<div class="t">{who}</div></td></tr>')
+    return f'<table class="tp">{"".join(rows)}</table>' if rows else '<p class="err">없음</p>'
+
+
+def us_one(items, stocks):
+    """한 줄 요약: 종목 리포트 수, 가장 많이 낸 증권사, 의견 하향, 실적 프리뷰·리뷰 수."""
+    if not items:
+        return ""
+    top = max({x["broker"] for x in items}, key=lambda b: sum(x["broker"] == b for x in items))
+    parts = [f'종목 리포트 {len(stocks)}건', f'{top} 최다({sum(x["broker"] == top for x in items)}건)']
+    pv = sum(x.get("kind") in ("Preview", "Review") for x in stocks)
+    if pv:
+        parts.append(f'실적 프리뷰·리뷰 {pv}건')
+    dn = [x["company"] for x in stocks if x.get("opinion_change") == "하향"]
+    if dn:
+        parts.append("의견 하향 " + ", ".join(dn[:3]))
+    return ", ".join(parts)
+
+
+def build_us():
+    out = OUT / "us"
+    files = sorted((p for p in US_REPORTS.glob("*.json") if DATE_RE.match(p.stem)), key=lambda p: p.stem, reverse=True) \
+        if US_REPORTS.is_dir() else []
+    first = None
+    dates = "".join(f'<li><a href="{{root}}{p.stem}/">{label(p.stem)}</a></li>' for p in files[:30])
+    search = ('<input class="tp-q" type="search" placeholder="종목·티커·증권사 검색 (예: 마벨, MRVL, 키움)" '
+              'oninput="var q=this.value.trim().toLowerCase();document.querySelectorAll(\'.us tr[data-k]\').forEach(function(r){'
+              'r.style.display=!q||r.dataset.k.indexOf(q)>=0?\'\':\'none\'})">')
+    for i, p in enumerate(files[:60]):
+        try:
+            doc = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        items = doc.get("items", [])
+        stocks = [x for x in items if x.get("ticker")]
+        others = [x for x in items if not x.get("ticker")]
+        one = us_one(items, stocks)
+        body = (f'<style>{TARGET_CSS}{US_CSS}</style><div class="us">'
+                f'<section class="panel"><div class="tp-sum"><b>리포트 {len(items)}건</b><b class="up">종목 {len(stocks)}</b>'
+                f'<b>산업·시황 {len(others)}</b></div>' + (f'<div class="tp-one">▶ {escape(one)}</div>' if one else "")
+                + f'{search}</section>'
+                f'<section class="panel report"><h3>🇺🇸 종목 리포트 ({len(stocks)})</h3>{us_rows(stocks)}</section>'
+                f'<section class="panel report"><h3>🌐 산업·시황 ({len(others)})</h3>{us_rows(others, stock=False)}'
+                '<p class="t" style="margin-top:8px">제목을 누르면 리포트 원문(PDF)이 열립니다. 의견은 제목에 적힌 경우만 표시합니다. '
+                '자료: 연합인포맥스 글로벌모니터(한국투자증권 미국주식 리서치), 저작권은 각 증권사에 있습니다.</p></section></div>')
+        sub = (f'{escape(doc.get("made", ""))} 기준 · {label(doc.get("since", p.stem))}부터 발간분 · '
+               '국내 증권사 미국주식 리포트')
+        title = f'{label(p.stem)} 해외주식 리포트'
+        for dest, root in ((out / p.stem, "../../"),) + (((out, "../"),) if i == 0 else ()):
+            dest.mkdir(parents=True, exist_ok=True)
+            more = f'<section class="panel"><h3 style="margin:0 0 8px">지난 리포트</h3><ul class="dates">{dates.replace("{root}", "" if dest == out else "../")}</ul></section>'
+            (dest / "index.html").write_text(page(title, body + more, root, "us/", "US EQUITY RESEARCH", sub), encoding="utf-8")
+        if first is None:
+            first = dict(day=p.stem, made=doc.get("made", ""), stocks=stocks, n=len(items), one=one)
+    if first is None:
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "index.html").write_text(page("해외주식 리포트", '<p class="err">해외주식 리포트를 불러오지 못했습니다.</p>',
+                                             "../", "us/", "US EQUITY RESEARCH", "국내 증권사 미국주식 리포트"),
+                                        encoding="utf-8")
+    return first
+
+
+def us_home(us):
+    if not us or not us["stocks"]:
+        return ""
+    inner = (f'<div class="tp-sum"><b>리포트 {us["n"]}건</b><b class="up">종목 {len(us["stocks"])}</b></div>'
+             f'<h3>🇺🇸 최신 종목 리포트</h3>{us_rows(us["stocks"], 5)}'
+             + (f'<div class="tp-one">▶ {escape(us["one"])}</div>' if us["one"] else "")
+             + f'<a class="btn" href="us/">해외주식 리포트 {us["n"]}건 전체 보기</a>')
+    return (f'<section class="sec" id="us"><style>{TARGET_CSS}{US_CSS}</style><div class="sec-h"><h2>🇺🇸 해외주식 리포트</h2>'
+            f'<a href="us/">{label(us["day"])} {escape(us["made"][-5:])} · 전체 보기</a></div>'
+            f'<section class="panel report us">{inner}</section></section>')
+
+
 # ---------- 맵 (업종별 등락 트리맵) ----------
 # kb-market-report Actions가 장중 5분마다 flow-live/map.json(네이버 증권 업종별 종목 등락)을 올린다.
 # 업종 넓이 = 시가총액 합, 종목 넓이 = 시가총액, 색 = 등락률(-3%~+3%, 빨강 상승·파랑 하락).
@@ -1420,7 +1528,7 @@ ISSUE_JS = r"""<script>
 </script>""" % json.dumps(ISSUE_SRC)
 
 
-def build_home(now, daily, news, close, live=None, stocks=None, target=None):
+def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
@@ -1437,7 +1545,7 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None):
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
-            f'{target_home(target)}'
+            f'{target_home(target)}{us_home(us)}'
             f'<section class="sec" id="mystocks"><div class="sec-h"><h2>📌 관심 종목 뉴스</h2>'
             f'<a href="stocks/">{stocks["at"]:%m/%d %H:%M} 수집</a></div>{stocks["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
@@ -1458,11 +1566,13 @@ def main():
     news = build_news(now, theme_doc)
     close = build_close()
     target = build_target()
+    us = build_us()
     live = build_live(now)
     stocks = build_stocks(now)
     build_map()
-    build_home(now, daily, news, close, live, stocks, target)
+    build_home(now, daily, news, close, live, stocks, target, us)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
+                      "us": us and us["day"],
                       "live": bool(live),
                       "news": [len(news["kr"]), len(news["theme"])], "stocks": stocks["n"]}, ensure_ascii=False))
 
