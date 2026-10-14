@@ -124,7 +124,7 @@ def build_script(data):
     out = []
     say = out.append
 
-    say(f"굿모닝. KB증권 오선봉 과장입니다. 미증시 출근길에 챙겨보시죠. 오늘은 {now.month}월 {now.day}일 {wd[now.weekday()]}요일입니다.")
+    say(f"KB증권 오선봉 과장입니다. {now.month}월 {now.day}일 {wd[now.weekday()]}요일 미증시 브리핑 들어보시죠.")
     expected = now.date() - timedelta(days=1)  # 직전 미국 평일
     while expected.weekday() >= 5:
         expected -= timedelta(days=1)
