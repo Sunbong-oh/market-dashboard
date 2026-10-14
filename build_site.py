@@ -1640,6 +1640,45 @@ ISSUE_JS = r"""<script>
 </script>""" % json.dumps(ISSUE_SRC)
 
 
+# 실적 속보: earnings_flash/YYYYMMDD-회사.json (발표 직후 수동 정리). 발표일과 다음 날까지 핵심 이슈 아래에 보인다.
+EARN_CSS = """
+#earn{order:-2}.earn{background:var(--card);border:1px solid var(--line);border-left:5px solid #2f6fdb;border-radius:14px;padding:14px 16px;margin-top:10px}
+.earn h2{margin:0 0 2px;font-size:18px}.earn h2 small{font-size:12px;color:var(--muted);font-weight:600;margin-left:6px}
+.earn .vd{font-size:15px;font-weight:800;color:var(--up);margin:4px 0 8px}
+.earn table{width:100%;border-collapse:collapse;font-size:14px}.earn td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
+.earn td:first-child{color:var(--muted);font-weight:700;white-space:nowrap}.earn td.v{font-weight:800;white-space:nowrap}
+.earn td.c{color:var(--muted);font-size:12.5px;line-height:1.45}.earn .j{color:var(--text);font-size:13px}
+.earn h3{font-size:14.5px;margin:12px 0 4px}.earn ul{margin:0;padding-left:18px;line-height:1.55;font-size:14px}
+.earn .src{font-size:12px;color:var(--muted);margin-top:8px}.earn .src a{color:var(--muted)}
+"""
+EARN_JS = """<script>(function(){var n=new Date(Date.now()+9*3600e3),t=n.toISOString().slice(0,10),y=new Date(n-864e5).toISOString().slice(0,10);
+document.querySelectorAll('.earn[data-day]').forEach(function(c){if(c.dataset.day!==t&&c.dataset.day!==y)c.remove()});
+var s=document.getElementById('earn');if(s&&!s.querySelector('.earn'))s.remove()})()</script>"""
+
+
+def earnings_home(now):
+    cards = []
+    for f in sorted((ROOT / "earnings_flash").glob("*.json"), reverse=True):
+        try:
+            e = json.loads(f.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        if (now.date() - datetime.strptime(e["day"], "%Y-%m-%d").date()).days > 1:
+            continue
+        rows = "".join(f'<tr><td>{escape(r[0])}</td><td class="v">{escape(r[1])}</td><td class="c">'
+                       f'{f"<b class=j>{escape(r[3])}</b><br>" if r[3] else ""}{escape(r[2])}</td></tr>' for r in e.get("rows") or [])
+        guide = "".join(f"<li>{escape(g)}</li>" for g in e.get("guidance") or [])
+        src = " · ".join(f'<a href="{escape(u)}" target="_blank" rel="noopener">{escape(t)}</a>' for t, u in e.get("sources") or [])
+        cards.append(f'<div class="earn" data-day="{escape(e["day"])}"><h2>📊 실적 속보 · {escape(e["company"])}'
+                     f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time", ""))} 발표</small></h2>'
+                     f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>'
+                     + (f"<h3>향후 가이던스</h3><ul>{guide}</ul>" if guide else "")
+                     + (f'<div class="src">출처: {src}</div>' if src else "") + "</div>")
+    if not cards:
+        return ""
+    return f'<section class="sec" id="earn"><style>{EARN_CSS}</style>{"".join(cards)}</section>{EARN_JS}'
+
+
 def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
@@ -1654,6 +1693,7 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}{ISSUE_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
             f'<section class="sec" id="issue" hidden></section>'
+            f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
