@@ -6,7 +6,7 @@
   --notify   텔레그램으로도 MP3를 보낸다(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID).
 원고만 보고 싶으면 인자 없이 실행 -> briefing.txt, briefing.mp3 생성.
 
-음성: Microsoft Edge 온라인 TTS(edge-tts 패키지, 키 불필요). 차에서는 팟캐스트 앱(AntennaPod 등)이
+음성: ElevenLabs 키가 있으면 내 목소리(음성 복제), 없으면 Microsoft Edge 온라인 TTS(edge-tts, 키 불필요). 차에서는 팟캐스트 앱(AntennaPod 등)이
 FEED_URL을 구독해 두면 안드로이드 오토에서 바로 재생된다.
 """
 import asyncio
@@ -14,6 +14,8 @@ import json
 import re
 import shutil
 import sys
+import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, date, timedelta, timezone
@@ -22,6 +24,8 @@ from html import escape
 from pathlib import Path
 
 ROOT = Path(__file__).parent
+sys.path.insert(0, str(ROOT))
+from dashboard import load_env  # noqa: E402  (환경변수 또는 .env)
 DATA = ROOT / "briefing.json"
 TXT = ROOT / "briefing.txt"
 MP3 = ROOT / "briefing.mp3"
@@ -271,29 +275,62 @@ def wrap_up(data):
 
 
 # ---------- 음성 ----------
-async def _tts(text, path):
+# 내 목소리(ElevenLabs 음성 복제): Secrets에 ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID가 있으면 이걸 먼저 쓰고,
+# 없거나 실패하면 기본 음성(edge-tts)으로 만든다. 출력은 둘 다 고정 비트레이트 MP3라 크기로 길이를 계산한다.
+ELEVEN_MODEL = "eleven_multilingual_v2"  # 한국어 지원 모델. Secret/환경변수 ELEVENLABS_MODEL로 바꿀 수 있다
+ELEVEN_FORMAT, ELEVEN_KBPS = "mp3_44100_64", 64
+EDGE_KBPS = 48
+
+
+def eleven_tts(text, path):
+    key, voice = load_env("ELEVENLABS_API_KEY"), load_env("ELEVENLABS_VOICE_ID")
+    if not key or not voice:
+        return False
+    body = json.dumps(dict(text=text, model_id=load_env("ELEVENLABS_MODEL") or ELEVEN_MODEL,
+                           voice_settings=dict(stability=0.5, similarity_boost=0.85, style=0.0,
+                                               use_speaker_boost=True))).encode()
+    req = urllib.request.Request(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{urllib.parse.quote(voice)}?output_format={ELEVEN_FORMAT}",
+        body, {"xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg"})
+    try:
+        with urllib.request.urlopen(req, timeout=180) as r:
+            path.write_bytes(r.read())
+    except urllib.error.HTTPError as e:  # 키가 틀렸거나(401) 이번 달 글자 수를 다 썼을 때(401/429) 등
+        print("내 목소리(ElevenLabs) 실패:", e.code, e.read()[:300].decode("utf-8", "replace"), file=sys.stderr)
+        return False
+    except Exception as e:
+        print("내 목소리(ElevenLabs) 실패:", type(e).__name__, file=sys.stderr)
+        return False
+    return path.stat().st_size > 10000
+
+
+async def _edge(text, path):
     import edge_tts
     await edge_tts.Communicate(text, VOICE, rate=RATE).save(str(path))
 
 
 def synth(text, path, attempts=3):
+    """음성 파일을 만들고 비트레이트(kbps)를 돌려준다. 실패하면 None."""
+    if eleven_tts(text, path):
+        print("음성: 내 목소리(ElevenLabs)")
+        return ELEVEN_KBPS
     for i in range(attempts):
         try:
-            asyncio.run(_tts(text, path))
+            asyncio.run(_edge(text, path))
             if path.exists() and path.stat().st_size > 10000:
-                return True
+                print(f"음성: 기본 음성({VOICE})")
+                return EDGE_KBPS
         except Exception as e:
             print(f"TTS 실패({i + 1}/{attempts}):", type(e).__name__, e, file=sys.stderr)
-    return False
+    return None
 
 
-def mp3_seconds(path):
-    """edge-tts 기본 출력은 48kbps 고정 비트레이트 MP3라 크기로 길이를 계산한다."""
-    return round(path.stat().st_size * 8 / 48000)
+def mp3_seconds(path, kbps):
+    return round(path.stat().st_size * 8 / (kbps * 1000))
 
 
 # ---------- 팟캐스트 피드 ----------
-def update_feed(pod, mp3, text, now):
+def update_feed(pod, mp3, text, now, kbps):
     ep_dir = pod / "episodes"
     ep_dir.mkdir(parents=True, exist_ok=True)
     name = f"{now:%Y-%m-%d}.mp3"
@@ -306,7 +343,7 @@ def update_feed(pod, mp3, text, now):
     wd = "월화수목금토일"[now.weekday()]
     eps = [e for e in eps if e["file"] != name]
     eps.append(dict(file=name, title=f"{now.month}/{now.day}({wd}) 미국 증시 브리핑", pub=now.isoformat(),
-                    bytes=(ep_dir / name).stat().st_size, secs=mp3_seconds(ep_dir / name),
+                    bytes=(ep_dir / name).stat().st_size, secs=mp3_seconds(ep_dir / name, kbps),
                     desc=text.split("\n")[1] if "\n" in text else text, guid=str(uuid.uuid5(uuid.NAMESPACE_URL, name))))
     eps.sort(key=lambda e: e["pub"], reverse=True)
     for old in eps[KEEP:]:
@@ -344,8 +381,7 @@ def update_feed(pod, mp3, text, now):
 
 # ---------- 텔레그램 ----------
 def send_audio(mp3, title):
-    sys.path.insert(0, str(ROOT))
-    from dashboard import load_env, split_targets
+    from dashboard import split_targets
     token, chat = load_env("TELEGRAM_BOT_TOKEN"), load_env("TELEGRAM_CHAT_ID")
     if not token or not chat:
         print("텔레그램 설정 없음 -> 음성 발송 건너뜀", file=sys.stderr)
@@ -376,11 +412,13 @@ def main():
     print(f"원고 {len(text)}자 (약 {len(text) / 330:.1f}분)\n" + text)
     if "--text-only" in sys.argv:
         return
-    if not synth(text, MP3):
+    kbps = synth(text, MP3)
+    if not kbps:
         sys.exit("음성 생성 실패")
-    print(f"음성 생성: {MP3} ({MP3.stat().st_size // 1024}KB, 약 {mp3_seconds(MP3) // 60}분 {mp3_seconds(MP3) % 60}초)")
+    secs = mp3_seconds(MP3, kbps)
+    print(f"음성 생성: {MP3} ({MP3.stat().st_size // 1024}KB, 약 {secs // 60}분 {secs % 60}초)")
     if "--pod" in sys.argv:
-        update_feed(Path(sys.argv[sys.argv.index("--pod") + 1]), MP3, text, now)
+        update_feed(Path(sys.argv[sys.argv.index("--pod") + 1]), MP3, text, now, kbps)
     if "--notify" in sys.argv:
         send_audio(MP3, f"{now.month}/{now.day} 출근길 미국 증시 브리핑")
 

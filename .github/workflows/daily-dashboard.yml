@@ -103,6 +103,9 @@ jobs:
         shell: bash
         env:
           PYTHONIOENCODING: utf-8
+          # 내 목소리(선택): 둘 다 있으면 ElevenLabs 복제 음성, 없으면 기본 음성
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
         run: |
           pip install -q edge-tts
           mkdir -p _pod
