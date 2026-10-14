@@ -660,11 +660,20 @@ def kr_block(items):
     return f'<section class="panel kr"><div class="tag">오늘 한국 시장 영향</div>{body}</section>'
 
 
-def cal_block(events, weekly=()):
-    """오늘의 증시 캘린더 + 그 아래 '금주의 증시 캘린더'(테마 뉴스 '다음 체크'). 둘 다 없으면 빈 문자열."""
+def _cal_li(e, vals=""):
+    v = f'<div class="cv">{escape(vals)}</div>' if vals else ""
+    return f'<li>{"<b class=hot>★</b> " if e.startswith("★") else ""}{escape(e.lstrip("★"))}{v}</li>'
+
+
+def cal_block(events, weekly=(), done=()):
+    """어젯밤 발표 결과(실제치) + 오늘의 증시 캘린더(예상치) + 그 아래 '금주의 증시 캘린더'. 모두 없으면 빈 문자열.
+    events/done: [(항목, 수치 문자열)]"""
     out = ""
+    if done:
+        lis = "".join(_cal_li(e, v) for e, v in done)
+        out += f'<section class="panel cal done"><div class="tag">어젯밤 발표 결과</div><ol class="items">{lis}</ol></section>'
     if events:
-        lis = "".join(f'<li>{"<b class=hot>★</b> " if e.startswith("★") else ""}{escape(e.lstrip("★"))}</li>' for e in events)
+        lis = "".join(_cal_li(e, v) for e, v in events)
         out += f'<section class="panel cal"><div class="tag">오늘의 증시 캘린더</div><ol class="items">{lis}</ol></section>'
     if weekly:
         rows = "".join(f'<li><b class="wk-d">{escape(d)}</b><span{" class=hot" if hot else ""}>{escape(t)}</span></li>'
@@ -774,13 +783,13 @@ def putcall_block(cnn):
     return f'<section class="panel pc-solo">{putcall_badge(cnn)}</section>'
 
 
-def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact="", weekly=()):
+def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact="", weekly=(), done=()):
     return f'''<section class="fg driver">
   {headline_block(news, quotes)}
 </section>
 {earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
 {impact}
-{cal_block(cal, weekly)}'''
+{cal_block(cal, weekly, done)}'''
 
 
 # ---------- 텔레그램 ----------
@@ -1095,15 +1104,33 @@ def theme_news_pngs(src):
     return pngs
 
 
-def calendar_events(now):
-    """market_calendar.json({"YYYY-MM-DD": ["이슈", ...]})에서 오늘(KST) 항목을 찾는다. 없으면 빈 리스트."""
+def _calendar():
     try:
-        data = json.loads(CALENDAR.read_text(encoding="utf-8"))
+        return json.loads(CALENDAR.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         print("증시 캘린더 읽기 실패:", type(e).__name__, file=sys.stderr)
+        return {}
+
+
+def calendar_events(now):
+    """market_calendar.json({"YYYY-MM-DD": ["이슈", ...]})의 오늘(KST) 항목 + 예상치(발표됐으면 실제치). [(항목, 수치)]"""
+    from econ_values import values
+    ev = _calendar().get(f"{now:%Y-%m-%d}") or []
+    ev = [ev] if isinstance(ev, str) else [str(x) for x in ev]
+    return [(e, values(now.date(), e)) for e in ev]
+
+
+def calendar_done(now):
+    """직전 캘린더 날짜(어젯밤 미국 발표분) 중 실제치가 나온 항목. [(항목, 수치)]"""
+    from econ_values import values
+    data = _calendar()
+    keys = sorted(k for k in data if re.fullmatch(r"\d{4}-\d{2}-\d{2}", k) and k < f"{now:%Y-%m-%d}")
+    if not keys or (now.date() - datetime.strptime(keys[-1], "%Y-%m-%d").date()).days > 4:
         return []
-    ev = data.get(f"{now:%Y-%m-%d}") or []
-    return [ev] if isinstance(ev, str) else [str(x) for x in ev]
+    d = datetime.strptime(keys[-1], "%Y-%m-%d").date()
+    ev = data[keys[-1]]
+    ev = [ev] if isinstance(ev, str) else [str(x) for x in ev]
+    return [(e, v) for e in ev for v in [values(d, e)] if "실제" in v]
 
 
 def notify(quotes, cnn, now):
@@ -1198,6 +1225,8 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 .wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
 .wk-l{list-style:none;margin:0;padding:0}.wk-l li{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:16px;line-height:1.4}
 .wk-l li:first-child{border-top:0}.wk-d{flex:0 0 auto;min-width:96px}.panel.cal+.panel.cal{margin-top:10px}
+.cv{font-size:14.5px;font-weight:700;color:var(--muted);margin-top:2px}.panel.cal.done .cv{color:var(--text)}
+.panel.cal.done{border-left-color:#e03131}.panel.cal.done .tag{background:#e03131}
 .panel.cal{border-left:6px solid var(--hd2)}.panel.cal .tag{background:var(--hd2)}.panel.cal .items li{font-size:18px}.hot{color:var(--accent)}
 .panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
 .panel.ni{border-left:6px solid var(--accent);padding-bottom:10px}.panel.ni .tag{background:var(--accent);color:#fff;margin-bottom:4px}
@@ -1303,7 +1332,7 @@ def main():
 <div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now), impact, theme_weekly(now))}
+{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now), impact, theme_weekly(now), calendar_done(now))}
 </div>
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
