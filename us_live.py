@@ -18,7 +18,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from dashboard import INDEX_STRIP, ITEMS
+from dashboard import INDEX_STRIP, ITEMS, fetch_news, headline_title, pick_headline
 
 KST = timezone(timedelta(hours=9))
 ROOT = Path(__file__).resolve().parent
@@ -58,6 +58,19 @@ def quote(sym: str) -> dict | None:
         return None
 
 
+def headline(now: datetime) -> dict | None:
+    """지금 시황 헤드라인: 최근 6시간 '뉴욕증시' 기사 중 등락 이유가 드러난 제목 (데일리 아침 헤드라인과 같은 규칙)."""
+    try:
+        n = pick_headline(fetch_news(now.timestamp() - 6 * 3600))
+    except Exception as e:
+        print("  헤드라인 실패:", type(e).__name__, e, flush=True)
+        return None
+    if not n:
+        return None
+    return {"t": headline_title(n), "u": n["link"], "s": n["src"],
+            "dt": datetime.fromtimestamp(n["ts"], KST).strftime("%Y-%m-%d %H:%M")}
+
+
 def push(data: dict) -> None:
     token, repo = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
     if not token or not repo:
@@ -85,6 +98,7 @@ def main() -> None:
         else:
             print("시간 밖 → 종료", flush=True)
             return
+    hl = None
     while True:
         now = datetime.now(KST)
         if not in_window(now):
@@ -96,8 +110,10 @@ def main() -> None:
             print("다음 실행으로 넘김", flush=True)
             return
         data = {k: v for k, v in ((s, quote(s)) for s in SYMS) if v}
+        if now.minute % 5 == 0 or hl is None:  # 헤드라인은 5분마다
+            hl = headline(now) or hl
         if data:
-            push({"time": now.strftime("%Y-%m-%d %H:%M"), "data": data})
+            push({"time": now.strftime("%Y-%m-%d %H:%M"), "data": data, "hl": hl})
             print(now.strftime("%H:%M"), len(data), "종목", flush=True)
         time.sleep(max(5, 60 - (datetime.now(KST) - now).total_seconds()))
 

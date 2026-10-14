@@ -634,13 +634,17 @@ def index_chips(quotes):
     return f'<div class="ixs">{"".join(out)}</div>' if out else ""
 
 
+def headline_title(n):
+    # '…나스닥 0.24%↑'처럼 뒤에 붙은 지수 등락 꼬리는 떼고 요인만 남긴다
+    return re.sub(r"\s*(…|\.{2,})[^…]*\d[^…]*$", "", n["title"]).strip(" ….") or n["title"]
+
+
 def headline_block(news, quotes=()):
     n = pick_headline(news)
     if not n:
         return '<p class="err">뉴스를 가져오지 못했습니다.</p>'
     when = datetime.fromtimestamp(n["ts"], KST)
-    # '…나스닥 0.24%↑'처럼 뒤에 붙은 지수 등락 꼬리는 떼고 요인만 남긴다
-    title = re.sub(r"\s*(…|\.{2,})[^…]*\d[^…]*$", "", n["title"]).strip(" ….") or n["title"]
+    title = headline_title(n)
     return (f'<a class="headline" href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(title)}</a>'
             f'<div class="hl-foot"><div class="hl-src">{escape(n["src"])} · {when:%m/%d %H:%M}</div>'
             f'{index_chips(quotes)}</div>')
