@@ -9,10 +9,13 @@
 build_site.py 가 이 파일을 읽어 '해외주식' 메뉴로 보여 준다.
 """
 import argparse
+import http.cookiejar
 import json
 import re
 import sys
+import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from html import unescape
 from pathlib import Path
@@ -90,6 +93,48 @@ def parse(r):
     }
 
 
+def yahoo_prices(tickers):
+    """종목별 현재가·컨센서스 목표주가(애널리스트 평균). Yahoo quoteSummary는 쿠키+crumb가 필요해 세션 하나를 같이 쓴다."""
+    tickers = sorted({t for t in tickers if t})
+    if not tickers:
+        return {}
+    jar = http.cookiejar.CookieJar()
+    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    op.addheaders = [("User-Agent", d.UA), ("Accept", "*/*")]
+    try:
+        op.open("https://fc.yahoo.com", timeout=15)  # 쿠키 발급용(응답 자체는 404)
+    except Exception:
+        pass
+    try:
+        crumb = op.open("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=15).read().decode()
+    except Exception as e:
+        print("Yahoo crumb 실패:", e, file=sys.stderr)
+        return {}
+
+    def one(t):
+        sym = t.replace(".", "-")   # BRK.A -> BRK-A
+        url = (f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{urllib.parse.quote(sym)}"
+               f"?modules=financialData,price&crumb={urllib.parse.quote(crumb)}")
+        try:
+            r = json.loads(op.open(url, timeout=20).read())["quoteSummary"]["result"][0]
+        except Exception as e:
+            print("Yahoo 시세 실패:", t, type(e).__name__, file=sys.stderr)
+            return t, None
+        fd, pr = r.get("financialData") or {}, r.get("price") or {}
+        price = d._raw(pr, "regularMarketPrice") or d._raw(fd, "currentPrice")
+        target = d._raw(fd, "targetMeanPrice")
+        if not price:
+            return t, None
+        chg = d._raw(pr, "regularMarketChangePercent")
+        return t, {"price": round(price, 2), "chg_pct": round(chg * 100, 2) if chg is not None else None,
+                   "target": round(target, 2) if target else None,
+                   "upside": round((target / price - 1) * 100, 1) if target else None,
+                   "analysts": d._raw(fd, "numberOfAnalystOpinions"), "currency": pr.get("currency") or "USD"}
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        return {t: q for t, q in ex.map(one, tickers) if q}
+
+
 def prev_weekday(day):
     p = day - timedelta(days=1)
     while p.weekday() >= 5:
@@ -97,14 +142,20 @@ def prev_weekday(day):
     return p
 
 
-def collect(day, now, latest):
+def collect(day, now, latest, prices):
     since = prev_weekday(day)
     rows = fetch_all(since.isoformat(), day.isoformat())
     items = [parse(r) for r in rows]
     items = [i for i in items if since.isoformat() <= i["date"] <= day.isoformat()]
     items.sort(key=lambda i: (i["date"], i["time"]), reverse=True)
     stocks = [i for i in items if i["ticker"]]
+    # 현재가·컨센서스 목표주가: 여러 날짜를 돌 때 같은 종목은 한 번만 조회
+    prices.update(yahoo_prices({i["ticker"] for i in stocks} - prices.keys()))
+    for i in stocks:
+        if i["ticker"] in prices:
+            i["quote"] = prices[i["ticker"]]
     doc = {"day": day.isoformat(), "since": since.isoformat(), "made": now.strftime("%Y-%m-%d %H:%M"),
+           "price_note": "현재가·목표주가: Yahoo Finance (목표주가 = 애널리스트 평균 컨센서스)",
            "n": len(items), "n_stocks": len(stocks), "items": items,
            "source": "연합인포맥스 글로벌모니터 (국내 증권사 미국주식 리포트)"}
     OUT.mkdir(exist_ok=True)
@@ -125,9 +176,10 @@ def main():
     day = datetime.strptime(args.date, "%Y-%m-%d").date() if args.date else now.date()
     if day.weekday() >= 5:          # 주말에 돌리면 직전 금요일분
         day = prev_weekday(day)
+    prices = {}
     for n in range(max(args.days, 1)):
         try:
-            collect(day, now, latest=n == 0)
+            collect(day, now, latest=n == 0, prices=prices)
         except Exception as e:      # 하루치가 실패해도 나머지 날짜는 계속
             print(f"{day}: {e}", file=sys.stderr)
         day = prev_weekday(day)
