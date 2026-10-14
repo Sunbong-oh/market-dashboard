@@ -636,7 +636,7 @@ def index_chips(quotes):
 
 def headline_title(n):
     # '…나스닥 0.24%↑'처럼 뒤에 붙은 지수 등락 꼬리는 떼고 요인만 남긴다
-    return re.sub(r"\s*(…|\.{2,})[^…]*\d[^…]*$", "", n["title"]).strip(" ….") or n["title"]
+    return re.sub(r"\s*(…|⋯|\.{2,})[^…⋯]*\d[^…⋯]*$", "", n["title"]).strip(" ….⋯") or n["title"]
 
 
 def headline_block(news, quotes=()):
