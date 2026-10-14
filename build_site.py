@@ -1265,7 +1265,7 @@ def build_target():
 
 
 # ---------- 해외주식 리포트 (국내 증권사 미국주식 리포트 요약) ----------
-# us_reports.py 가 us_reports/YYYY-MM-DD.json 을 만든다 (연합인포맥스 글로벌모니터 목록 = 한국투자증권 미국주식 리서치 메뉴).
+# us_reports.py 가 us_reports/YYYY-MM-DD.json 을 만든다(us-live 작업이 평일 08:40·21:00에 모아 us-reports 브랜치에 저장) (연합인포맥스 글로벌모니터 목록 = 한국투자증권 미국주식 리서치 메뉴).
 US_CSS = """
 .us .tp .op{white-space:nowrap;text-align:right;font-weight:800}
 .us .tp .op .k{display:block;font-size:12px;font-weight:700;color:var(--muted)}
@@ -1405,7 +1405,7 @@ def build_us():
     if first is None:
         out.mkdir(parents=True, exist_ok=True)
         (out / "index.html").write_text(page("해외주식 리포트", '<p class="err">해외주식 리포트를 불러오지 못했습니다.</p>',
-                                             "../", "us/", "US EQUITY RESEARCH", "국내 증권사 미국주식 리포트"),
+                                             "../", "us/", "US EQUITY RESEARCH", "국내 증권사 미국주식 리포트 · 평일 오전 8시 40분·오후 9시"),
                                         encoding="utf-8")
     return first
 

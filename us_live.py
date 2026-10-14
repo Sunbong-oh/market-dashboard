@@ -3,7 +3,7 @@
 미국 장 전후(한국 17:00 ~ 다음 날 09:05, 월~금 미국 거래일) 1분마다 야후 시세를 받아
 us-live 브랜치의 quotes.json 으로 올린다. 데일리 페이지(US_LIVE_JS)가 이 파일을 읽어 카드의 가격·등락을 바꾼다.
 한 번 실행은 최대 5시간 40분(Actions 6시간 제한) — 끝나면 out/relay 를 남겨 워크플로가 다음 실행을 띄운다(늘 떠 있음).
-평일 07:20과, 목표주가 변동 리포트(kb-market-report, 08:40·21:00)가 올라올 때마다 사이트 빌드도 요청한다.
+평일 08:40·21:00에 해외주식 리포트를 모아 us-reports 브랜치에 저장하고, 국내 목표주가 리포트가 올라올 때마다 사이트 빌드를 요청한다.
 """
 
 from __future__ import annotations
@@ -72,52 +72,79 @@ def headline(now: datetime) -> dict | None:
             "dt": datetime.fromtimestamp(n["ts"], KST).strftime("%Y-%m-%d %H:%M")}
 
 
-def push(data: dict) -> None:
+def push_branch(branch: str, files: dict[str, bytes], msg: str) -> bool:
+    """files 를 담은 커밋 하나로 branch 를 덮어쓴다 (데이터 전용 브랜치)."""
     token, repo = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
     if not token or not repo:
-        print(json.dumps(data, ensure_ascii=False)[:300])
-        return
+        print(branch, list(files)[:5])
+        return False
     with tempfile.TemporaryDirectory() as d:
-        Path(d, "quotes.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        for name, body in files.items():
+            Path(d, name).write_bytes(body)
         git = lambda *a: subprocess.run(["git", *a], cwd=d, capture_output=True, timeout=60)
-        git("init", "-q", "-b", "us-live")
-        git("add", "quotes.json")
+        git("init", "-q", "-b", branch)
+        git("add", "-A")
         git("-c", "user.name=github-actions[bot]", "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
-            "commit", "-q", "-m", f"미국 시세 {data['time']}")
-        r = git("push", "-q", "-f", f"https://x-access-token:{token}@github.com/{repo}", "us-live")
+            "commit", "-q", "-m", msg)
+        r = git("push", "-q", "-f", f"https://x-access-token:{token}@github.com/{repo}", branch)
         if r.returncode:
-            print("  올리기 실패:", r.stderr.decode()[-200:], flush=True)
+            print("  올리기 실패:", branch, r.stderr.decode()[-200:], flush=True)
+        return r.returncode == 0
 
 
-_site: dict = {"day": "", "base": False, "hash": None}
+def push(data: dict) -> None:
+    push_branch("us-live", {"quotes.json": json.dumps(data, ensure_ascii=False).encode()}, f"미국 시세 {data['time']}")
+
+
+def site_build(why: str, hm: str) -> None:
+    r = subprocess.run(["gh", "workflow", "run", "site.yml", "--ref", "main"], cwd=ROOT, capture_output=True, timeout=60)
+    print(hm, f"사이트 빌드 요청({why}):", r.returncode, r.stderr.decode(errors="replace")[-200:], flush=True)
+
+
+REPORT_SLOTS = (("08:40", "09:40"), ("21:00", "22:00"))  # 해외주식 리포트 수집 (국내 목표주가 리포트와 같은 시각)
+_rep: dict = {"day": "", "slots": set()}
+
+
+def update_us_reports(now: datetime) -> None:
+    """평일 08:40·21:00에 해외주식 리포트(us_reports.py)를 모아 us-reports 브랜치에 저장하고 사이트를 빌드한다.
+    사이트 빌드(site.yml)는 이 브랜치의 저장본만 쓰므로 해외주식 메뉴는 이 두 시각에만 바뀐다."""
+    hm, d = now.strftime("%H:%M"), now.strftime("%Y-%m-%d")
+    if now.weekday() >= 5:
+        return
+    if _rep["day"] != d:
+        _rep["day"], _rep["slots"] = d, set()
+    due = [a for a, b in REPORT_SLOTS if a <= hm < b and a not in _rep["slots"]]
+    if not due:
+        return
+    _rep["slots"].update(due)
+    r = subprocess.run([sys.executable, "us_reports.py", "--days", "10"], cwd=ROOT, capture_output=True, timeout=900)
+    print(hm, "해외주식 리포트 수집:", r.returncode, r.stderr.decode(errors="replace")[-300:], flush=True)
+    files = {f.name: f.read_bytes() for f in (ROOT / "us_reports").glob("*.json")}
+    if files and push_branch("us-reports", files, f"해외주식 리포트 {d} {hm}"):
+        site_build("해외주식 리포트", hm)
+
+
+_site: dict = {"day": "", "hash": None}
 CONSENSUS_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/main/consensus/{}.json"
 
 
 def kick_site(now: datetime) -> None:
-    """평일 사이트 빌드 요청: 07:20에 한 번(해외주식 리포트 새로 모음), 그리고 kb-market-report의 오늘
-    목표주가 변동 리포트(08:40·21:00 실행)가 새로 올라오거나 바뀔 때(08:30~10:00, 20:50~22:30 사이 확인)."""
+    """국내 목표주가 변동 리포트(kb-market-report, 08:40·21:00 실행)가 새로 올라오거나 바뀌면 사이트 빌드를 요청한다
+    (08:30~10:00, 20:50~22:30 사이 확인)."""
     hm, d = now.strftime("%H:%M"), now.strftime("%Y-%m-%d")
-    if now.weekday() >= 5:
+    if now.weekday() >= 5 or not ("08:30" <= hm < "10:00" or "20:50" <= hm < "22:30"):
         return
     if _site["day"] != d:
-        _site.update(day=d, base=False, hash=None)
-    why = ""
-    if "08:30" <= hm < "10:00" or "20:50" <= hm < "22:30":
-        try:
-            body = urllib.request.urlopen(urllib.request.Request(CONSENSUS_URL.format(d) + f"?t={int(time.time())}", headers=UA),
-                                          timeout=10).read()
-            h = hash(body)
-            if h != _site["hash"]:
-                _site["hash"], why = h, "목표주가 리포트 갱신"
-        except Exception:
-            pass
-    if not why and "07:20" <= hm < "09:00" and not _site["base"]:
-        why = "해외주식 리포트"
-    if not why:
+        _site.update(day=d, hash=None)
+    try:
+        body = urllib.request.urlopen(urllib.request.Request(CONSENSUS_URL.format(d) + f"?t={int(time.time())}", headers=UA),
+                                      timeout=10).read()
+    except Exception:
         return
-    _site["base"] = True
-    r = subprocess.run(["gh", "workflow", "run", "site.yml", "--ref", "main"], cwd=ROOT, capture_output=True, timeout=60)
-    print(hm, f"사이트 빌드 요청({why}):", r.returncode, r.stderr.decode(errors="replace")[-200:], flush=True)
+    h = hash(body)
+    if h != _site["hash"]:
+        _site["hash"] = h
+        site_build("목표주가 리포트 갱신", hm)
 
 
 def main() -> None:
@@ -131,10 +158,11 @@ def main() -> None:
             (ROOT / "out" / "relay").write_text("1")
             print("다음 실행으로 넘김", flush=True)
             return
-        try:
-            kick_site(now)
-        except Exception as e:
-            print("  사이트 빌드 요청 실패:", type(e).__name__, e, flush=True)
+        for job in (update_us_reports, kick_site):
+            try:
+                job(now)
+            except Exception as e:
+                print("  아침·밤 리포트 작업 실패:", job.__name__, type(e).__name__, e, flush=True)
         if not in_window(now):
             time.sleep(60)
             continue
