@@ -1235,6 +1235,11 @@ US_CSS = """
 .us .tp .tk{font-size:12px;font-weight:700;color:var(--muted);margin-left:4px}
 .us .tp .tm{font-size:13px;color:var(--muted);white-space:nowrap}
 .us .tp .ds{font-size:13px;font-weight:600;color:var(--text);margin-top:3px;white-space:normal;line-height:1.45}
+.us .tp .pr{width:1%;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.us .tp .pr b{display:block;font-size:16px}.us .tp .pr .pc{display:block;font-weight:800;font-size:15px}
+.us .tp .pr .nw,.us .tp .pr .nt{display:block;font-size:12px;color:var(--muted);font-weight:600}
+@media (max-width:520px){.us .tp .ds,.us .tp .t.m{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .us .tp .co{white-space:normal}.us .tp .pr b{font-size:15px}}
 .us .tp .sk{display:inline-block;font-size:11.5px;font-weight:700;padding:0 6px;margin-right:5px;border-radius:5px;
  background:#fff1dc;color:#1c2330;vertical-align:1px}
 """
@@ -1254,16 +1259,26 @@ def _usd(v):
     return f"{v:,.2f}" if v else "-"
 
 
+def _px(v):
+    """좁은 칸용 가격: 1만 달러 이상은 소수점 생략."""
+    return "-" if not v else f"{v:,.0f}" if v >= 10000 else f"{v:,.2f}"
+
+
 def us_px(it):
-    """현재가 → 컨센서스 목표주가, 상승여력."""
+    """맨 오른쪽 한 칸: 목표주가(컨센서스) / 상승여력 / 현재가."""
     q = it.get("quote") or {}
     if not q.get("price"):
-        return '<td class="px">-</td><td class="pct"></td>'
+        return '<td class="pr">-</td>'
     cur = "$" if q.get("currency", "USD") == "USD" else ""
-    tgt = f'<b>{cur}{_usd(q["target"])}</b>' if q.get("target") else '<span class="t">목표가 없음</span>'
     up = q.get("upside")
-    pct = f'<td class="pct {"up" if up > 0 else "down"}">{up:+.1f}%</td>' if up is not None else '<td class="pct"></td>'
-    return f'<td class="px">{cur}{_usd(q["price"])} →<br>{tgt}</td>{pct}'
+    tgt = f'<b>{cur}{_px(q["target"])}</b>' if q.get("target") else '<span class="nt">목표가 없음</span>'
+    pct = f'<span class="pc {"up" if up > 0 else "down"}">{up:+.1f}%</span>' if up is not None else ""
+    return f'<td class="pr">{tgt}{pct}<span class="nw">현재 {cur}{_px(q["price"])}</span></td>'
+
+
+def short_broker(b):
+    """신한투자증권 → 신한, 대신증권 → 대신 (좁은 화면용)."""
+    return re.sub(r"(금융)?(투자)?증권$", "", b) or b
 
 
 def us_rows(items, limit=None, stock=True):
@@ -1275,6 +1290,7 @@ def us_rows(items, limit=None, stock=True):
         who = f'{escape(it["broker"])} · {escape(it["date"][5:].replace("-", "/"))} {escape(it.get("time", ""))}'
         key = escape(f'{it.get("company", "")} {it.get("ticker", "")} {it["broker"]} {it["headline"]}'.lower())
         if stock:
+            who = f'{escape(short_broker(it["broker"]))} {escape(it["date"][5:].replace("-", "/"))}'
             q = it.get("quote") or {}
             desc = describe(it["ticker"], q.get("industry", ""))
             sec = sector_ko(q.get("sector", ""))
@@ -1354,7 +1370,7 @@ def us_home(us):
              + (f'<div class="tp-one">▶ {escape(us["one"])}</div>' if us["one"] else "")
              + f'<a class="btn" href="us/">해외주식 리포트 {us["n"]}건 전체 보기</a>')
     return (f'<section class="sec" id="us"><style>{TARGET_CSS}{US_CSS}</style><div class="sec-h"><h2>🇺🇸 해외주식 리포트</h2>'
-            f'<a href="us/">{label(us["day"])} {escape(us["made"][-5:])} · 전체 보기</a></div>'
+            f'<a href="us/">{escape(us["day"][5:].replace("-", "/"))} {escape(us["made"][-5:])} · 전체</a></div>'
             f'<section class="panel report us">{inner}</section></section>')
 
 
