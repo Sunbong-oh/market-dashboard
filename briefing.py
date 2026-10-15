@@ -330,10 +330,10 @@ def update_feed(pod, mp3, text, now, kbps):
     except (OSError, ValueError):
         eps = []
     wd = "월화수목금토일"[now.weekday()]
-    eps = [e for e in eps if e["file"] != name]
+    eps = [e for e in eps if e["file"] != name]  # 같은 날 다시 만들면 새 회차로 바꿔 끼운다(guid가 달라 앱이 새로 받는다)
     eps.append(dict(file=name, title=f"{now.month}/{now.day}({wd}) 미국 증시 브리핑", pub=now.isoformat(),
                     bytes=(ep_dir / name).stat().st_size, secs=mp3_seconds(ep_dir / name, kbps),
-                    desc=text.split("\n")[1] if "\n" in text else text, guid=str(uuid.uuid5(uuid.NAMESPACE_URL, name))))
+                    desc=text.split("\n")[1] if "\n" in text else text, guid=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{name}@{now.isoformat()}"))))
     eps.sort(key=lambda e: e["pub"], reverse=True)
     for old in eps[KEEP:]:
         (ep_dir / old["file"]).unlink(missing_ok=True)
