@@ -1,4 +1,4 @@
-"""출근길 음성 브리핑: 오전 데일리(dashboard.py가 남긴 briefing.json)를 5분 안팎의 라디오 원고로 바꿔
+"""출근길 음성 브리핑: 오전 데일리(dashboard.py가 남긴 briefing.json)를 2분 안팎의 라디오 원고로 바꿔
 한국어 음성(MP3)으로 만들고, 팟캐스트 피드(feed.xml)를 갱신한다.
 
 실행: python briefing.py [--pod DIR] [--notify]
@@ -32,16 +32,25 @@ MP3 = ROOT / "briefing.mp3"
 KST = timezone(timedelta(hours=9))
 
 VOICE = "ko-KR-HyunsuMultilingualNeural"  # 굵은 남성 음성(아나운서 톤)
-RATE = "+15%"  # 1.15배속
+RATE = "+25%"  # 1.25배속
 PITCH = "-8Hz"  # 조금 낮게
 SITE = "https://sunbong-oh.github.io/market-dashboard"
 FEED_URL = f"{SITE}/podcast/feed.xml"
 KEEP = 14  # 피드에 남길 회차 수(오래된 MP3는 지운다)
 SHOW_TITLE = "출근길 미국 증시 브리핑"
 
-STOCKS = ("AMD", "MU", "SKHY", "PANW", "SPCX", "LITE")
-SPOKEN_NAME = {"SKHY": "SK하이닉스 ADR", "SPCX": "스페이스X", "PANW": "팔로알토", "LITE": "루멘텀",
-               "MU": "마이크론", "AMD": "AMD"}
+HOST = "주식쟁이봉"
+AI_MOVE = 5.0  # AI 기업 급등락 기준(전일 대비 %)
+NH_READ = 15   # 52주 신고가는 시총 큰 순으로 이만큼 이름을 읽고 나머지는 'N종목'으로
+# AI 밸류체인 종목(티커: 읽을 이름). 기사 검색에도 이 이름을 쓴다
+AI_STOCKS = {
+    "NVDA": "엔비디아", "MSFT": "마이크로소프트", "GOOGL": "알파벳", "AMZN": "아마존", "META": "메타",
+    "TSLA": "테슬라", "AVGO": "브로드컴", "AMD": "AMD", "MU": "마이크론", "SKHY": "SK하이닉스 ADR",
+    "TSM": "TSMC", "INTC": "인텔", "ARM": "ARM", "ASML": "ASML", "MRVL": "마벨", "ORCL": "오라클",
+    "PLTR": "팔란티어", "CRWV": "코어위브", "NBIS": "네비우스", "IREN": "아이렌", "SMCI": "슈퍼마이크로",
+    "DELL": "델", "ANET": "아리스타", "VRT": "버티브", "LITE": "루멘텀", "COHR": "코히런트",
+    "CLS": "셀레스티카", "SNDK": "샌디스크", "WDC": "웨스턴디지털", "STX": "시게이트",
+}
 
 
 # ---------- 읽기 좋은 문장으로 ----------
@@ -49,6 +58,8 @@ def speakable(t):
     """기사 제목·캘린더 항목의 한자·기호를 소리 내어 읽기 좋게 바꾼다."""
     t = re.sub(r"\s+:\s+\S+$", "", t)  # '… : 금융' 같은 섹션 꼬리
     t = re.sub(r"\(([\u4e00-\u9fff]+)\)", "", t)  # 조(兆) -> 조
+    t = re.sub(r"([가-힣])\s*\([A-Z]{2,6}\)", r"\1", t)  # 아이렌(IREN) -> 아이렌
+    t = t.replace("行", "행")
     t = re.sub(r"\(~(\d+일)\)", r", \1까지", t)  # (~16일) -> , 16일까지
     t = re.sub(r"\$(\d[\d.,]*)", r"\1달러", t)
     t = re.sub(r"\.{2,}", ", ", t)
@@ -119,160 +130,137 @@ def cleanup_recap(t):
 
 # ---------- 원고 ----------
 def build_script(data):
+    """매일 듣는 순서: 나스닥과 등락 이유 -> 풋콜 비율 -> 주요 지표 -> AI 기업 급등락과 이유 -> 52주 신고가 종목명."""
     now = datetime.fromisoformat(data["now"])
     sday = date.fromisoformat(data["session_day"])
     wd = "월화수목금토일"
     out = []
     say = out.append
 
-    say(f"KB증권 오선봉 과장입니다. {now.month}월 {now.day}일 {wd[now.weekday()]}요일 미증시 브리핑 들어보시죠.")
+    say(f"{HOST}입니다. {now.month}월 {now.day}일 {wd[now.weekday()]}요일 미증시 브리핑 들어보시죠.")
     expected = now.date() - timedelta(days=1)  # 직전 미국 평일
     while expected.weekday() >= 5:
         expected -= timedelta(days=1)
     if sday < expected:
-        say(f"어젯밤 미국 증시는 쉬었습니다. 마지막 거래일인 {sday.month}월 {sday.day}일 기준으로 전해 드립니다.")
+        say(f"어젯밤 미국 증시는 쉬었습니다. 마지막 거래일인 {sday.month}월 {sday.day}일 기준입니다.")
 
-    # 1) 지수
-    idx = [(n, q_of(data, s)) for n, s in (("다우", "^DJI"), ("S&P500", "^GSPC"), ("나스닥", "^IXIC"))]
-    idx = [(n, q) for n, q in idx if q]
-    if idx:
-        parts = [f"{n} {pct(chg(q))} {'상승' if chg(q) > 0.005 else '하락' if chg(q) < -0.005 else '보합'}" for n, q in idx]
-        say("먼저 지수입니다. 뉴욕증시 3대 지수는 " + ", ".join(parts) + "으로 마감했습니다.")
-        nas = q_of(data, "^IXIC")
-        if nas:
-            say(f"나스닥 종합지수는 {nas['last']:.0f}포인트입니다.")
-        weeks = [f"{n} {pct(q['w1'], 1)} {'상승' if q['w1'] > 0 else '하락'}" for n, q in idx[1:] if q.get("w1") is not None]
-        if weeks:
-            say("최근 일주일로 보면 " + ", ".join(weeks) + "입니다.")
-    if data.get("headline"):
-        say(f"오늘 아침 시황 기사 제목은 이렇습니다. {speakable(data['headline'])}.")
+    # 1) 나스닥 + 이유
+    nas = q_of(data, "^IXIC")
+    if nas:
+        c = chg(nas)
+        word = "상승" if c > 0.005 else "하락" if c < -0.005 else "보합"
+        say(f"먼저 나스닥입니다. 나스닥 종합지수는 {pct(c)} {word}한 {nas['last']:.0f}포인트로 마감했습니다.")
+    reasons = [cleanup_recap(data["headline"])] if data.get("headline") else []
+    reasons += distinct([cleanup_recap(t) for t in data.get("news") or []], seen=reasons, limit=1)
+    reasons = [speakable(r) for r in reasons if r]
+    if reasons:
+        say(f"{'상승' if nas and chg(nas) > 0 else '하락' if nas and chg(nas) < 0 else '등락'} 이유는 "
+            + ", 그리고 ".join(reasons) + ", 이렇게 정리됩니다.")
 
-    # 2) 뉴스
-    news = distinct([cleanup_recap(t) for t in data.get("news") or []], seen=[data.get("headline") or ""])
-    if news:
-        say("다른 기사들은 " + ", 그리고 ".join(speakable(t) for t in news) + ", 이런 요인들을 짚었습니다.")
+    # 2) 풋콜 비율(수치만)
+    pc = data.get("putcall")
+    if pc:
+        say(f"풋콜 비율은 {num(pc['value'])}입니다.")
 
-    # 3) 금리·변동성·원자재·코인
-    say("다음은 주요 지표입니다.")
-    t = q_of(data, "^TNX")
-    if t:
-        d = t["last"] - t["prev"]
-        say(f"미국 10년물 국채 금리는 {num(t['last'], 3)}%로, 전날보다 {abs(d * 100):.1f}bp "
-            f"{'올랐' if d > 0.0005 else '내렸' if d < -0.0005 else '변동이 없었'}습니다.".replace("bp", " 베이시스포인트"))
-    v = q_of(data, "^VIX")
-    if v:
-        lv = v["last"]
-        mood = "안정" if lv < 15 else "보통" if lv < 20 else "불안" if lv < 30 else "공포"
-        say(f"변동성 지수 VIX는 {num(lv)}로 {pct(chg(v))} {updown(chg(v))}고, {mood} 구간입니다.")
-    for sym, name in (("CL=F", "WTI 유가"), ("GC=F", "금 값"), ("BTC-USD", "비트코인")):
+    # 3) 주요 지표 등락
+    parts = []
+    for sym, name in (("^DJI", "다우"), ("^GSPC", "S&P500"), ("^VIX", "VIX"), ("CL=F", "WTI 유가"),
+                      ("GC=F", "금"), ("BTC-USD", "비트코인")):
         q = q_of(data, sym)
         if q:
-            d0 = 0 if sym == "BTC-USD" else 2
             c = chg(q)
-            move = f"{pct(c)} {updown(c)}습니다" if abs(c) >= 0.005 else "전날과 비슷합니다"
-            say(f"{name}{josa(name)} {num(q['last'], d0)}달러로 {move}.")
+            parts.append(f"{name} {pct(c)} {'상승' if c > 0.005 else '하락' if c < -0.005 else '보합'}")
+    t = q_of(data, "^TNX")
+    if t:
+        bp = (t["last"] - t["prev"]) * 100
+        parts.insert(2, f"미국 10년물 금리 {num(t['last'], 2)}%, {abs(bp):.0f}bp {'상승' if bp >= 0.5 else '하락' if bp <= -0.5 else '보합'}"
+                     .replace("bp", " 베이시스포인트"))
+    if parts:
+        say("주요 지표입니다. " + ", ".join(parts) + "입니다.")
 
-    # 4) 심리
-    fg, pc = data.get("fear_greed"), data.get("putcall")
-    if fg and fg.get("score") is not None:
-        s = f"CNN 공포탐욕지수는 {round(fg['score'])}, {fg['rating']} 단계입니다."
-        if fg.get("prev") is not None:
-            s += f" 전날은 {round(fg['prev'])}, 일주일 전은 {round(fg['week'])}였습니다."
-        say(s)
-    if pc:
-        sig = {"sell": " 콜옵션 쏠림이 커서 과열 신호, 적극 매도 구간입니다.",
-               "buy": " 풋옵션 쏠림이 커서 공포 신호, 적극 매수 구간입니다."}.get(pc["signal"], " 정상 범위입니다.")
-        say(f"풋콜 비율은 {num(pc['value'])}로{sig}")
+    # 4) AI 기업 급등락 + 이유
+    movers = data.get("ai_movers")
+    if movers:
+        say(f"AI 기업 중 {AI_MOVE:.0f}% 넘게 움직인 종목입니다.")
+        for m in movers:
+            s = f"{m['name']} {pct(m['chg'], 1)} {'급등' if m['chg'] > 0 else '급락'}."
+            if m.get("why"):
+                s += f" 관련 기사는, {speakable(m['why'])}" + ("" if m["why"].endswith("?") else ".")
+            say(s)
+    elif movers is not None:
+        say(f"AI 기업 중 {AI_MOVE:.0f}% 넘게 움직인 종목은 없었습니다.")
 
-    # 5) 관심 종목
-    qs = [(SPOKEN_NAME[s], chg(q)) for s in STOCKS for q in [q_of(data, s)] if q]
-    if qs:
-        ups = [f"{n} {pct(c)}" for n, c in sorted(qs, key=lambda x: -x[1]) if c > 0.005]
-        downs = [f"{n} {pct(c)}" for n, c in sorted(qs, key=lambda x: x[1]) if c < -0.005]
-        say("관심 종목입니다.")
-        if ups:
-            say("오른 종목은 " + ", ".join(ups) + " 상승.")
-        if downs:
-            say("내린 종목은 " + ", ".join(downs) + " 하락.")
-        big = max(qs, key=lambda x: abs(x[1]))
-        if abs(big[1]) >= 5:
-            say(f"특히 {big[0]}{josa(big[0], '이', '가')} {pct(big[1], 1)} {'급등' if big[1] > 0 else '급락'}한 점이 눈에 띕니다.")
+    # 5) 52주 신고가(종목명만)
+    nh = data.get("new_highs")
+    if nh is not None:
+        names = nh["names"]
+        if names:
+            more = len(names) - NH_READ
+            say(f"미국 52주 신고가 종목은 {len(names)}개입니다. " + ", ".join(spoken_co(n) for n in names[:NH_READ])
+                + (f", 외 {more}종목입니다." if more > 0 else "입니다."))
+        else:
+            say("미국 52주 신고가 종목은 없었습니다.")
 
-    # 6) 실적
-    e = data.get("earnings")
-    if e:
-        s = f"실적 소식입니다. {e['name']}{josa(e['name'])} {e['when']} 실적을 발표했습니다."
-        if e.get("eps_act") is not None and e.get("eps_est"):
-            diff = (e["eps_act"] / e["eps_est"] - 1) * 100
-            word = "웃돌았" if diff > 0.05 else "밑돌았" if diff < -0.05 else "부합했"
-            s += (f" 주당순이익은 {num(e['eps_act'])}달러로, 시장 예상 {num(e['eps_est'])}달러를 "
-                  + (f"{pct(diff, 1)} {word}습니다." if word != "부합했" else "부합했습니다."))
-        elif e.get("eps_est"):
-            s += f" 주당순이익 예상치는 {num(e['eps_est'])}달러이고, 실제치는 아직 집계 전입니다."
-        if e.get("rev"):
-            s += f" 매출은 {e['rev'] / 1e8:.0f}억 달러입니다."
-        if e.get("px_pct") is not None:
-            s += f" 주가는 {e['px_label']} 기준 {pct(e['px_pct'])} {updown(e['px_pct'])}습니다."
-        say(s)
-
-    # 7) 어젯밤 발표 결과, 한국 시장 영향 뉴스, 오늘 일정
-    done = data.get("cal_done") or []
-    if done:
-        say("어젯밤 발표된 지표 결과입니다.")
-        for item, val in done:
-            say(f"{speakable(item.lstrip('★'))}, {speakable(val)}.")
-    kr = [speakable(t) for t in data.get("kr") or []]
-    if kr:
-        say("오늘 한국 시장에 영향을 줄 만한 뉴스입니다. " + " ".join(f"{t}." for t in kr))
-    today = data.get("cal_today") or []
-    if today:
-        say("오늘 챙겨 볼 일정입니다. 한국 시간으로 오늘 밤부터 내일 새벽 사이 발표가 많습니다.")
-        for item, val in today:
-            hot = "핵심 일정, " if item.startswith("★") else ""
-            say(f"{hot}{speakable(item.lstrip('★'))}" + (f", {speakable(val)}" if val else "") + ".")
-
-    rest = week_rest(now)
-    if rest:
-        say("이번 주 남은 일정도 짚어 보겠습니다. " + " ".join(rest))
-
-    say(wrap_up(data))
-    say("이상 출근길 미국 증시 브리핑이었습니다. 자료는 투자 판단의 참고용입니다. 오늘도 안전 운전하세요.")
+    say(f"이상 {HOST}{josa(HOST, '이었', '였')}습니다. 오늘도 안전 운전하세요.")
     return "\n".join(out)
 
 
-def week_rest(now):
-    """market_calendar.json에서 내일부터 이번 주 금요일까지의 ★ 핵심 일정(없으면 첫 항목)."""
-    try:
-        cal = json.loads((ROOT / "market_calendar.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
-    out, d = [], now.date() + timedelta(days=1)
-    while d.weekday() < 5:
-        ev = cal.get(f"{d:%Y-%m-%d}") or []
-        ev = [ev] if isinstance(ev, str) else ev
-        hot = [e.lstrip("★") for e in ev if e.startswith("★")] or ev[:1]
-        if hot:
-            out.append(f"{d.day}일 {'월화수목금토일'[d.weekday()]}요일은 {speakable(', '.join(hot))}.")
-        d += timedelta(days=1)
+# ---------- AI 기업 급등락 · 52주 신고가 ----------
+CO_CUT = re.compile(r"[\s,]+(S\.p\.A\.|S\.A\.|N\.V\.|p\.l\.c\.|plc|AG|SE|ADS|ADR|Company|Corporation|Incorporated|"
+                    r"International|Group|Limited|Ltd\.?|Co\.?|& Co).*$", re.I)
+
+
+def spoken_co(name):
+    """영문 회사명의 법인 꼬리(S.A., p.l.c., International 등)를 떼어 짧게 읽는다."""
+    return CO_CUT.sub("", name).strip() or name
+
+def ai_movers(session_day):
+    """AI 종목 중 전일 대비 AI_MOVE% 이상 움직인 종목(큰 순, 최대 4개)과 이유가 될 만한 오늘 기사 제목."""
+    import dashboard as d
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        qs = list(ex.map(d.fetch_quote, [(n, s, "price", "", "") for s, n in AI_STOCKS.items()]))
+    day = lambda t: datetime.fromtimestamp(t, d.US_DAY_TZ).date()
+    out = []
+    for q in qs:
+        if q["ok"] and day(q["pts"][-1][0]) == session_day:  # 그날 거래한 종목만(상장폐지·거래정지 제외)
+            c = (q["pts"][-1][1] / q["pts"][-2][1] - 1) * 100
+            if abs(c) >= AI_MOVE:
+                out.append(dict(sym=q["sym"], name=q["name"], chg=c))
+    out = sorted(out, key=lambda m: -abs(m["chg"]))[:4]
+    for m in out:
+        m["why"] = move_reason(m["name"], m["chg"])
     return out
 
 
-def wrap_up(data):
-    """한 줄 정리: 나스닥 방향 + 금리·VIX·공포탐욕으로 본 분위기."""
-    nas, vix, tnx = q_of(data, "^IXIC"), q_of(data, "^VIX"), q_of(data, "^TNX")
-    if not nas:
-        return "오늘도 지표와 일정 확인하시면서 차분하게 대응하시기 바랍니다."
-    c = chg(nas)
-    tone = ("기술주 중심으로 크게 밀린" if c <= -1 else "약세를 보인" if c < -0.2 else
-            "강하게 오른" if c >= 1 else "강세를 보인" if c > 0.2 else "방향 없이 쉬어 간")
-    s = f"정리하면, 어젯밤 미국 증시는 {tone} 하루였습니다."
-    if vix and chg(vix) >= 8:
-        s += " 변동성 지수가 크게 뛰어 불안 심리가 커진 만큼, 오늘 국내 증시도 개장 초 변동성에 유의하시기 바랍니다."
-    elif tnx and abs(tnx["last"] - tnx["prev"]) >= 0.05:
-        s += " 금리 움직임이 컸던 만큼 성장주 흐름을 함께 살펴보시기 바랍니다."
-    else:
-        s += " 오늘 국내 증시에서는 반도체 등 관련 업종의 흐름을 함께 확인해 보시기 바랍니다."
-    return s
+MOVE_WORD = re.compile(r"급등|급락|폭등|폭락|주가|상승|하락|강세|약세|↑|↓|%|뛰|떨어|날개|추락|치솟|곤두박질")
+
+
+def move_reason(name, c):
+    """'{종목} when:1d' 국내 기사 중 종목명과 주가 움직임이 함께 나온 제목. 없으면 None."""
+    import dashboard as d
+    items = sorted(d.google_news(f"{name} 주가 when:1d"), key=lambda n: -n["ts"])
+    for n in items:
+        t = n["title"]
+        if name.split()[0] in t and MOVE_WORD.search(t):
+            return t
+    return items[0]["title"] if items else None
+
+
+def new_highs_names(session_day):
+    """newhighs.py가 아침 발송 때 남긴 newhighs.json(같은 기준일)을 쓰고, 없으면 직접 스캔한다. 실패하면 None."""
+    import newhighs
+    try:
+        j = json.loads(newhighs.NAMES_JSON.read_text(encoding="utf-8"))
+        if j.get("asof") == f"{session_day:%Y-%m-%d}":
+            return j
+    except (OSError, ValueError):
+        pass
+    try:
+        return newhighs.scan_names()
+    except Exception as e:
+        print("신고가 스캔 실패:", type(e).__name__, e, file=sys.stderr)
+        return None
 
 
 # ---------- 음성 ----------
@@ -368,7 +356,7 @@ def update_feed(pod, mp3, text, now, kbps):
   <link>{SITE}/</link>
   <atom:link href="{FEED_URL}" rel="self" type="application/rss+xml"/>
   <language>ko-kr</language>
-  <description>평일 아침 7시, 오전 데일리 마켓을 5분 음성으로 읽어 드립니다. 투자 판단의 참고용입니다.</description>
+  <description>평일 아침 7시, 나스닥·주요 지표·AI 기업 급등락·52주 신고가를 음성으로 짚어 드립니다. 투자 판단의 참고용입니다.</description>
   <itunes:author>market-dashboard</itunes:author>
   <itunes:explicit>false</itunes:explicit>
   <itunes:block>Yes</itunes:block>
@@ -408,6 +396,12 @@ def send_audio(mp3, title):
 def main():
     data = json.loads(DATA.read_text(encoding="utf-8"))
     now = datetime.fromisoformat(data["now"])
+    sday = date.fromisoformat(data["session_day"])
+    try:
+        data["ai_movers"] = ai_movers(sday)
+    except Exception as e:  # 이 칸이 빠져도 나머지 브리핑은 나간다
+        print("AI 급등락 실패:", type(e).__name__, e, file=sys.stderr)
+    data["new_highs"] = new_highs_names(sday)
     text = build_script(data)
     TXT.write_text(text, encoding="utf-8")
     print(f"원고 {len(text)}자 (약 {len(text) / 330:.1f}분)\n" + text)
