@@ -39,7 +39,8 @@ FEED_URL = f"{SITE}/podcast/feed.xml"
 KEEP = 14  # 피드에 남길 회차 수(오래된 MP3는 지운다)
 SHOW_TITLE = "출근길 미국 증시 브리핑"
 
-HOST = "주식쟁이봉"  # 붙여 쓰면 음성이 '주식쟁 이봉'으로 끊어 읽어서, 읽을 때는 뒤에 띄어 쓴다
+HOST = "주식쟁이 봉"  # '주식쟁이봉'을 붙여 쓰면 음성이 '주식쟁 이봉'으로 끊어 읽어서 이렇게 띄어 쓴다
+PAUSE = "⏸"  # 원고 속 쉼표: 하나에 SILENCE 한 번(0.5초). 항목 제목 뒤 1번, 항목 사이 2번
 AI_MOVE = 5.0  # AI 기업 급등락 기준(전일 대비 %)
 NH_READ = 15   # 52주 신고가는 시총 큰 순으로 이만큼 이름을 읽고 나머지는 'N종목'으로
 # AI 밸류체인 종목(티커: 읽을 이름). 기사 검색에도 이 이름을 쓴다
@@ -140,8 +141,9 @@ def build_script(data):
     wd = "월화수목금토일"
     out = []
     say = out.append
+    P, GAP = PAUSE, PAUSE * 2
 
-    say(f"{HOST} 입니다. {now.month}월 {now.day}일 {wd[now.weekday()]}요일 미증시 브리핑 들어보시죠.")
+    say(f"{HOST}입니다. {now.month}월 {now.day}일 {wd[now.weekday()]}요일 미증시 브리핑 들어보시죠.")
     expected = now.date() - timedelta(days=1)  # 직전 미국 평일
     while expected.weekday() >= 5:
         expected -= timedelta(days=1)
@@ -153,9 +155,9 @@ def build_script(data):
     if nas:
         c = chg(nas)
         word = "상승" if c > 0.005 else "하락" if c < -0.005 else "보합"
-        say(f"먼저 나스닥입니다. 나스닥 종합지수는 {pct(c)} {word}한 {nas['last']:.0f}포인트로 마감했습니다.")
+        say(f"{GAP}먼저 나스닥입니다.{P}나스닥 종합지수는 {pct(c)} {word}한 {nas['last']:.0f}포인트로 마감했습니다.")
     reasons = [cleanup_recap(data["headline"])] if data.get("headline") else []
-    reasons += distinct([cleanup_recap(t) for t in data.get("news") or []], seen=reasons, limit=1)
+    # 둘째 기사는 국내 증시·ETF 기사가 섞여 들어와 엉뚱한 이유가 되기 쉬워, 대표 시황 기사 제목 하나만 쓴다
     reasons = [speakable(r) for r in reasons if r]
     if reasons:
         say(f"{'상승' if nas and chg(nas) > 0 else '하락' if nas and chg(nas) < 0 else '등락'} 이유는 "
@@ -166,7 +168,7 @@ def build_script(data):
     # 2) 풋콜 비율(수치만)
     pc = data.get("putcall")
     if pc:
-        say(f"풋콜 비율은 {num(pc['value'])}입니다.")
+        say(f"{GAP}풋콜 비율은 {num(pc['value'])}입니다.")
 
     # 3) 주요 지표 등락
     parts = []
@@ -182,31 +184,31 @@ def build_script(data):
         parts.insert(2, f"미국 10년물 금리 {num(t['last'], 2)}%, {abs(bp):.0f}bp {'상승' if bp >= 0.5 else '하락' if bp <= -0.5 else '보합'}"
                      .replace("bp", " 베이시스포인트"))
     if parts:
-        say("주요 지표입니다. " + ", ".join(parts) + "입니다.")
+        say(f"{GAP}주요 지표입니다.{P}" + ", ".join(parts) + "입니다.")
 
     # 4) 실적: 실적 속보(earnings_flash) + 미국 장 전후 발표 대형주
     earn = earnings_sentences(data)
     if earn:
-        say("실적 소식입니다.")
+        say(f"{GAP}실적 소식입니다.{P}")
         out.extend(earn)
 
     # 5) AI 기업 급등락 + 이유 + 여러 종목에 겹친 키워드 해설
     movers = data.get("ai_movers")
     if movers:
-        say(f"AI 기업 중 {AI_MOVE:.0f}% 넘게 움직인 종목입니다.")
+        say(f"{GAP}AI 기업 급등락입니다.{P}{AI_MOVE:.0f}% 넘게 움직인 종목을 보겠습니다.")
         for m in movers:
             s = f"{m['name']} {pct(m['chg'], 1)} {'급등' if m['chg'] > 0 else '급락'}."
             if m.get("why"):
                 s += f" 관련 기사는, {speakable(m['why'])}" + ("" if m["why"].endswith("?") else ".")
             say(s)
         th = data.get("theme")
-        if th and th.get("heads"):
+        if th and th.get("heads") and not data.get("notes"):  # 해설이 없을 때만 공통 키워드 기사 흐름으로 대신
             say(f"여러 종목 기사에 공통으로 나온 키워드는 {th['key']}입니다. 기사 흐름을 따라가 보면, "
                 + " ".join(f"{speakable(h)}." for h in th["heads"]))
     elif movers is not None:
-        say(f"AI 기업 중 {AI_MOVE:.0f}% 넘게 움직인 종목은 없었습니다.")
+        say(f"{GAP}AI 기업 급등락입니다.{P}{AI_MOVE:.0f}% 넘게 움직인 종목은 없었습니다.")
     if data.get("notes"):  # 아침 루틴이 조사해 둔 해설(briefing_notes/날짜.txt)
-        say("자세히 짚어 보겠습니다. " + data["notes"])
+        say(f"{P}자세히 짚어 보겠습니다.{P}" + data["notes"])
 
     # 6) 52주 신고가(종목명만)
     nh = data.get("new_highs")
@@ -214,10 +216,10 @@ def build_script(data):
         names = nh["names"]
         if names:
             more = len(names) - NH_READ
-            say(f"미국 52주 신고가 종목은 {len(names)}개입니다. " + ", ".join(spoken_co(n) for n in names[:NH_READ])
+            say(f"{GAP}52주 신고가입니다.{P}미국 52주 신고가 종목은 {len(names)}개입니다. " + ", ".join(spoken_co(n) for n in names[:NH_READ])
                 + (f", 외 {more}종목입니다." if more > 0 else "입니다."))
         else:
-            say("미국 52주 신고가 종목은 없었습니다.")
+            say(f"{GAP}52주 신고가입니다.{P}미국 52주 신고가 종목은 없었습니다.")
 
     # 7) 오늘·내일 일정: ★ 핵심 항목만, 수치는 첫 예상치 하나만
     days = []
@@ -226,9 +228,9 @@ def build_script(data):
         if hot:
             days.append(f"{label}은 " + ", ".join(hot))
     if days:
-        say("핵심 일정입니다. " + ". ".join(days) + "입니다.")
+        say(f"{GAP}핵심 일정입니다.{P}" + ". ".join(days) + "입니다.")
 
-    say(f"이상 {HOST} 이었습니다. 오늘도 안전 운전하세요.")
+    say(f"{GAP}이상 {HOST}이었습니다. 오늘도 안전 운전하세요.")
     return "\n".join(out)
 
 
@@ -344,7 +346,9 @@ def move_reason(name, c):
     import dashboard as d
     items = sorted(d.google_news(f"{name} 주가 when:1d"), key=lambda n: -n["ts"])
     heads = [n["title"] for n in items[:12]]
-    why = next((t for t in heads if name.split()[0] in t and MOVE_WORD.search(t)), heads[0] if heads else None)
+    # '수요일 주가 12% 하락한 이유는?' 같은 질문형 번역 기사는 이유가 없어 뒤로 미룬다
+    ok = [t for t in heads if name.split()[0] in t and MOVE_WORD.search(t)]
+    why = next((t for t in ok if not t.endswith("?")), None) or (ok[0] if ok else heads[0] if heads else None)
     return why, heads
 
 
@@ -434,14 +438,32 @@ def eleven_tts(text, path):
     return path.stat().st_size > 10000
 
 
+SILENCE = ROOT / "assets" / "silence_0.5s.mp3"  # edge-tts 출력과 같은 24kHz·48kbps 모노 MP3
+
+
 async def _edge(text, path):
+    """원고를 PAUSE 기준으로 나눠 따로 읽히고, 사이에 무음(쉼표 개수 x 0.5초)을 이어 붙인다.
+    (edge-tts는 SSML 쉼 태그를 받지 않는다. 같은 형식의 MP3 프레임이라 이어 붙여도 정상 재생된다)"""
     import edge_tts
-    await edge_tts.Communicate(text, VOICE, rate=RATE, pitch=PITCH).save(str(path))
+    silence = SILENCE.read_bytes() if SILENCE.exists() else b""
+    buf = bytearray()
+    for piece in re.split(f"({PAUSE}+)", text):
+        if piece.startswith(PAUSE):
+            if buf:
+                buf += silence * len(piece)
+            continue
+        if not piece.strip():
+            continue
+        tmp = path.with_suffix(".part.mp3")
+        await edge_tts.Communicate(piece.strip(), VOICE, rate=RATE, pitch=PITCH).save(str(tmp))
+        buf += tmp.read_bytes()
+        tmp.unlink(missing_ok=True)
+    path.write_bytes(bytes(buf))
 
 
 def synth(text, path, attempts=3):
     """음성 파일을 만들고 비트레이트(kbps)를 돌려준다. 실패하면 None."""
-    if eleven_tts(text, path):
+    if eleven_tts(re.sub(f"{PAUSE}+", "\n\n", text), path):
         print("음성: 내 목소리(ElevenLabs)")
         return ELEVEN_KBPS
     for i in range(attempts):
@@ -558,8 +580,9 @@ def main():
     data["cal_tomorrow"] = calendar_next(now)
     data["notes"] = briefing_notes(now)
     text = build_script(data)
-    TXT.write_text(text, encoding="utf-8")
-    print(f"원고 {len(text)}자 (약 {len(text) / 330:.1f}분)\n" + text)
+    plain = re.sub(f"{PAUSE}+", " ", text).replace(" \n", "\n").strip()  # 피드 설명·원고 파일용
+    TXT.write_text(plain, encoding="utf-8")
+    print(f"원고 {len(plain)}자 (약 {len(plain) / 330:.1f}분)\n" + text)
     if "--text-only" in sys.argv:
         return
     kbps = synth(text, MP3)
@@ -568,7 +591,7 @@ def main():
     secs = mp3_seconds(MP3, kbps)
     print(f"음성 생성: {MP3} ({MP3.stat().st_size // 1024}KB, 약 {secs // 60}분 {secs % 60}초)")
     if "--pod" in sys.argv:
-        update_feed(Path(sys.argv[sys.argv.index("--pod") + 1]), MP3, text, now, kbps)
+        update_feed(Path(sys.argv[sys.argv.index("--pod") + 1]), MP3, plain, now, kbps)
     if "--notify" in sys.argv:
         send_audio(MP3, f"{now.month}/{now.day} 출근길 미국 증시 브리핑")
 
