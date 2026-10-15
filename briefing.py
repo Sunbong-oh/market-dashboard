@@ -40,6 +40,10 @@ KEEP = 14  # 피드에 남길 회차 수(오래된 MP3는 지운다)
 SHOW_TITLE = "출근길 미국 증시 브리핑"
 
 HOST = "주식쟁이 봉"  # '주식쟁이봉'을 붙여 쓰면 음성이 '주식쟁 이봉'으로 끊어 읽어서 이렇게 띄어 쓴다
+SLOW, SLOW_END = "⟪", "⟫"  # 이 사이는 천천히(SLOW_RATE) 읽는다. 중요 지표(VIX)용
+SLOW_RATE = "+0%"
+# 음성이 표준 발음대로 읽으면 어색한 낱말 -> 소리 나는 대로(화면·피드 글에는 원래 표기)
+SOUND = (("신고가", "신고까"), ("주가", "주까"))
 PAUSE = "⏸"  # 원고 속 쉼표: 하나에 SILENCE 한 번(0.5초). 항목 제목 뒤 1번, 항목 사이 2번
 AI_MOVE = 5.0  # AI 기업 급등락 기준(전일 대비 %)
 NH_READ = 15   # 52주 신고가는 시총 큰 순으로 이만큼 이름을 읽고 나머지는 'N종목'으로
@@ -172,7 +176,7 @@ def build_script(data):
 
     # 3) 주요 지표 등락
     parts = []
-    for sym, name in (("^DJI", "다우"), ("^GSPC", "S&P500"), ("^VIX", "VIX"), ("CL=F", "WTI 유가"),
+    for sym, name in (("^DJI", "다우"), ("^GSPC", "S&P500"), ("CL=F", "WTI 유가"),
                       ("GC=F", "금"), ("BTC-USD", "비트코인")):
         q = q_of(data, sym)
         if q:
@@ -185,6 +189,11 @@ def build_script(data):
                      .replace("bp", " 베이시스포인트"))
     if parts:
         say(f"{GAP}주요 지표입니다.{P}" + ", ".join(parts) + "입니다.")
+    v = q_of(data, "^VIX")
+    if v:  # 중요 지표라 따로, 천천히
+        c = chg(v)
+        say(f"{P}{SLOW}변동성 지수, 빅스는 {num(v['last'])}, 전날보다 {pct(c)} "
+            f"{'올랐' if c > 0.005 else '내렸' if c < -0.005 else '변동이 없었'}습니다.{SLOW_END}{P}")
 
     # 4) 실적: 실적 속보(earnings_flash) + 미국 장 전후 발표 대형주
     earn = earnings_sentences(data)
@@ -196,18 +205,23 @@ def build_script(data):
     movers = data.get("ai_movers")
     if movers:
         say(f"{GAP}AI 기업 급등락입니다.{P}{AI_MOVE:.0f}% 넘게 움직인 종목을 보겠습니다.")
+        notes = data.get("notes")
+        # 해설은 그 해설이 다루는 종목(처음 이름이 나오는 급등락 종목, 없으면 첫 종목)을 읽은 바로 뒤에 붙인다
+        at = next((m["name"] for m in movers if notes and m["name"].split()[0] in notes), movers[0]["name"])
         for m in movers:
             s = f"{m['name']} {pct(m['chg'], 1)} {'급등' if m['chg'] > 0 else '급락'}."
             if m.get("why"):
                 s += f" 관련 기사는, {speakable(m['why'])}" + ("" if m["why"].endswith("?") else ".")
             say(s)
+            if notes and m["name"] == at:
+                say(f"{P}자세히 짚어 보겠습니다.{P}{notes}{P}")
         th = data.get("theme")
         if th and th.get("heads") and not data.get("notes"):  # 해설이 없을 때만 공통 키워드 기사 흐름으로 대신
             say(f"여러 종목 기사에 공통으로 나온 키워드는 {th['key']}입니다. 기사 흐름을 따라가 보면, "
                 + " ".join(f"{speakable(h)}." for h in th["heads"]))
     elif movers is not None:
         say(f"{GAP}AI 기업 급등락입니다.{P}{AI_MOVE:.0f}% 넘게 움직인 종목은 없었습니다.")
-    if data.get("notes"):  # 아침 루틴이 조사해 둔 해설(briefing_notes/날짜.txt)
+    if data.get("notes") and not movers:  # 급등락 종목이 없는 날의 해설(나스닥을 움직인 재료)
         say(f"{P}자세히 짚어 보겠습니다.{P}" + data["notes"])
 
     # 6) 52주 신고가(종목명만)
@@ -447,15 +461,17 @@ async def _edge(text, path):
     import edge_tts
     silence = SILENCE.read_bytes() if SILENCE.exists() else b""
     buf = bytearray()
-    for piece in re.split(f"({PAUSE}+)", text):
+    for piece in re.split(f"({PAUSE}+|{SLOW}[^{SLOW_END}]*{SLOW_END})", text):
         if piece.startswith(PAUSE):
             if buf:
                 buf += silence * len(piece)
             continue
-        if not piece.strip():
+        slow = piece.startswith(SLOW)
+        piece = piece.strip(SLOW + SLOW_END).strip()
+        if not piece:
             continue
         tmp = path.with_suffix(".part.mp3")
-        await edge_tts.Communicate(piece.strip(), VOICE, rate=RATE, pitch=PITCH).save(str(tmp))
+        await edge_tts.Communicate(piece, VOICE, rate=SLOW_RATE if slow else RATE, pitch=PITCH).save(str(tmp))
         buf += tmp.read_bytes()
         tmp.unlink(missing_ok=True)
     path.write_bytes(bytes(buf))
@@ -463,7 +479,9 @@ async def _edge(text, path):
 
 def synth(text, path, attempts=3):
     """음성 파일을 만들고 비트레이트(kbps)를 돌려준다. 실패하면 None."""
-    if eleven_tts(re.sub(f"{PAUSE}+", "\n\n", text), path):
+    for a, b in SOUND:
+        text = text.replace(a, b)
+    if eleven_tts(re.sub(f"{PAUSE}+", "\n\n", text).replace(SLOW, "").replace(SLOW_END, ""), path):
         print("음성: 내 목소리(ElevenLabs)")
         return ELEVEN_KBPS
     for i in range(attempts):
@@ -580,7 +598,7 @@ def main():
     data["cal_tomorrow"] = calendar_next(now)
     data["notes"] = briefing_notes(now)
     text = build_script(data)
-    plain = re.sub(f"{PAUSE}+", " ", text).replace(" \n", "\n").strip()  # 피드 설명·원고 파일용
+    plain = re.sub(f"{PAUSE}+", " ", text).replace(SLOW, "").replace(SLOW_END, "").replace(" \n", "\n").strip()  # 피드 설명·원고 파일용
     TXT.write_text(plain, encoding="utf-8")
     print(f"원고 {len(plain)}자 (약 {len(plain) / 330:.1f}분)\n" + text)
     if "--text-only" in sys.argv:
