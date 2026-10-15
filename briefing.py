@@ -219,15 +219,24 @@ def build_script(data):
         else:
             say("미국 52주 신고가 종목은 없었습니다.")
 
-    # 7) 오늘·내일 일정
+    # 7) 오늘·내일 일정: ★ 핵심 항목만, 수치는 첫 예상치 하나만
+    days = []
     for label, items in (("오늘", data.get("cal_today")), ("내일", data.get("cal_tomorrow"))):
-        if items:
-            say(f"{label} 일정입니다. " + " ".join(
-                f"{'핵심, ' if e.startswith('★') else ''}{speakable(e.lstrip('★'))}" + (f", {speakable(v)}" if v else "") + "."
-                for e, v in items))
+        hot = [short_event(e, v) for e, v in items or [] if e.startswith("★")]
+        if hot:
+            days.append(f"{label}은 " + ", ".join(hot))
+    if days:
+        say("핵심 일정입니다. " + ". ".join(days) + "입니다.")
 
     say(f"이상 {HOST}{josa(HOST, '이었', '였')}습니다. 오늘도 안전 운전하세요.")
     return "\n".join(out)
+
+
+def short_event(item, val):
+    """'★TSMC 실적', 'EPS 예상 $4.45' -> 'TSMC 실적, 주당순이익 예상 4.45달러'. 괄호 설명과 둘째 이후 수치는 뺀다."""
+    name = speakable(re.sub(r"\([^)]*\)", "", item.lstrip("★")))
+    m = re.search(r"(?:\S+\s+)?예상\s+[^,/]+", val or "")
+    return f"{name}, {speakable(m.group(0))}" if m else name
 
 
 REL = re.compile(r"(?:(\S+)\s+)?실제\s+(-?[\d.]+)(%?)(?:,\s*예상\s+(-?[\d.]+)%?)?")
