@@ -322,7 +322,9 @@ def mp3_seconds(path, kbps):
 def update_feed(pod, mp3, text, now, kbps):
     ep_dir = pod / "episodes"
     ep_dir.mkdir(parents=True, exist_ok=True)
-    name = f"{now:%Y-%m-%d}.mp3"
+    # 파일명·제목·guid를 회차마다 다르게 한다. 팟캐스트 앱(AntennaPod 등)은 주소나 제목이 같으면
+    # 같은 회차로 보고 예전에 받은 파일을 계속 틀기 때문이다.
+    name = f"{now:%Y-%m-%d-%H%M}.mp3"
     shutil.copyfile(mp3, ep_dir / name)
     meta_p = pod / "episodes.json"
     try:
@@ -330,10 +332,18 @@ def update_feed(pod, mp3, text, now, kbps):
     except (OSError, ValueError):
         eps = []
     wd = "월화수목금토일"[now.weekday()]
-    eps = [e for e in eps if e["file"] != name]  # 같은 날 다시 만들면 새 회차로 바꿔 끼운다(guid가 달라 앱이 새로 받는다)
-    eps.append(dict(file=name, title=f"{now.month}/{now.day}({wd}) 미국 증시 브리핑", pub=now.isoformat(),
+    title = f"{now.month}/{now.day}({wd}) 미국 증시 브리핑"
+    same_day = [e for e in eps if e["file"].startswith(f"{now:%Y-%m-%d}")]
+    if same_day:  # 같은 날 다시 만들면 앞의 것을 지우고 새 회차로 바꿔 끼운다
+        title += f" ({now:%H:%M} 업데이트)"
+        for e in same_day:
+            if e["file"] != name:
+                (ep_dir / e["file"]).unlink(missing_ok=True)
+        eps = [e for e in eps if e not in same_day]
+    eps.append(dict(file=name, title=title, pub=now.isoformat(),
                     bytes=(ep_dir / name).stat().st_size, secs=mp3_seconds(ep_dir / name, kbps),
-                    desc=text.split("\n")[1] if "\n" in text else text, guid=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{name}@{now.isoformat()}"))))
+                    desc=text.split("\n")[1] if "\n" in text else text,
+                    guid=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{name}@{now.isoformat()}"))))
     eps.sort(key=lambda e: e["pub"], reverse=True)
     for old in eps[KEEP:]:
         (ep_dir / old["file"]).unlink(missing_ok=True)
