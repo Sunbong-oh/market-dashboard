@@ -319,7 +319,7 @@ CO_CUT = re.compile(r"[\s,]+(S\.p\.A\.|S\.A\.|N\.V\.|p\.l\.c\.|plc|AG|SE|ADS|ADR
 
 def spoken_co(name):
     """영문 회사명의 법인 꼬리(S.A., p.l.c., International 등)를 떼어 짧게 읽는다."""
-    return CO_CUT.sub("", name).strip() or name
+    return re.sub(r"\s+(and|&)$", "", CO_CUT.sub("", name).strip()) or name
 
 def ai_movers(session_day):
     """AI 종목 중 전일 대비 AI_MOVE% 이상 움직인 종목(큰 순, 최대 4개)과 이유가 될 만한 오늘 기사 제목."""
@@ -363,16 +363,34 @@ def theme(movers):
 
 
 MOVE_WORD = re.compile(r"급등|급락|폭등|폭락|주가|상승|하락|강세|약세|↑|↓|%|뛰|떨어|날개|추락|치솟|곤두박질")
+# 주가를 움직일 만한 재료(실적·계약·자금조달·규제 등)가 제목에 있으면 가산
+CATALYST = re.compile(r"실적|매출|이익|가이던스|전망 ?(상향|하향)|계약|수주|공급|협력|파트너|인수|합병|매각|지분|투자 ?유치|"
+                      r"회사채|채권|금리|부채|빚|차입|자금 ?조달|유상증자|증자|상장|IPO|규제|제재|관세|소송|조사|승인|허가|"
+                      r"출시|공개|발표|목표주가|투자의견|상향|하향|등급|CEO|최고경영자|사임|해고|감원|리콜|해킹|중단|데이터센터|칩|수요")
+# 걸러낼 기사: 자동 번역·자동 생성 시세 기사, 여러 종목 등락을 나열한 시황 기사, 질문형 '…한 이유는?'
+NOISE = re.compile(r"움직였습니다|전체 분석|주식 분석|\([A-Z]{2,5}\)|Inc\b|Corp\b|이유는\??$|\?$|특징주|마감 ?시황|뉴욕증시|"
+                   r"美증시|미국 증시|오늘의|체크포인트|총정리|모음|TOP ?\d|\d+선")
+
+
+def reason_score(name, t):
+    """기사 제목이 그 종목의 등락 이유로 쓸 만한지 점수. 0 이하는 버린다."""
+    if name.split()[0] not in t or NOISE.search(t):
+        return 0
+    latin = sum(ch.isascii() and ch.isalpha() for ch in t)
+    if latin > len(t) * 0.35:  # 영문이 많은 제목은 기계 번역·원문 그대로인 경우가 대부분
+        return 0
+    if len(re.findall(r"[가-힣A-Z]+ ?\d+(?:\.\d+)?%대? ?(?:급등|급락|상승|하락|올라|내려|↑|↓)", t)) >= 2:  # 여러 종목 등락 나열
+        return 0
+    return 2 * len(set(CATALYST.findall(t))) + (1 if MOVE_WORD.search(t) else 0) - 1
 
 
 def move_reason(name, c):
-    """('{종목} 주가 when:1d' 국내 기사 중 종목명과 주가 움직임이 함께 나온 제목, 그 종목의 오늘 기사 제목들)."""
+    """('{종목} 주가 when:1d' 국내 기사 중 주가에 영향을 줄 재료가 담긴 제목(없으면 None), 그 종목의 오늘 기사 제목들)."""
     import dashboard as d
     items = sorted(d.google_news(f"{name} 주가 when:1d"), key=lambda n: -n["ts"])
     heads = [n["title"] for n in items[:12]]
-    # '수요일 주가 12% 하락한 이유는?' 같은 질문형 번역 기사는 이유가 없어 뒤로 미룬다
-    ok = [t for t in heads if name.split()[0] in t and MOVE_WORD.search(t)]
-    why = next((t for t in ok if not t.endswith("?")), None) or (ok[0] if ok else heads[0] if heads else None)
+    scored = sorted(((reason_score(name, t), -i, t) for i, t in enumerate(heads)), reverse=True)
+    why = scored[0][2] if scored and scored[0][0] > 0 else None
     return why, heads
 
 
