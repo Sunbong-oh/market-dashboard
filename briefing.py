@@ -32,7 +32,7 @@ MP3 = ROOT / "briefing.mp3"
 KST = timezone(timedelta(hours=9))
 
 VOICE = "ko-KR-HyunsuMultilingualNeural"  # 굵은 남성 음성(아나운서 톤)
-RATE = "+25%"  # 1.25배속
+RATE = "+15%"  # 1.15배속
 PITCH = "-8Hz"  # 조금 낮게
 SITE = "https://sunbong-oh.github.io/market-dashboard"
 FEED_URL = f"{SITE}/podcast/feed.xml"
@@ -59,7 +59,10 @@ def speakable(t):
     t = re.sub(r"\s+:\s+\S+$", "", t)  # '… : 금융' 같은 섹션 꼬리
     t = re.sub(r"\(([\u4e00-\u9fff]+)\)", "", t)  # 조(兆) -> 조
     t = re.sub(r"([가-힣])\s*\([A-Z]{2,6}\)", r"\1", t)  # 아이렌(IREN) -> 아이렌
-    t = t.replace("行", "행")
+    t = t.replace("行", "행").replace("發", "발").replace("對", "대").replace("與", "여")
+    t = re.sub(r"€([\d.]+)~([\d.]+)억", r"\1억에서 \2억 유로", t)
+    t = re.sub(r"€([\d.]+)(억|조)?", lambda m: f"{m.group(1)}{m.group(2) or ''} 유로", t)
+    t = re.sub(r"(\d)~(\d)", r"\1에서 \2", t)
     t = re.sub(r"\(~(\d+일)\)", r", \1까지", t)  # (~16일) -> , 16일까지
     t = re.sub(r"\$(\d[\d.,]*)", r"\1달러", t)
     t = re.sub(r"\.{2,}", ", ", t)
@@ -130,7 +133,8 @@ def cleanup_recap(t):
 
 # ---------- 원고 ----------
 def build_script(data):
-    """매일 듣는 순서: 나스닥과 등락 이유 -> 풋콜 비율 -> 주요 지표 -> AI 기업 급등락과 이유 -> 52주 신고가 종목명."""
+    """순서: 나스닥과 이유(+어젯밤 지표 결과) -> 풋콜 -> 주요 지표 -> 실적 -> AI 급등락과 이유(+공통 키워드 해설)
+    -> 52주 신고가 -> 오늘·내일 일정."""
     now = datetime.fromisoformat(data["now"])
     sday = date.fromisoformat(data["session_day"])
     wd = "월화수목금토일"
@@ -144,7 +148,7 @@ def build_script(data):
     if sday < expected:
         say(f"어젯밤 미국 증시는 쉬었습니다. 마지막 거래일인 {sday.month}월 {sday.day}일 기준입니다.")
 
-    # 1) 나스닥 + 이유
+    # 1) 나스닥 + 이유 + 어젯밤 발표된 지표 결과(이유가 'CPI 충격'이면 CPI가 실제로 어떻게 나왔는지)
     nas = q_of(data, "^IXIC")
     if nas:
         c = chg(nas)
@@ -156,6 +160,8 @@ def build_script(data):
     if reasons:
         say(f"{'상승' if nas and chg(nas) > 0 else '하락' if nas and chg(nas) < 0 else '등락'} 이유는 "
             + ", 그리고 ".join(reasons) + ", 이렇게 정리됩니다.")
+    for item, val in data.get("cal_done") or []:
+        say(release_sentence(item, val))
 
     # 2) 풋콜 비율(수치만)
     pc = data.get("putcall")
@@ -178,7 +184,13 @@ def build_script(data):
     if parts:
         say("주요 지표입니다. " + ", ".join(parts) + "입니다.")
 
-    # 4) AI 기업 급등락 + 이유
+    # 4) 실적: 실적 속보(earnings_flash) + 미국 장 전후 발표 대형주
+    earn = earnings_sentences(data)
+    if earn:
+        say("실적 소식입니다.")
+        out.extend(earn)
+
+    # 5) AI 기업 급등락 + 이유 + 여러 종목에 겹친 키워드 해설
     movers = data.get("ai_movers")
     if movers:
         say(f"AI 기업 중 {AI_MOVE:.0f}% 넘게 움직인 종목입니다.")
@@ -187,10 +199,16 @@ def build_script(data):
             if m.get("why"):
                 s += f" 관련 기사는, {speakable(m['why'])}" + ("" if m["why"].endswith("?") else ".")
             say(s)
+        th = data.get("theme")
+        if th and th.get("heads"):
+            say(f"여러 종목 기사에 공통으로 나온 키워드는 {th['key']}입니다. 기사 흐름을 따라가 보면, "
+                + " ".join(f"{speakable(h)}." for h in th["heads"]))
     elif movers is not None:
         say(f"AI 기업 중 {AI_MOVE:.0f}% 넘게 움직인 종목은 없었습니다.")
+    if data.get("notes"):  # 아침 루틴이 조사해 둔 해설(briefing_notes/날짜.txt)
+        say("자세히 짚어 보겠습니다. " + data["notes"])
 
-    # 5) 52주 신고가(종목명만)
+    # 6) 52주 신고가(종목명만)
     nh = data.get("new_highs")
     if nh is not None:
         names = nh["names"]
@@ -201,8 +219,62 @@ def build_script(data):
         else:
             say("미국 52주 신고가 종목은 없었습니다.")
 
+    # 7) 오늘·내일 일정
+    for label, items in (("오늘", data.get("cal_today")), ("내일", data.get("cal_tomorrow"))):
+        if items:
+            say(f"{label} 일정입니다. " + " ".join(
+                f"{'핵심, ' if e.startswith('★') else ''}{speakable(e.lstrip('★'))}" + (f", {speakable(v)}" if v else "") + "."
+                for e, v in items))
+
     say(f"이상 {HOST}{josa(HOST, '이었', '였')}습니다. 오늘도 안전 운전하세요.")
     return "\n".join(out)
+
+
+REL = re.compile(r"(?:(\S+)\s+)?실제\s+(-?[\d.]+)(%?)(?:,\s*예상\s+(-?[\d.]+)%?)?")
+
+
+def release_sentence(item, val):
+    """'미 9월 소비자물가(CPI)', '실제 3.7%, 예상 3.6%, 이전 3.4% / 근원 실제 2.6%, 예상 2.5%, ...'
+    -> '어젯밤 발표된 미국 9월 소비자물가는 3.7%로 예상 3.6%보다 높았고, 근원은 2.6%로 예상 2.5%보다 높았습니다.'"""
+    name = speakable(re.sub(r"\([^)]*\)", "", item.lstrip("★")))
+    parts = []
+    for seg in val.split(" / "):
+        m = REL.search(seg)
+        if not m:
+            continue
+        label, act, unit, est = m.group(1), float(m.group(2)), m.group(3), m.group(4)
+        s = f"{label + '은 ' if label else ''}{m.group(2)}{unit}"
+        if est is not None:
+            e = float(est)
+            s += f"로 예상 {est}{unit}" + ("보다 높았" if act > e else "보다 낮았" if act < e else "에 부합했")
+        else:
+            s += "였"
+        parts.append(s)
+    if not parts:
+        return f"어젯밤 발표된 {name}{josa(name)} {speakable(val)}."
+    return f"어젯밤 발표된 {name}{josa(name)} " + "고, ".join(parts) + "습니다."
+
+
+def earnings_sentences(data):
+    out, seen = [], set()
+    for f in data.get("flashes") or []:
+        seen.add(f["company"].upper())
+        s = f"{f['company']} {f.get('period', '')} 실적입니다. {f['verdict']}."
+        g = (f.get("guidance") or [])[:1]
+        if g:
+            s += f" 가이던스는 {g[0]}."
+        out.append(speakable(s) + ".")
+    e = data.get("earnings")
+    if e and e["name"].upper() not in seen and e["sym"].upper() not in seen:
+        s = f"{e['name']}{josa(e['name'])} {e['when']} 실적을 발표했습니다."
+        if e.get("eps_act") is not None and e.get("eps_est"):
+            diff = (e["eps_act"] / e["eps_est"] - 1) * 100
+            s += (f" 주당순이익은 {num(e['eps_act'])}달러로 예상 {num(e['eps_est'])}달러를 "
+                  + ("웃돌았습니다." if diff > 0.05 else "밑돌았습니다." if diff < -0.05 else "충족했습니다."))
+        if e.get("px_pct") is not None:
+            s += f" 주가는 {e['px_label']} {pct(e['px_pct'])} {updown(e['px_pct'])}습니다."
+        out.append(s)
+    return out
 
 
 # ---------- AI 기업 급등락 · 52주 신고가 ----------
@@ -229,22 +301,82 @@ def ai_movers(session_day):
                 out.append(dict(sym=q["sym"], name=q["name"], chg=c))
     out = sorted(out, key=lambda m: -abs(m["chg"]))[:4]
     for m in out:
-        m["why"] = move_reason(m["name"], m["chg"])
+        m["why"], m["heads"] = move_reason(m["name"], m["chg"])
     return out
+
+
+THEME_STOP = {"주가", "급등", "급락", "폭등", "폭락", "상승", "하락", "미국", "뉴욕증시", "증시", "나스닥", "종목", "투자",
+              "AI", "이유", "기업", "오늘", "전망", "우려", "약세", "강세", "마감", "특징주", "시간외", "관련주", "수혜"}
+
+
+def theme(movers):
+    """급등락 종목 2개 이상의 기사에 공통으로 나온 키워드(종목 이름 포함)와, 그 키워드가 든 서로 다른 기사 제목 최대 3개.
+    예: 코어위브 회사채 금리 급등 -> 코어위브·네비우스·아이렌이 함께 급락하면 '코어위브' 기사 흐름을 읽는다."""
+    if len(movers) < 2:
+        return None
+    words = lambda t: set(re.findall(r"[가-힣]{2,}|[A-Za-z]{2,}", t)) - THEME_STOP
+    count = {}
+    for m in movers:
+        for w in set().union(*(words(h) for h in m["heads"])) if m["heads"] else ():
+            count[w] = count.get(w, 0) + 1
+    common = [w for w, n in sorted(count.items(), key=lambda x: -x[1]) if n >= 2]
+    if not common:
+        return None
+    key = common[0]
+    heads = distinct([h for m in movers for h in m["heads"] if key in h], limit=3, thr=0.35)
+    return dict(key=key, heads=heads)
 
 
 MOVE_WORD = re.compile(r"급등|급락|폭등|폭락|주가|상승|하락|강세|약세|↑|↓|%|뛰|떨어|날개|추락|치솟|곤두박질")
 
 
 def move_reason(name, c):
-    """'{종목} when:1d' 국내 기사 중 종목명과 주가 움직임이 함께 나온 제목. 없으면 None."""
+    """('{종목} 주가 when:1d' 국내 기사 중 종목명과 주가 움직임이 함께 나온 제목, 그 종목의 오늘 기사 제목들)."""
     import dashboard as d
     items = sorted(d.google_news(f"{name} 주가 when:1d"), key=lambda n: -n["ts"])
-    for n in items:
-        t = n["title"]
-        if name.split()[0] in t and MOVE_WORD.search(t):
-            return t
-    return items[0]["title"] if items else None
+    heads = [n["title"] for n in items[:12]]
+    why = next((t for t in heads if name.split()[0] in t and MOVE_WORD.search(t)), heads[0] if heads else None)
+    return why, heads
+
+
+def earnings_flashes(now):
+    """earnings_flash/*.json(실적 속보) 중 어제·오늘(KST) 발표분."""
+    out = []
+    for f in sorted((ROOT / "earnings_flash").glob("*.json")):
+        try:
+            j = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if j.get("day") in (f"{now:%Y-%m-%d}", f"{now - timedelta(days=1):%Y-%m-%d}") and j.get("verdict"):
+            out.append(j)
+    return out
+
+
+def calendar_next(now):
+    """market_calendar.json에서 내일(다음 평일, KST) 일정과 예상치. [(항목, 수치)]"""
+    try:
+        cal = json.loads((ROOT / "market_calendar.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    d = now.date() + timedelta(days=1)
+    while d.weekday() >= 5:
+        d += timedelta(days=1)
+    ev = cal.get(f"{d:%Y-%m-%d}") or []
+    ev = [ev] if isinstance(ev, str) else [str(x) for x in ev]
+    try:
+        from econ_values import values
+    except ImportError:
+        values = lambda *_: ""
+    return [(e, values(d, e)) for e in ev]
+
+
+def briefing_notes(now):
+    """아침 루틴이 조사해 남긴 해설 briefing_notes/YYYY-MM-DD.txt(있을 때만)."""
+    f = ROOT / "briefing_notes" / f"{now:%Y-%m-%d}.txt"
+    try:
+        return re.sub(r"\s+", " ", f.read_text(encoding="utf-8")).strip() or None
+    except OSError:
+        return None
 
 
 def new_highs_names(session_day):
@@ -412,6 +544,10 @@ def main():
     except Exception as e:  # 이 칸이 빠져도 나머지 브리핑은 나간다
         print("AI 급등락 실패:", type(e).__name__, e, file=sys.stderr)
     data["new_highs"] = new_highs_names(sday)
+    data["theme"] = theme(data.get("ai_movers") or [])
+    data["flashes"] = earnings_flashes(now)
+    data["cal_tomorrow"] = calendar_next(now)
+    data["notes"] = briefing_notes(now)
     text = build_script(data)
     TXT.write_text(text, encoding="utf-8")
     print(f"원고 {len(text)}자 (약 {len(text) / 330:.1f}분)\n" + text)
