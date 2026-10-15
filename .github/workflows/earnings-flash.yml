@@ -1,0 +1,44 @@
+name: Earnings Flash Telegram
+
+# 실적 속보 카드(earnings_flash/*.json)가 main 에 새로 올라오거나 고쳐지면 텔레그램으로 보낸다.
+# (홈페이지 반영은 site.yml 이 같은 push 로 따로 한다)
+on:
+  push:
+    branches: [main]
+    paths: ["earnings_flash/**"]
+  workflow_dispatch:
+    inputs:
+      file:
+        description: 보낼 카드 경로 (예 earnings_flash/20261015-TSMC.json)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: earnings-flash
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTHONIOENCODING: utf-8
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 카드 텔레그램 발송
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          FILE: ${{ inputs.file }}
+        run: |
+          if [ -n "$FILE" ]; then python earnings_notify.py "$FILE"
+          else python earnings_notify.py --diff "$BEFORE" "$AFTER"; fi
