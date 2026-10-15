@@ -21,6 +21,7 @@ import dashboard as d
 from company_ko import describe
 
 OUT = Path(__file__).with_name("newhighs.html")
+NAMES_JSON = Path(__file__).with_name("newhighs.json")  # 음성 브리핑(briefing.py)이 읽는 신고가 종목명
 MIN_CAP = 10e9      # 이 시가총액($) 이상만 검색
 TOP_N = 300         # 카드로 보여줄 최대 종목 수(시총 순). 사실상 신고가 종목 전부. 넘는 종목만 티커로 나열
 PER_PHOTO = 4       # 사진 한 장에 담을 카드 수 (폰 한 화면 비율 유지)
@@ -306,8 +307,8 @@ def shoot(png, n):
     return False
 
 
-def run(now=None, send=False):
-    now = now or datetime.now(d.KST)
+def scan():
+    """(신고가 종목[시총 순], 기준일, 시세 수신 종목 수). 수신률이 낮으면 오탐을 막으려고 예외."""
     uni = universe()
     with ThreadPoolExecutor(max_workers=12) as ex:
         bars = list(ex.map(fetch_bars, uni))
@@ -316,6 +317,25 @@ def run(now=None, send=False):
     print(f"신고가 스캔: 후보 {len(uni)}종목, 시세 수신 {got}종목, 신고가 {len(highs)}종목 (기준일 {asof})")
     if got < len(uni) * 0.7:
         raise RuntimeError(f"시세 수신률이 낮음({got}/{len(uni)}) — 오탐을 막으려고 중단")
+    save_names(highs, asof)
+    return highs, asof, got
+
+
+def save_names(highs, asof):
+    data = dict(asof=f"{asof:%Y-%m-%d}" if asof else None, names=[short_name(b["sym"], b["name"]) for b in highs])
+    NAMES_JSON.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    return data
+
+
+def scan_names():
+    """음성 브리핑용: 스캔만 하고 종목명 목록을 돌려준다(카드·사진은 만들지 않음)."""
+    highs, asof, _ = scan()
+    return save_names(highs, asof)
+
+
+def run(now=None, send=False):
+    now = now or datetime.now(d.KST)
+    highs, asof, got = scan()
     if not highs:
         if send:
             d.send_telegram(f"🚀 미국 52주 신고가: {asof:%m/%d} 마감 기준 시총 ${MIN_CAP / 1e9:.0f}B 이상 신고가 종목이 없습니다.")
