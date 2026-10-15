@@ -1678,7 +1678,8 @@ ISSUE_JS = r"""<script>
 </script>""" % json.dumps(ISSUE_SRC)
 
 
-# 실적 속보: earnings_flash/YYYYMMDD-회사.json (발표 직후 수동 정리). 발표일과 다음 날까지 핵심 이슈 아래에 보인다.
+# 실적 속보: earnings_flash/YYYYMMDD-회사.json (발표 직후 수동 정리). 발표 6시간까지 맨 위(핵심 이슈 아래),
+# 그 뒤 24시간까지는 데일리(오늘의 증시 캘린더) 칸 바로 아래로 내려가고 그 뒤 사라진다 (EARN_JS).
 EARN_CSS = """
 #earn{order:-2}.earn{background:var(--card);border:1px solid var(--line);border-left:5px solid #2f6fdb;border-radius:14px;padding:14px 16px;margin-top:10px}
 .earn h2{margin:0 0 2px;font-size:18px}.earn h2 small{font-size:12px;color:var(--muted);font-weight:600;margin-left:6px}
@@ -1695,9 +1696,14 @@ EARN_CSS = """
 .earn .pxr{font-size:13.5px;line-height:1.6}.earn .pl{font-weight:700}.earn .ps,.earn .pr{font-size:12px;color:var(--muted)}
 .earn .up{color:var(--up)}.earn .down{color:var(--down)}
 """
-EARN_JS = """<script>(function(){var n=new Date(Date.now()+9*3600e3),t=n.toISOString().slice(0,10),y=new Date(n-864e5).toISOString().slice(0,10);
-document.querySelectorAll('.earn[data-day]').forEach(function(c){if(c.dataset.day!==t&&c.dataset.day!==y)c.remove()});
-var s=document.getElementById('earn');if(s&&!s.querySelector('.earn'))s.remove()})()</script>"""
+EARN_JS = """<script>/* 실적 속보: 발표 6시간 뒤엔 맨 위에서 내려 데일리(오늘의 증시 캘린더) 칸 바로 아래로, 24시간 뒤엔 지운다 */
+window.earnPlace=function(){var now=Date.now(),daily=document.getElementById('daily'),old=document.getElementById('earn-old');
+ if(!old&&daily){old=document.createElement('section');old.className='sec';old.id='earn-old';daily.insertAdjacentElement('afterend',old)}
+ if(old&&daily)old.style.order=getComputedStyle(daily).order;
+ document.querySelectorAll('.earn[data-ts]').forEach(function(c){var a=now-Date.parse(c.dataset.ts);
+  if(!(a<=864e5))c.remove();else if(a>216e5&&old&&c.parentNode!==old)old.appendChild(c)});
+ ['earn','earn-live','earn-old'].forEach(function(id){var x=document.getElementById(id);if(x)x.hidden=!x.querySelector('.earn')})};
+earnPlace();setInterval(earnPlace,300000)</script>"""
 
 
 # 자동 실적 속보: kb-market-report earnings-watch 워크플로가 10분마다 갱신하는 earnings-live/earnings.json
@@ -1714,13 +1720,14 @@ EARN_LIVE_JS = r"""<script>
  function draw(j){var now=Date.now(),manual={};document.querySelectorAll('.earn[data-key]').forEach(function(c){manual[c.dataset.key]=c});
   (j&&j.items||[]).forEach(function(i){var c=manual[i.key];if(!c)return;var o=c.querySelector('.px');if(o)o.remove();
    var h=px(i);if(h){var t=c.querySelector('table');(t||c.querySelector('.vd')).insertAdjacentHTML('afterend',h)}});  /* 수동 카드에는 주가 반응만 */
-  var its=(j&&j.items||[]).filter(function(i){var t=Date.parse(i.detected.replace(' ','T')+':00+09:00');return now-t<72*3600e3&&!manual[i.key]});
-  if(!its.length){box.hidden=true;return}
-  box.innerHTML=its.map(function(i){return '<div class="earn auto"><h2>⚡ 실적 발표 · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
+  var ts=function(i){return i.first_iso||(i.detected.replace(' ','T')+':00+09:00')};
+  var its=(j&&j.items||[]).filter(function(i){return now-Date.parse(ts(i))<864e5&&!manual[i.key]});
+  document.querySelectorAll('#earn-old .earn.auto').forEach(function(c){c.remove()});  /* 다시 그리기 전에 내려 둔 자동 카드 정리 */
+  box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>⚡ 실적 발표 · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
    (i.item!==i.name?'<div class="cal">캘린더: '+e(i.item)+'</div>':'')+
    (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+px(i)+
    '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
-  box.hidden=false}
+  if(window.earnPlace)earnPlace();else box.hidden=!its.length}
  function load(i){i=i||0;if(i>=SRC.length)return;
   fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
   .then(function(r){if(!r.ok)throw 0;return r.json()}).then(draw).catch(function(){load(i+1)})}
@@ -1742,15 +1749,16 @@ def earnings_home(now):
                        f'{f"<b class=j>{escape(r[3])}</b><br>" if r[3] else ""}{escape(r[2])}</td></tr>' for r in e.get("rows") or [])
         guide = "".join(f"<li>{escape(g)}</li>" for g in e.get("guidance") or [])
         src = " · ".join(f'<a href="{escape(u)}" target="_blank" rel="noopener">{escape(t)}</a>' for t, u in e.get("sources") or [])
-        cards.append(f'<div class="earn" data-day="{escape(e["day"])}" data-key="{escape(f.stem)}"><h2>📊 실적 속보 · {escape(e["company"])}'
+        ts = f'{e["day"]}T{e.get("time") or "00:00"}:00+09:00'
+        cards.append(f'<div class="earn" data-day="{escape(e["day"])}" data-ts="{escape(ts)}" data-key="{escape(f.stem)}"><h2>📊 실적 속보 · {escape(e["company"])}'
                      f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time", ""))} 발표</small></h2>'
                      f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>'
                      + (f"<h3>향후 가이던스</h3><ul>{guide}</ul>" if guide else "")
                      + (f'<div class="src">출처: {src}</div>' if src else "") + "</div>")
     live = f'<section class="sec" id="earn-live" hidden></section>'
     if not cards:
-        return f'<style>{EARN_CSS}</style>{live}{EARN_LIVE_JS}'
-    return f'<section class="sec" id="earn"><style>{EARN_CSS}</style>{"".join(cards)}</section>{EARN_JS}{live}{EARN_LIVE_JS}'
+        return f'<style>{EARN_CSS}</style>{live}'
+    return f'<section class="sec" id="earn"><style>{EARN_CSS}</style>{"".join(cards)}</section>{live}'
 
 
 def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=None):
@@ -1775,7 +1783,7 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=
             f'<section class="sec" id="mystocks"><div class="sec-h"><h2>📌 관심 종목 뉴스</h2>'
             f'<a href="stocks/">{stocks["at"]:%m/%d %H:%M} 수집</a></div>{stocks["body"]}</section>'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
-            f'{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}')
+            f'{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
