@@ -220,9 +220,21 @@ function load(i){i=i||0;if(i>=SRC.length)return;
 load();setInterval(function(){if(!document.hidden)load()},60000)})()</script>""" % json.dumps(list(US_LIVE_SRC))
 
 
+# 데일리의 '실적 발표' 칸(어젯밤 미국장 실적)도 실적 속보처럼 발표 24시간이 지나면 숨긴다(Put/Call 표시는 남김).
+# 발표 시각은 칸의 '10/14 개장 전 발표' 문구로 어림한다: 개장 전 = 그날 21:00 KST, 장 마감 후 = 다음 날 05:00 KST.
+EARN_DAILY_JS = r"""<script>(function(){function z(n){return ('0'+n).slice(-2)}
+function f(){var p=document.querySelector('.panel.earn');if(!p)return;var s=p.querySelector('.earn-co > span');if(!s)return;
+ var m=/(\d{1,2})\/(\d{1,2})\s*(개장 전|장 마감 후)?/.exec(s.textContent);if(!m)return;
+ var y=new Date(Date.now()+9*3600e3).getUTCFullYear(),after=m[3]==='장 마감 후';
+ var ts=Date.parse(y+'-'+z(m[1])+'-'+z(m[2])+'T'+(after?'05:00':'21:00')+':00+09:00')+(after?864e5:0);
+ if(!(Date.now()-ts>864e5))return;
+ var pc=p.querySelector('.pcb');if(pc){var w=document.createElement('section');w.className='panel pc-solo';w.appendChild(pc);p.replaceWith(w)}else p.remove()}
+f();setInterval(f,300000)})()</script>"""
+
+
 def with_us_live(html, since):
     """since: 'YYYY-MM-DD HH:MM'(KST) — 이보다 오래된 실시간 시세는 무시 (지난 리포트를 덮어쓰지 않게)."""
-    js = US_LIVE_JS.replace("__SINCE__", since)
+    js = US_LIVE_JS.replace("__SINCE__", since) + EARN_DAILY_JS
     i = html.lower().rfind("</body>")
     return html[:i] + js + html[i:] if i >= 0 else html + js
 
