@@ -1736,6 +1736,20 @@ EARN_LIVE_JS = r"""<script>
 </script>""" % json.dumps(list(EARN_LIVE_SRC))
 
 
+def earn_card(e, key):
+    """실적 속보 카드 한 장 (홈페이지와 텔레그램 이미지 earnings_notify.py 가 같이 쓴다)."""
+    rows = "".join(f'<tr><td>{escape(r[0])}</td><td class="v">{escape(r[1])}</td><td class="c">'
+                   f'{f"<b class=j>{escape(r[3])}</b><br>" if r[3] else ""}{escape(r[2])}</td></tr>' for r in e.get("rows") or [])
+    guide = "".join(f"<li>{escape(g)}</li>" for g in e.get("guidance") or [])
+    src = " · ".join(f'<a href="{escape(u)}" target="_blank" rel="noopener">{escape(t)}</a>' for t, u in e.get("sources") or [])
+    ts = f'{e["day"]}T{e.get("time") or "00:00"}:00+09:00'
+    return (f'<div class="earn" data-day="{escape(e["day"])}" data-ts="{escape(ts)}" data-key="{escape(key)}"><h2>📊 실적 속보 · {escape(e["company"])}'
+            f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time", ""))} 발표</small></h2>'
+            f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>'
+            + (f"<h3>향후 가이던스</h3><ul>{guide}</ul>" if guide else "")
+            + (f'<div class="src">출처: {src}</div>' if src else "") + "</div>")
+
+
 def earnings_home(now):
     cards = []
     for f in sorted((ROOT / "earnings_flash").glob("*.json"), reverse=True):
@@ -1745,16 +1759,7 @@ def earnings_home(now):
             continue
         if (now.date() - datetime.strptime(e["day"], "%Y-%m-%d").date()).days > 1:
             continue
-        rows = "".join(f'<tr><td>{escape(r[0])}</td><td class="v">{escape(r[1])}</td><td class="c">'
-                       f'{f"<b class=j>{escape(r[3])}</b><br>" if r[3] else ""}{escape(r[2])}</td></tr>' for r in e.get("rows") or [])
-        guide = "".join(f"<li>{escape(g)}</li>" for g in e.get("guidance") or [])
-        src = " · ".join(f'<a href="{escape(u)}" target="_blank" rel="noopener">{escape(t)}</a>' for t, u in e.get("sources") or [])
-        ts = f'{e["day"]}T{e.get("time") or "00:00"}:00+09:00'
-        cards.append(f'<div class="earn" data-day="{escape(e["day"])}" data-ts="{escape(ts)}" data-key="{escape(f.stem)}"><h2>📊 실적 속보 · {escape(e["company"])}'
-                     f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time", ""))} 발표</small></h2>'
-                     f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>'
-                     + (f"<h3>향후 가이던스</h3><ul>{guide}</ul>" if guide else "")
-                     + (f'<div class="src">출처: {src}</div>' if src else "") + "</div>")
+        cards.append(earn_card(e, f.stem))
     live = f'<section class="sec" id="earn-live" hidden></section>'
     if not cards:
         return f'<style>{EARN_CSS}</style>{live}'

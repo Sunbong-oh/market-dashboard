@@ -1,6 +1,6 @@
 name: Earnings Flash Telegram
 
-# 실적 속보 카드(earnings_flash/*.json)가 main 에 새로 올라오거나 고쳐지면 텔레그램으로 보낸다.
+# 실적 속보 카드(earnings_flash/*.json)가 main 에 새로 올라오거나 고쳐지면 홈페이지 카드 모양 이미지로 텔레그램에 보낸다.
 # (홈페이지 반영은 site.yml 이 같은 push 로 따로 한다)
 on:
   push:
@@ -34,6 +34,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: 카드 이미지 준비 (한글·이모지 글꼴, Playwright)
+        # 러너에 깔린 Chrome 을 쓴다. 준비가 실패해도 다음 단계가 글로 보낸다.
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-color-emoji > /dev/null
+          pip install -q playwright
+          echo "CHROME_PATH=$(command -v google-chrome || command -v chromium)" >> "$GITHUB_ENV"
       - name: 카드 텔레그램 발송
         env:
           BEFORE: ${{ github.event.before }}
