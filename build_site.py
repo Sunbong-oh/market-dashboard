@@ -1761,6 +1761,57 @@ def earnings_home(now):
     return f'<section class="sec" id="earn"><style>{EARN_CSS}</style>{"".join(cards)}</section>{live}'
 
 
+# 음성 브리핑(팟캐스트) 구독 주소: 고객이 주소를 복사해 팟캐스트 앱에 'URL로 추가'하거나, 바로 최신 회차를 듣는다
+PODCASTS = (
+    ("출근길 미국증시 브리핑", "평일 아침 7시", "https://sunbong-oh.github.io/market-dashboard/podcast/feed.xml"),
+    ("퇴근길 장마감 브리핑", "평일 오후 4시", "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/podcast/feed.xml"),
+)
+POD_CSS = """
+.pod{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+.pod h2{margin:0 0 8px;font-size:17px}.pod h2 small{font-size:12.5px;font-weight:400;color:var(--muted);margin-left:6px}
+.pod-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 0;border-top:1px solid var(--line)}
+.pod-row:first-of-type{border-top:0}
+.pod-name{font-weight:800;min-width:150px}.pod-name small{display:block;font-weight:400;font-size:12.5px;color:var(--muted)}
+.pod-url{flex:1 1 260px;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);
+  font:12.5px/1.3 ui-monospace,Menlo,Consolas,monospace}
+.pod button{padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);font-weight:700;cursor:pointer}
+.pod button.copy{background:var(--accent);border-color:var(--accent);color:#fff}
+.pod audio{width:100%;margin-top:6px}.pod .help{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+"""
+POD_JS = """<script>
+document.querySelectorAll('.pod .copy').forEach(b => b.addEventListener('click', async () => {
+  const inp = b.parentElement.querySelector('.pod-url');
+  try { await navigator.clipboard.writeText(inp.value); } catch (e) { inp.select(); document.execCommand('copy'); }
+  const t = b.textContent; b.textContent = '복사됨 ✓'; setTimeout(() => b.textContent = t, 1500);
+}));
+document.querySelectorAll('.pod .play').forEach(b => b.addEventListener('click', async () => {
+  const row = b.parentElement, url = row.querySelector('.pod-url').value;
+  let au = row.querySelector('audio');
+  if (au) { au.paused ? au.play() : au.pause(); return; }
+  b.textContent = '불러오는 중…';
+  try {  // 피드의 첫 회차(최신) MP3를 바로 재생
+    const xml = new DOMParser().parseFromString(await (await fetch(url + '?t=' + Date.now())).text(), 'text/xml');
+    const item = xml.querySelector('item');
+    au = document.createElement('audio'); au.controls = true; au.src = item.querySelector('enclosure').getAttribute('url');
+    row.appendChild(au); au.play().catch(() => {});
+    b.textContent = '▶ ' + item.querySelector('title').textContent;
+  } catch (e) { b.textContent = '아직 회차가 없습니다'; }
+}));
+</script>"""
+
+
+def podcast_home():
+    rows = "".join(
+        f'<div class="pod-row"><div class="pod-name">🎧 {escape(name)}<small>{escape(when)} 업데이트</small></div>'
+        f'<input class="pod-url" readonly value="{escape(url)}" aria-label="{escape(name)} RSS 주소" onfocus="this.select()">'
+        f'<button class="copy" type="button">주소 복사</button><button class="play" type="button">▶ 최신 회차 듣기</button></div>'
+        for name, when, url in PODCASTS)
+    return (f'<style>{POD_CSS}</style><section class="sec pod" id="podcast"><h2>🎧 음성 브리핑<small>운전·출퇴근길에 들어 보세요</small></h2>'
+            f'{rows}<div class="help">구독: 주소를 복사해 팟캐스트 앱에 붙여 넣으세요. '
+            f'안드로이드 <b>AntennaPod·Podcast Addict</b>: ＋ → URL로 추가 · 아이폰 <b>Apple 팟캐스트</b>: 보관함 → ⋯ → URL로 쇼 팔로우. '
+            f'구독해 두면 새 회차가 자동으로 내려받아져 안드로이드 오토·카플레이에서 바로 재생됩니다.</div></section>{POD_JS}')
+
+
 def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
@@ -1774,6 +1825,7 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}{ISSUE_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
+            f'{podcast_home()}'
             f'<section class="sec" id="issue" hidden></section>'
             f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
