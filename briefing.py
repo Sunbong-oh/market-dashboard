@@ -31,8 +31,9 @@ TXT = ROOT / "briefing.txt"
 MP3 = ROOT / "briefing.mp3"
 KST = timezone(timedelta(hours=9))
 
-VOICE = "ko-KR-InJoonNeural"  # 남성 음성
-RATE = "+25%"  # 1.25배속
+VOICE = "ko-KR-HyunsuMultilingualNeural"  # 굵은 남성 음성(아나운서 톤)
+RATE = "+15%"  # 1.15배속
+PITCH = "-8Hz"  # 조금 낮게
 SITE = "https://sunbong-oh.github.io/market-dashboard"
 FEED_URL = f"{SITE}/podcast/feed.xml"
 KEEP = 14  # 피드에 남길 회차 수(오래된 MP3는 지운다)
@@ -306,7 +307,7 @@ def eleven_tts(text, path):
 
 async def _edge(text, path):
     import edge_tts
-    await edge_tts.Communicate(text, VOICE, rate=RATE).save(str(path))
+    await edge_tts.Communicate(text, VOICE, rate=RATE, pitch=PITCH).save(str(path))
 
 
 def synth(text, path, attempts=3):
