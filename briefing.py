@@ -39,7 +39,7 @@ FEED_URL = f"{SITE}/podcast/feed.xml"
 KEEP = 14  # 피드에 남길 회차 수(오래된 MP3는 지운다)
 SHOW_TITLE = "출근길 미국 증시 브리핑"
 
-HOST = "주식쟁이봉"
+HOST = "주식쟁이봉"  # 붙여 쓰면 음성이 '주식쟁 이봉'으로 끊어 읽어서, 읽을 때는 뒤에 띄어 쓴다
 AI_MOVE = 5.0  # AI 기업 급등락 기준(전일 대비 %)
 NH_READ = 15   # 52주 신고가는 시총 큰 순으로 이만큼 이름을 읽고 나머지는 'N종목'으로
 # AI 밸류체인 종목(티커: 읽을 이름). 기사 검색에도 이 이름을 쓴다
@@ -141,7 +141,7 @@ def build_script(data):
     out = []
     say = out.append
 
-    say(f"{HOST}입니다. {now.month}월 {now.day}일 {wd[now.weekday()]}요일 미증시 브리핑 들어보시죠.")
+    say(f"{HOST} 입니다. {now.month}월 {now.day}일 {wd[now.weekday()]}요일 미증시 브리핑 들어보시죠.")
     expected = now.date() - timedelta(days=1)  # 직전 미국 평일
     while expected.weekday() >= 5:
         expected -= timedelta(days=1)
@@ -228,7 +228,7 @@ def build_script(data):
     if days:
         say("핵심 일정입니다. " + ". ".join(days) + "입니다.")
 
-    say(f"이상 {HOST}{josa(HOST, '이었', '였')}습니다. 오늘도 안전 운전하세요.")
+    say(f"이상 {HOST} 이었습니다. 오늘도 안전 운전하세요.")
     return "\n".join(out)
 
 
