@@ -82,6 +82,15 @@ def speakable(t):
     return re.sub(r"\s+", " ", t).strip(" ,.")
 
 
+def man_unit(v):
+    """26692.87 -> '2만 6700' (백 단위 반올림). 1만 미만은 그대로."""
+    v = int(round(v, -2))
+    if v < 10000:
+        return f"{v}"
+    man, rest = divmod(v, 10000)
+    return f"{man}만" + (f" {rest}" if rest else "")
+
+
 def num(v, d=2):
     """TTS가 자릿수 쉼표를 엉뚱하게 읽지 않도록 쉼표 없이."""
     return f"{v:.{d}f}"
@@ -159,7 +168,8 @@ def build_script(data):
     if nas:
         c = chg(nas)
         word = "상승" if c > 0.005 else "하락" if c < -0.005 else "보합"
-        say(f"{GAP}먼저 나스닥입니다.{P}나스닥 종합지수는 {pct(c)} {word}한 {nas['last']:.0f}포인트로 마감했습니다.")
+        # 등락률이 핵심이라 먼저, 지수 수준은 '2만 6700'처럼 백 단위로 짧게(긴 숫자는 음성이 끊어 읽는다)
+        say(f"{GAP}먼저 나스닥입니다.{P}나스닥은 {pct(c)} {word}, {man_unit(nas['last'])}에 마감했습니다.")
     reasons = [cleanup_recap(data["headline"])] if data.get("headline") else []
     # 둘째 기사는 국내 증시·ETF 기사가 섞여 들어와 엉뚱한 이유가 되기 쉬워, 대표 시황 기사 제목 하나만 쓴다
     reasons = [speakable(r) for r in reasons if r]
