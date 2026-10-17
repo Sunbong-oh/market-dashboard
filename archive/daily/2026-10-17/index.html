@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>26년 10월 17일 미국 데일리 마켓</title><style>
+:root{--bg:#f4f5f7;--card:#fff;--text:#1c2330;--muted:#6b7385;--line:#e3e6ec;--up:#d63c3c;--down:#2f6fdb;--flat:#8a92a3;--accent:#f08c00;--hd1:#ffd43b;--hd2:#ff922b;--hd-text:#2b1a00;--wh:#6741d9}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#ffa94d;--hd1:#f59f00;--hd2:#e8590c;--hd-text:#1a0f00;--wh:#b197fc}}
+:root[data-theme=dark]{--bg:#0f131a;--card:#181e28;--text:#e6e9ef;--muted:#8d96a8;--line:#272f3d;--up:#ff5d5d;--down:#5b9bff;--flat:#7b8496;--accent:#ffa94d;--hd1:#f59f00;--hd2:#e8590c;--hd-text:#1a0f00;--wh:#b197fc}
+:root[data-color=us]{--up:#1f9d55;--down:#d63c3c}
+:root[data-color=us][data-theme=dark]{--up:#3ddc84;--down:#ff5d5d}
+@media (prefers-color-scheme:dark){:root[data-color=us]:not([data-theme=light]){--up:#3ddc84;--down:#ff5d5d}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:'Malgun Gothic','Segoe UI',system-ui,sans-serif;line-height:1.4}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:14px;
+  padding:14px 22px;border-radius:18px;color:var(--hd-text);background:linear-gradient(120deg,var(--hd1),var(--hd2));
+  box-shadow:0 6px 18px -8px rgba(232,89,12,.55)}
+.kicker{font-size:13px;font-weight:800;letter-spacing:.18em;opacity:.7}
+h1{margin:2px 0 0;font-size:32px;font-weight:800;letter-spacing:-.01em}.top .sub{color:var(--hd-text);opacity:.8;font-size:16px;margin-top:6px}
+.top .tools button{background:rgba(255,255,255,.35);border-color:rgba(0,0,0,.08);color:var(--hd-text)}
+.tools button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;margin-left:6px}
+h2{font-size:22px;margin:26px 0 12px;color:var(--text);font-weight:700;letter-spacing:.01em}
+a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.fg+.fg{margin-top:14px}
+.card,.fg{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.card header{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h3{margin:0;font-size:19px;font-weight:700}.sym{color:var(--muted);font-size:13px;white-space:nowrap}
+.price{font-size:36px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}.price small{font-size:19px;font-weight:500;color:var(--muted);margin:0 2px}
+.badge{font-size:14px;font-weight:600;background:var(--bg);border:1px solid var(--line);padding:2px 8px;border-radius:99px;vertical-align:middle;color:var(--muted)}
+.delta{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--flat)}
+.spark{width:100%;height:64px;margin-top:8px;display:block}
+.spark .line{fill:none;stroke:currentColor;stroke-width:1.8}.spark .area{fill:currentColor;opacity:.10}.spark .dot{fill:currentColor}
+.spark.up{color:var(--up)}.spark.down{color:var(--down)}.spark.flat{color:var(--flat)}
+.range{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);margin-top:8px;font-variant-numeric:tabular-nums}
+.bar{flex:1;height:4px;background:var(--line);border-radius:4px;position:relative}
+.bar i{position:absolute;top:-3px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--accent)}
+.range-cap{font-size:13px;color:var(--muted);text-align:center;margin-top:2px}
+.chips{display:flex;gap:5px;margin-top:10px}.chip{flex:1;background:var(--bg);border-radius:8px;padding:6px 6px;font-size:14px;display:flex;flex-direction:column;min-width:0}
+.chip span{color:var(--muted)}.chip b{white-space:nowrap;font-size:16px;font-variant-numeric:tabular-nums}.chip small{color:var(--muted);font-size:12px}
+.err{color:var(--muted);font-size:16px}
+.fg{padding:16px 18px}.fg h2{margin-top:0}
+.driver{border-left:6px solid var(--accent);padding:18px 22px}
+.headline{display:block;font-size:30px;font-weight:800;line-height:1.35;letter-spacing:-.01em}
+.hl-src{font-size:14px;color:var(--muted)}
+.hl-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:10px}
+.ixs{display:flex;gap:6px}.ix{background:var(--bg);border-radius:8px;padding:4px 10px;font-size:14px;font-weight:700;white-space:nowrap}.ix b{font-size:16px;font-variant-numeric:tabular-nums}
+.driver+.panel,.panel+.panel,.panel+.fg{margin-top:14px}
+.earn-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.earn-co .tk{font-size:18px;font-weight:700;color:var(--muted)}
+.pcb{display:grid;grid-template-columns:auto auto;align-items:center;column-gap:12px;row-gap:2px;
+  padding:10px 16px;border-radius:12px;background:var(--bg);border:1px solid var(--line);text-align:right}
+.pcb-k{font-size:16px;font-weight:800}.pcb-v{grid-row:span 2;font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.pcb-n{font-size:12px;color:var(--muted)}
+.pcb.buy,.pcb.sell{grid-template-columns:auto auto}.pcb.buy .pcb-v,.pcb.sell .pcb-v{font-size:42px}
+.pcb.buy .pcb-v,.pcb.buy .pcb-a{color:#e03131}.pcb.sell .pcb-v,.pcb.sell .pcb-a{color:#1c6dd0}
+.pcb.buy{border-color:#e03131;box-shadow:0 0 0 3px rgba(224,49,49,.2)}.pcb.sell{border-color:#1c6dd0;box-shadow:0 0 0 3px rgba(28,109,208,.2)}
+.pcb-a{font-size:20px;font-weight:900;white-space:nowrap}.pcb-w{grid-column:2;font-size:11.5px;color:var(--muted)}
+.pc-solo{display:flex;justify-content:flex-end}
+.wh,.vs small.wh{color:var(--wh)!important;font-weight:800}
+.wk-l{list-style:none;margin:0;padding:0}.wk-l li{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:16px;line-height:1.4}
+.wk-l li:first-child{border-top:0}.wk-d{flex:0 0 auto;min-width:96px}.panel.cal+.panel.cal{margin-top:10px}
+.cv{font-size:14.5px;font-weight:700;color:var(--muted);margin-top:2px}.panel.cal.done .cv{color:var(--text)}
+.panel.cal.done{border-left-color:#e03131}.panel.cal.done .tag{background:#e03131}
+.panel.cal{border-left:6px solid var(--hd2)}.panel.cal .tag{background:var(--hd2)}.panel.cal .items li{font-size:18px}.hot{color:var(--accent)}
+.panel.kr{border-left:6px solid var(--hd1)}.panel.kr .tag{background:linear-gradient(120deg,var(--hd1),var(--hd2))}
+.panel.ni{border-left:6px solid var(--accent);padding-bottom:10px}.panel.ni .tag{background:var(--accent);color:#fff;margin-bottom:4px}
+.ni-list{list-style:none;margin:0;padding:0}.ni-list li{padding:7px 0}.ni-list li+li{border-top:1px solid var(--line)}
+.ni-h{display:flex;align-items:center;gap:6px;min-width:0}
+.ni-h a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px;font-weight:700}
+.ni-th{flex:none;background:var(--hd1);color:var(--hd-text);border-radius:6px;padding:1px 7px;font-size:12px;font-weight:800}
+.ni-sts{display:flex;align-items:center;gap:7px;margin-top:3px;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
+.ni-px{background:var(--bg);border-radius:6px;padding:0 7px;white-space:nowrap}
+.ni-st{white-space:nowrap}.ni-st b{margin-left:1px}
+.ni-note{font-size:11px;color:var(--muted);margin-top:2px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.tag{display:inline-block;font-size:14px;font-weight:800;color:var(--hd-text);background:var(--hd1);
+  padding:3px 12px;border-radius:99px;margin-bottom:8px}
+.panel.earn .tag{background:var(--hd2)}
+.items{list-style:none;margin:0;padding:0;counter-reset:i}
+.items li{counter-increment:i;position:relative;padding:10px 0 10px 34px;font-size:20px;font-weight:700;line-height:1.4}
+.items li+li{border-top:1px solid var(--line)}
+.items li:before{content:counter(i);position:absolute;left:0;top:12px;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:14px;font-weight:800;text-align:center;line-height:24px}
+.it-src{font-size:13px;font-weight:400;color:var(--muted);margin-top:3px}
+.earn-co{font-size:14px;color:var(--muted);margin:2px 0 8px}.earn-co b{display:block;font-size:24px;color:var(--text)}
+.erows{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:6px;border-top:1px solid var(--line)}
+.er{display:flex;flex-direction:column;gap:4px;padding:12px 14px 4px;border-left:1px solid var(--line)}.er:first-child{border-left:0;padding-left:0}
+.ek{font-size:15px;color:var(--muted);font-weight:700}.evv{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}.evv small{display:block;font-size:13px;font-weight:400;color:var(--muted)}
+.ev{font-size:15px;white-space:nowrap}.ev b{font-size:18px}.ev small{display:block;font-size:12px;color:var(--muted)}
+.vs{line-height:1.25}.vs+.vs{margin-top:4px}.vs small{display:inline!important;margin-right:5px}
+.ek{line-height:1.25}
+:root[data-shot] .tools,:root[data-shot] footer{display:none}:root[data-shot] .wrap{padding-bottom:6px}
+/* 지표 한 장(part i): 600px 폭에 3열 4줄 */
+:root[data-part=i] .wrap{padding:12px 10px 6px}:root[data-part=i] h2{font-size:22px;margin:4px 0 10px}
+:root[data-part=i] .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+:root[data-part=i] .card{padding:11px 11px 10px;border-radius:12px}
+:root[data-part=i] .card header{flex-direction:column;align-items:flex-start;gap:0}
+:root[data-part=i] .card h3{font-size:18px}:root[data-part=i] .sym{font-size:12px}
+:root[data-part=i] .price{font-size:27px;margin-top:4px}:root[data-part=i] .price small{font-size:15px}
+:root[data-part=i] .badge{font-size:12px;padding:1px 6px}:root[data-part=i] .delta{font-size:15px}
+:root[data-part=i] .spark{height:46px;margin-top:6px}
+:root[data-part=i] .range,:root[data-part=i] .range-cap{display:none}
+:root[data-part=i] .chips{gap:2px;margin-top:8px}:root[data-part=i] .chip{padding:4px 3px;font-size:12px;border-radius:6px;overflow:hidden}
+:root[data-part=i] .chip b{font-size:13px;letter-spacing:-.04em}:root[data-part=i] .chip small{display:none}
+footer{margin-top:24px;color:var(--muted);font-size:14px}
+@media (max-width:520px){
+.wrap{padding:12px 10px 20px}.sub-x{display:none}
+.top{padding:9px 14px 10px;border-radius:12px;margin-bottom:10px}.kicker{font-size:10px;letter-spacing:.14em}h1{font-size:22px;margin:0;line-height:1.25}.top .sub{font-size:12px;margin-top:1px}
+.driver{padding:14px 16px;border-left-width:5px}.headline{font-size:24px;line-height:1.3}.hl-src{font-size:13px}.hl-foot{margin-top:8px}.ix{font-size:13px;padding:3px 8px}.ix b{font-size:15px}
+.driver+.panel,.panel+.panel,.panel+.fg{margin-top:10px}
+.panel{padding:14px}.tag{font-size:13px}
+.earn-head{gap:8px}.pcb{padding:8px 10px;column-gap:8px}.pcb-k{font-size:14px}.pcb-v{font-size:28px}.pcb-n{font-size:10.5px}.pcb.buy .pcb-v,.pcb.sell .pcb-v{font-size:32px}.pcb-a{font-size:16px}.earn-co b{font-size:22px}.earn-co .tk{font-size:16px}.earn-co{font-size:13px}
+.erows{grid-template-columns:1fr 1fr;gap:8px;border-top:0;margin-top:10px}
+.er{background:var(--bg);border:0!important;border-radius:10px;padding:10px 12px!important;gap:3px}
+.ek{font-size:14px}.evv{font-size:21px}.evv small{font-size:12.5px}.ev{font-size:14px}.ev b{font-size:16px}.ev small{font-size:12px}
+.items li{font-size:18px;padding:10px 0 10px 30px}.items li:before{width:22px;height:22px;line-height:22px;font-size:13px;top:12px}
+.it-src{font-size:12.5px}
+h2{font-size:20px;margin:18px 0 10px}
+.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.card{padding:12px;border-radius:12px}
+.card header{flex-direction:column;align-items:flex-start;gap:0}.card h3{font-size:17px}.sym{font-size:12px}
+.price{font-size:25px;margin-top:4px}.price small{font-size:15px}.badge{font-size:12px;padding:1px 6px}
+.delta{font-size:15px}
+.spark{height:44px;margin-top:6px}
+.range{font-size:11px;gap:4px;margin-top:6px}.range-cap{display:none}
+.chips{gap:3px;margin-top:8px}.chip{padding:4px 4px;font-size:11px;border-radius:6px}.chip b{font-size:12px;letter-spacing:-.02em}.chip small{display:none}
+footer{font-size:12px}
+}
+</style></head><body><div class="wrap">
+<div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>26년 10월 17일 미국 데일리 마켓</h1>
+<div class="sub">2026-10-17(토) 09:22 KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
+<div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
+<section class="fg driver">
+  <a class="headline" href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE1FajlzSHNRZW9UMnM3dEQ4R0FvMmNMNW80TW5XUVdSRG1WMUJoR1BEZS03VmZlUUw4UWhNd0tyYXJkUnBvTWZvVTVxdzI0bnNrd1lnWFNnbmM1ZkZ6Z2pFOER0Qk5KRGlR?oc=5" target="_blank" rel="noopener">코어위브 7.6% 급락·반도체 약세…뉴욕증시, AI 신용 우려 속 엇갈린 행보</a><div class="hl-foot"><div class="hl-src">CBC뉴스 · 10/17 09:04</div><div class="ixs"><span class="ix" data-sym="^IXIC">나스닥 <b class="down">-2.15%</b></span><span class="ix" data-sym="^GSPC">S&P500 <b class="down">-1.09%</b></span></div></div>
+</section>
+<div class="panel earn"><div class="earn-head"><div><div class="tag">실적 발표</div><div class="earn-co"><b>The Travelers Companies <span class="tk">(TRV)</span></b><span>10/16 개장 전 발표 · FY26 3분기</span></div></div><div class="pcb"><span class="pcb-k">Put/Call</span><b class="pcb-v">0.82</b><span class="pcb-n">정상 범위 0.6~1.0</span></div></div><div class="erows"><div class="er"><span class="ek">EPS</span><span class="evv">$9.18<small>컨센 $7.43</small></span><span class="ev"><div class="vs"><small class="">컨센</small><b class="up">+23.5%</b> 상회</div></span></div><div class="er"><span class="ek">매출</span><span class="evv">111.0억 달러</span><span class="ev"><div class="vs"><small>전분기 대비</small><b class="up">+3.3%</b></div></span></div><div class="er"><span class="ek">발표 당일</span><span class="evv">$389.54</span><span class="ev"><b class="up">+1.47%</b></span></div></div></div>
+
+
+</div>
+<div data-part="bci"><h2 class="ind-h">주요 지표</h2>
+<div class="grid"><article class="card">
+  <header><h3><a href="https://www.investing.com/rates-bonds/u.s.-10-year-bond-yield" target="_blank" rel="noopener">미국 10년물 금리</a></h3>
+  <span class="sym">^TNX · 10/16</span></header>
+  <div class="price">5.098<small>%</small> </div>
+  <div class="delta"><span class="up">+0.9bp (+0.18%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,60.0 4.7,55.9 9.4,53.7 14.1,51.6 18.8,48.2 23.4,50.0 28.1,52.7 32.8,55.4 37.5,54.1 42.2,51.1 46.9,45.2 51.6,49.5 56.2,53.7 60.9,54.5 65.6,50.6 70.3,51.3 75.0,48.5 79.7,49.6 84.4,49.7 89.1,52.7 93.8,48.7 98.4,46.7 103.1,48.0 107.8,51.9 112.5,48.7 117.2,45.7 121.9,48.1 126.6,52.9 131.2,51.1 135.9,50.5 140.6,47.0 145.3,44.2 150.0,41.5 154.7,41.5 159.4,43.9 164.1,42.3 168.8,40.7 173.4,38.5 178.1,30.7 182.8,28.4 187.5,29.5 192.2,26.9 196.9,26.2 201.6,30.5 206.2,26.8 210.9,29.3 215.6,28.9 220.3,18.3 225.0,14.8 229.7,13.2 234.4,9.2 239.1,8.1 243.8,5.3 248.4,9.4 253.1,6.5 257.8,4.0 262.5,7.1 267.2,6.5 271.9,9.8 276.6,8.9 281.2,9.2 285.9,10.8 290.6,12.8 295.3,20.1 300.0,19.5 300,64" class="area"/><polyline points="0.0,60.0 4.7,55.9 9.4,53.7 14.1,51.6 18.8,48.2 23.4,50.0 28.1,52.7 32.8,55.4 37.5,54.1 42.2,51.1 46.9,45.2 51.6,49.5 56.2,53.7 60.9,54.5 65.6,50.6 70.3,51.3 75.0,48.5 79.7,49.6 84.4,49.7 89.1,52.7 93.8,48.7 98.4,46.7 103.1,48.0 107.8,51.9 112.5,48.7 117.2,45.7 121.9,48.1 126.6,52.9 131.2,51.1 135.9,50.5 140.6,47.0 145.3,44.2 150.0,41.5 154.7,41.5 159.4,43.9 164.1,42.3 168.8,40.7 173.4,38.5 178.1,30.7 182.8,28.4 187.5,29.5 192.2,26.9 196.9,26.2 201.6,30.5 206.2,26.8 210.9,29.3 215.6,28.9 220.3,18.3 225.0,14.8 229.7,13.2 234.4,9.2 239.1,8.1 243.8,5.3 248.4,9.4 253.1,6.5 257.8,4.0 262.5,7.1 267.2,6.5 271.9,9.8 276.6,8.9 281.2,9.2 285.9,10.8 290.6,12.8 295.3,20.1 300.0,19.5" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="19.5" r="3" class="dot"/></svg>
+  <div class="range"><span>4.541</span><div class="bar"><i style="left:72%"></i></div><span>5.311</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-14.6bp</b> <small>(-2.78%)</small></div><div class="chip"><span>1개월</span><b class="up">+9.2bp</b> <small>(+1.84%)</small></div><div class="chip"><span>3개월</span><b class="up">+55.7bp</b> <small>(+12.27%)</small></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/indices/volatility-s-p-500" target="_blank" rel="noopener">VIX 변동성지수</a></h3>
+  <span class="sym">^VIX · 10/16</span></header>
+  <div class="price"><small></small>19.99 <span class="badge">보통</span></div>
+  <div class="delta"><span class="up">▲ 3.53 (+21.45%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,20.4 4.6,21.5 9.2,35.3 13.8,38.9 18.5,21.0 23.1,22.1 27.7,21.3 32.3,25.3 36.9,4.0 41.5,35.0 46.2,44.5 50.8,45.7 55.4,40.1 60.0,46.1 64.6,51.8 69.2,54.0 73.8,49.1 78.5,50.7 83.1,57.0 87.7,56.4 92.3,59.7 96.9,51.5 101.5,45.8 106.2,54.1 110.8,44.4 115.4,52.0 120.0,45.8 124.6,49.2 129.2,51.3 133.8,57.4 138.5,58.1 143.1,53.8 147.7,41.5 152.3,51.4 156.9,59.0 161.5,57.2 166.2,50.5 170.8,46.9 175.4,40.5 180.0,28.5 184.6,45.8 189.2,34.9 193.8,34.0 198.5,29.6 203.1,49.3 207.7,54.8 212.3,54.3 216.9,60.0 221.5,51.6 226.2,47.3 230.8,54.3 235.4,43.9 240.0,44.1 244.6,41.5 249.2,41.1 253.8,50.4 258.5,48.6 263.1,53.1 267.7,52.4 272.3,49.6 276.9,54.5 281.5,51.3 286.2,50.8 290.8,36.9 295.4,40.5 300.0,9.8 300,64" class="area"/><polyline points="0.0,20.4 4.6,21.5 9.2,35.3 13.8,38.9 18.5,21.0 23.1,22.1 27.7,21.3 32.3,25.3 36.9,4.0 41.5,35.0 46.2,44.5 50.8,45.7 55.4,40.1 60.0,46.1 64.6,51.8 69.2,54.0 73.8,49.1 78.5,50.7 83.1,57.0 87.7,56.4 92.3,59.7 96.9,51.5 101.5,45.8 106.2,54.1 110.8,44.4 115.4,52.0 120.0,45.8 124.6,49.2 129.2,51.3 133.8,57.4 138.5,58.1 143.1,53.8 147.7,41.5 152.3,51.4 156.9,59.0 161.5,57.2 166.2,50.5 170.8,46.9 175.4,40.5 180.0,28.5 184.6,45.8 189.2,34.9 193.8,34.0 198.5,29.6 203.1,49.3 207.7,54.8 212.3,54.3 216.9,60.0 221.5,51.6 226.2,47.3 230.8,54.3 235.4,43.9 240.0,44.1 244.6,41.5 249.2,41.1 253.8,50.4 258.5,48.6 263.1,53.1 267.7,52.4 272.3,49.6 276.9,54.5 281.5,51.3 286.2,50.8 290.8,36.9 295.4,40.5 300.0,9.8" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="9.8" r="3" class="dot"/></svg>
+  <div class="range"><span>14.21</span><div class="bar"><i style="left:90%"></i></div><span>20.66</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="up">+34.70%</b></div><div class="chip"><span>1개월</span><b class="up">+12.87%</b></div><div class="chip"><span>3개월</span><b class="up">+6.50%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/commodities/crude-oil" target="_blank" rel="noopener">WTI 원유</a></h3>
+  <span class="sym">CL=F · 10/16</span></header>
+  <div class="price"><small>$</small>99.04 </div>
+  <div class="delta"><span class="up">▲ 1.07 (+1.09%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,46.7 4.7,45.3 9.4,42.3 14.1,38.8 18.8,29.0 23.4,34.2 28.1,46.5 32.8,52.6 37.5,43.1 42.2,44.7 46.9,42.7 51.6,50.6 56.2,59.0 60.9,60.0 65.6,56.2 70.3,54.6 75.0,47.4 79.7,45.4 84.4,45.3 89.1,49.0 93.8,46.9 98.4,43.0 103.1,42.2 107.8,40.6 112.5,36.9 117.2,38.3 121.9,42.1 126.6,46.9 131.2,47.2 135.9,44.8 140.6,45.0 145.3,40.7 150.0,32.6 154.7,31.1 159.4,30.6 164.1,30.3 168.8,27.4 173.4,21.9 178.1,10.1 182.8,14.6 187.5,12.1 192.2,4.0 196.9,10.2 201.6,11.2 206.2,14.1 210.9,22.4 215.6,24.6 220.3,29.0 225.0,24.5 229.7,28.6 234.4,28.2 239.1,34.1 243.8,32.2 248.4,27.7 253.1,30.9 257.8,34.0 262.5,34.0 267.2,36.1 271.9,30.2 276.6,29.6 281.2,26.1 285.9,25.4 290.6,23.6 295.3,18.4 300.0,16.4 300,64" class="area"/><polyline points="0.0,46.7 4.7,45.3 9.4,42.3 14.1,38.8 18.8,29.0 23.4,34.2 28.1,46.5 32.8,52.6 37.5,43.1 42.2,44.7 46.9,42.7 51.6,50.6 56.2,59.0 60.9,60.0 65.6,56.2 70.3,54.6 75.0,47.4 79.7,45.4 84.4,45.3 89.1,49.0 93.8,46.9 98.4,43.0 103.1,42.2 107.8,40.6 112.5,36.9 117.2,38.3 121.9,42.1 126.6,46.9 131.2,47.2 135.9,44.8 140.6,45.0 145.3,40.7 150.0,32.6 154.7,31.1 159.4,30.6 164.1,30.3 168.8,27.4 173.4,21.9 178.1,10.1 182.8,14.6 187.5,12.1 192.2,4.0 196.9,10.2 201.6,11.2 206.2,14.1 210.9,22.4 215.6,24.6 220.3,29.0 225.0,24.5 229.7,28.6 234.4,28.2 239.1,34.1 243.8,32.2 248.4,27.7 253.1,30.9 257.8,34.0 262.5,34.0 267.2,36.1 271.9,30.2 276.6,29.6 281.2,26.1 285.9,25.4 290.6,23.6 295.3,18.4 300.0,16.4" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="16.4" r="3" class="dot"/></svg>
+  <div class="range"><span>75.22</span><div class="bar"><i style="left:78%"></i></div><span>105.83</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="up">+7.83%</b></div><div class="chip"><span>1개월</span><b class="down">-3.31%</b></div><div class="chip"><span>3개월</span><b class="up">+20.06%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/indices/nasdaq-composite" target="_blank" rel="noopener">나스닥 종합</a></h3>
+  <span class="sym">^IXIC · 10/16</span></header>
+  <div class="price"><small></small>26,140.03 </div>
+  <div class="delta"><span class="down">▼ 573.00 (-2.15%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,40.9 4.7,41.1 9.4,35.3 14.1,37.9 18.8,47.7 23.4,50.5 28.1,51.3 32.8,52.3 37.5,60.0 42.2,48.0 46.9,43.5 51.6,33.9 56.2,22.0 60.9,25.9 65.6,26.2 70.3,20.1 75.0,21.6 79.7,24.5 84.4,21.9 89.1,18.1 93.8,19.4 98.4,20.9 103.1,27.2 107.8,26.5 112.5,31.2 117.2,29.2 121.9,32.7 126.6,29.7 131.2,30.1 135.9,22.8 140.6,25.2 145.3,25.8 150.0,30.6 154.7,28.5 159.4,22.0 164.1,23.4 168.8,24.9 173.4,27.9 178.1,30.9 182.8,26.5 187.5,29.1 192.2,32.7 196.9,32.8 201.6,25.0 206.2,23.1 210.9,12.5 215.6,10.3 220.3,15.8 225.0,15.7 229.7,13.4 234.4,17.8 239.1,18.2 243.8,17.1 248.4,16.9 253.1,11.3 257.8,6.2 262.5,4.0 267.2,5.1 271.9,11.2 276.6,8.1 281.2,10.3 285.9,11.0 290.6,20.1 295.3,19.7 300.0,29.9 300,64" class="area"/><polyline points="0.0,40.9 4.7,41.1 9.4,35.3 14.1,37.9 18.8,47.7 23.4,50.5 28.1,51.3 32.8,52.3 37.5,60.0 42.2,48.0 46.9,43.5 51.6,33.9 56.2,22.0 60.9,25.9 65.6,26.2 70.3,20.1 75.0,21.6 79.7,24.5 84.4,21.9 89.1,18.1 93.8,19.4 98.4,20.9 103.1,27.2 107.8,26.5 112.5,31.2 117.2,29.2 121.9,32.7 126.6,29.7 131.2,30.1 135.9,22.8 140.6,25.2 145.3,25.8 150.0,30.6 154.7,28.5 159.4,22.0 164.1,23.4 168.8,24.9 173.4,27.9 178.1,30.9 182.8,26.5 187.5,29.1 192.2,32.7 196.9,32.8 201.6,25.0 206.2,23.1 210.9,12.5 215.6,10.3 220.3,15.8 225.0,15.7 229.7,13.4 234.4,17.8 239.1,18.2 243.8,17.1 248.4,16.9 253.1,11.3 257.8,6.2 262.5,4.0 267.2,5.1 271.9,11.2 276.6,8.1 281.2,10.3 285.9,11.0 290.6,20.1 295.3,19.7 300.0,29.9" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="29.9" r="3" class="dot"/></svg>
+  <div class="range"><span>24,442.94</span><div class="bar"><i style="left:54%"></i></div><span>27,599.79</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-4.48%</b></div><div class="chip"><span>1개월</span><b class="up">+0.62%</b></div><div class="chip"><span>3개월</span><b class="up">+2.43%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/commodities/gold" target="_blank" rel="noopener">금 (Gold)</a></h3>
+  <span class="sym">GC=F · 10/16</span></header>
+  <div class="price"><small>$</small>4,186.70 </div>
+  <div class="delta"><span class="up">▲ 16.60 (+0.40%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,59.8 4.7,60.0 9.4,55.0 14.1,48.8 18.8,57.2 23.4,55.5 28.1,55.0 32.8,58.1 37.5,58.3 42.2,53.1 46.9,52.5 51.6,53.9 56.2,48.8 60.9,36.2 65.6,36.7 70.3,28.5 75.0,26.8 79.7,25.1 84.4,22.9 89.1,26.8 93.8,25.4 98.4,22.4 103.1,26.8 107.8,16.5 112.5,14.4 117.2,5.4 121.9,4.0 126.6,4.3 131.2,7.7 135.9,6.8 140.6,17.8 145.3,21.8 150.0,28.8 154.7,27.3 159.4,17.0 164.1,22.2 168.8,25.3 173.4,23.5 178.1,27.9 182.8,27.7 187.5,32.4 192.2,34.0 196.9,29.5 201.6,28.5 206.2,26.4 210.9,29.8 215.6,30.4 220.3,35.2 225.0,36.8 229.7,34.9 234.4,47.5 239.1,46.5 243.8,46.0 248.4,44.7 253.1,48.0 257.8,48.4 262.5,45.9 267.2,49.8 271.9,48.4 276.6,43.5 281.2,45.7 285.9,46.7 290.6,52.4 295.3,47.3 300.0,46.0 300,64" class="area"/><polyline points="0.0,59.8 4.7,60.0 9.4,55.0 14.1,48.8 18.8,57.2 23.4,55.5 28.1,55.0 32.8,58.1 37.5,58.3 42.2,53.1 46.9,52.5 51.6,53.9 56.2,48.8 60.9,36.2 65.6,36.7 70.3,28.5 75.0,26.8 79.7,25.1 84.4,22.9 89.1,26.8 93.8,25.4 98.4,22.4 103.1,26.8 107.8,16.5 112.5,14.4 117.2,5.4 121.9,4.0 126.6,4.3 131.2,7.7 135.9,6.8 140.6,17.8 145.3,21.8 150.0,28.8 154.7,27.3 159.4,17.0 164.1,22.2 168.8,25.3 173.4,23.5 178.1,27.9 182.8,27.7 187.5,32.4 192.2,34.0 196.9,29.5 201.6,28.5 206.2,26.4 210.9,29.8 215.6,30.4 220.3,35.2 225.0,36.8 229.7,34.9 234.4,47.5 239.1,46.5 243.8,46.0 248.4,44.7 253.1,48.0 257.8,48.4 262.5,45.9 267.2,49.8 271.9,48.4 276.6,43.5 281.2,45.7 285.9,46.7 290.6,52.4 295.3,47.3 300.0,46.0" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="46.0" r="3" class="dot"/></svg>
+  <div class="range"><span>4,015.90</span><div class="bar"><i style="left:25%"></i></div><span>4,697.80</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-0.70%</b></div><div class="chip"><span>1개월</span><b class="down">-4.58%</b></div><div class="chip"><span>3개월</span><b class="up">+4.18%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/crypto/bitcoin" target="_blank" rel="noopener">비트코인</a></h3>
+  <span class="sym">BTC-USD · 10/17</span></header>
+  <div class="price"><small>$</small>81,503.87 </div>
+  <div class="delta"><span class="down">▼ 637.59 (-0.78%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,55.2 3.3,55.5 6.7,54.2 10.0,51.2 13.3,52.2 16.7,54.6 20.0,56.9 23.3,56.4 26.7,53.9 30.0,57.7 33.3,57.4 36.7,57.3 40.0,55.4 43.3,59.9 46.7,60.0 50.0,58.3 53.3,58.4 56.7,57.0 60.0,55.7 63.3,56.5 66.7,55.0 70.0,55.0 73.3,55.1 76.7,57.3 80.0,58.1 83.3,58.5 86.7,58.5 90.0,59.5 93.3,59.4 96.7,59.9 100.0,55.9 103.3,55.5 106.7,44.7 110.0,35.9 113.3,23.4 116.7,26.4 120.0,24.8 123.3,21.9 126.7,22.9 130.0,21.8 133.3,18.9 136.7,24.6 140.0,23.6 143.3,25.0 146.7,22.9 150.0,25.6 153.3,25.9 156.7,16.5 160.0,20.3 163.3,19.9 166.7,18.7 170.0,21.6 173.3,23.2 176.7,23.6 180.0,27.6 183.3,26.1 186.7,25.9 190.0,26.9 193.3,23.8 196.7,29.8 200.0,28.6 203.3,28.0 206.7,17.4 210.0,16.6 213.3,16.8 216.7,4.0 220.0,5.0 223.3,9.2 226.7,9.2 230.0,10.0 233.3,9.2 236.7,9.0 240.0,11.3 243.3,11.0 246.7,11.2 250.0,8.1 253.3,8.9 256.7,8.3 260.0,4.3 263.3,5.9 266.7,6.5 270.0,11.8 273.3,15.6 276.7,13.5 280.0,12.7 283.3,10.9 286.7,15.4 290.0,12.2 293.3,15.8 296.7,14.5 300.0,16.0 300,64" class="area"/><polyline points="0.0,55.2 3.3,55.5 6.7,54.2 10.0,51.2 13.3,52.2 16.7,54.6 20.0,56.9 23.3,56.4 26.7,53.9 30.0,57.7 33.3,57.4 36.7,57.3 40.0,55.4 43.3,59.9 46.7,60.0 50.0,58.3 53.3,58.4 56.7,57.0 60.0,55.7 63.3,56.5 66.7,55.0 70.0,55.0 73.3,55.1 76.7,57.3 80.0,58.1 83.3,58.5 86.7,58.5 90.0,59.5 93.3,59.4 96.7,59.9 100.0,55.9 103.3,55.5 106.7,44.7 110.0,35.9 113.3,23.4 116.7,26.4 120.0,24.8 123.3,21.9 126.7,22.9 130.0,21.8 133.3,18.9 136.7,24.6 140.0,23.6 143.3,25.0 146.7,22.9 150.0,25.6 153.3,25.9 156.7,16.5 160.0,20.3 163.3,19.9 166.7,18.7 170.0,21.6 173.3,23.2 176.7,23.6 180.0,27.6 183.3,26.1 186.7,25.9 190.0,26.9 193.3,23.8 196.7,29.8 200.0,28.6 203.3,28.0 206.7,17.4 210.0,16.6 213.3,16.8 216.7,4.0 220.0,5.0 223.3,9.2 226.7,9.2 230.0,10.0 233.3,9.2 236.7,9.0 240.0,11.3 243.3,11.0 246.7,11.2 250.0,8.1 253.3,8.9 256.7,8.3 260.0,4.3 263.3,5.9 266.7,6.5 270.0,11.8 273.3,15.6 276.7,13.5 280.0,12.7 283.3,10.9 286.7,15.4 290.0,12.2 293.3,15.8 296.7,14.5 300.0,16.0" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="16.0" r="3" class="dot"/></svg>
+  <div class="range"><span>62,763.32</span><div class="bar"><i style="left:79%"></i></div><span>86,602.91</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-1.70%</b></div><div class="chip"><span>1개월</span><b class="up">+6.68%</b></div><div class="chip"><span>3개월</span><b class="up">+25.78%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/equities/adv-micro-device" target="_blank" rel="noopener">AMD</a></h3>
+  <span class="sym">AMD · 10/16</span></header>
+  <div class="price"><small>$</small>528.75 </div>
+  <div class="delta"><span class="down">▼ 33.48 (-5.95%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,41.1 4.8,30.7 9.5,28.7 14.3,31.9 19.0,36.5 23.8,43.3 28.6,53.6 33.3,60.0 38.1,45.8 42.9,48.1 47.6,46.0 52.4,37.3 57.1,46.6 61.9,44.8 66.7,46.3 71.4,49.8 76.2,48.6 81.0,46.4 85.7,46.4 90.5,38.4 95.2,40.5 100.0,46.0 104.8,50.6 109.5,49.8 114.3,48.9 119.0,53.1 123.8,47.4 128.6,46.9 133.3,48.0 138.1,50.8 142.9,49.5 147.6,52.3 152.4,53.0 157.1,53.2 161.9,47.8 166.7,40.6 171.4,36.7 176.2,41.1 181.0,37.9 185.7,43.7 190.5,41.0 195.2,38.9 200.0,30.6 204.8,26.8 209.5,12.6 214.3,10.5 219.0,12.9 223.8,9.1 228.6,8.8 233.3,14.6 238.1,14.7 242.9,13.6 247.6,12.6 252.4,8.0 257.1,8.5 261.9,4.0 266.7,4.9 271.4,11.3 276.2,14.5 281.0,18.1 285.7,15.2 290.5,24.0 295.2,26.2 300.0,34.7 300,64" class="area"/><polyline points="0.0,41.1 4.8,30.7 9.5,28.7 14.3,31.9 19.0,36.5 23.8,43.3 28.6,53.6 33.3,60.0 38.1,45.8 42.9,48.1 47.6,46.0 52.4,37.3 57.1,46.6 61.9,44.8 66.7,46.3 71.4,49.8 76.2,48.6 81.0,46.4 85.7,46.4 90.5,38.4 95.2,40.5 100.0,46.0 104.8,50.6 109.5,49.8 114.3,48.9 119.0,53.1 123.8,47.4 128.6,46.9 133.3,48.0 138.1,50.8 142.9,49.5 147.6,52.3 152.4,53.0 157.1,53.2 161.9,47.8 166.7,40.6 171.4,36.7 176.2,41.1 181.0,37.9 185.7,43.7 190.5,41.0 195.2,38.9 200.0,30.6 204.8,26.8 209.5,12.6 214.3,10.5 219.0,12.9 223.8,9.1 228.6,8.8 233.3,14.6 238.1,14.7 242.9,13.6 247.6,12.6 252.4,8.0 257.1,8.5 261.9,4.0 266.7,4.9 271.4,11.3 276.2,14.5 281.0,18.1 285.7,15.2 290.5,24.0 295.2,26.2 300.0,34.7" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="34.7" r="3" class="dot"/></svg>
+  <div class="range"><span>429.56</span><div class="bar"><i style="left:45%"></i></div><span>649.42</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-13.05%</b></div><div class="chip"><span>1개월</span><b class="up">+3.17%</b></div><div class="chip"><span>3개월</span><b class="up">+6.65%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/equities/micron-tech" target="_blank" rel="noopener">마이크론</a></h3>
+  <span class="sym">MU · 10/16</span></header>
+  <div class="price"><small>$</small>878.84 </div>
+  <div class="delta"><span class="down">▼ 52.40 (-5.63%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,40.2 4.8,23.8 9.5,25.5 14.3,20.7 19.0,31.6 23.8,34.8 28.6,47.3 33.3,60.0 38.1,38.8 42.9,46.9 47.6,45.9 52.4,36.0 57.1,35.9 61.9,37.7 66.7,38.3 71.4,40.9 76.2,39.8 81.0,33.1 85.7,27.1 90.5,23.6 95.2,17.4 100.0,28.5 104.8,29.0 109.5,23.2 114.3,24.4 119.0,33.2 123.8,29.7 128.6,28.8 133.3,29.3 138.1,29.7 142.9,25.7 147.6,29.6 152.4,26.1 157.1,25.8 161.9,16.6 166.7,19.2 171.4,14.9 176.2,22.7 181.0,23.1 185.7,31.1 190.5,30.5 195.2,30.7 200.0,22.7 204.8,16.7 209.5,12.3 214.3,4.2 219.0,8.0 223.8,6.6 228.6,6.4 233.3,10.8 238.1,9.0 242.9,9.0 247.6,4.0 252.4,7.5 257.1,9.2 261.9,12.1 266.7,5.5 271.4,13.6 276.2,14.7 281.0,20.9 285.7,26.5 290.5,32.6 295.2,30.0 300.0,38.1 300,64" class="area"/><polyline points="0.0,40.2 4.8,23.8 9.5,25.5 14.3,20.7 19.0,31.6 23.8,34.8 28.6,47.3 33.3,60.0 38.1,38.8 42.9,46.9 47.6,45.9 52.4,36.0 57.1,35.9 61.9,37.7 66.7,38.3 71.4,40.9 76.2,39.8 81.0,33.1 85.7,27.1 90.5,23.6 95.2,17.4 100.0,28.5 104.8,29.0 109.5,23.2 114.3,24.4 119.0,33.2 123.8,29.7 128.6,28.8 133.3,29.3 138.1,29.7 142.9,25.7 147.6,29.6 152.4,26.1 157.1,25.8 161.9,16.6 166.7,19.2 171.4,14.9 176.2,22.7 181.0,23.1 185.7,31.1 190.5,30.5 195.2,30.7 200.0,22.7 204.8,16.7 209.5,12.3 214.3,4.2 219.0,8.0 223.8,6.6 228.6,6.4 233.3,10.8 238.1,9.0 242.9,9.0 247.6,4.0 252.4,7.5 257.1,9.2 261.9,12.1 266.7,5.5 271.4,13.6 276.2,14.7 281.0,20.9 285.7,26.5 290.5,32.6 295.2,30.0 300.0,38.1" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="38.1" r="3" class="dot"/></svg>
+  <div class="range"><span>739.00</span><div class="bar"><i style="left:39%"></i></div><span>1,097.39</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-14.59%</b></div><div class="chip"><span>1개월</span><b class="down">-5.15%</b></div><div class="chip"><span>3개월</span><b class="up">+3.52%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://finance.yahoo.com/quote/SKHY" target="_blank" rel="noopener">SK하이닉스 ADR</a></h3>
+  <span class="sym">SKHY · 10/16</span></header>
+  <div class="price"><small>$</small>136.49 </div>
+  <div class="delta"><span class="down">▼ 9.62 (-6.58%)</span></div>
+  <svg class="spark down" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,41.0 4.8,24.8 9.5,30.0 14.3,26.7 19.0,38.3 23.8,47.3 28.6,57.4 33.3,60.0 38.1,42.7 42.9,46.8 47.6,47.6 52.4,38.5 57.1,41.1 61.9,47.0 66.7,51.3 71.4,53.4 76.2,48.4 81.0,38.5 85.7,29.7 90.5,29.2 95.2,25.2 100.0,37.5 104.8,37.1 109.5,31.7 114.3,31.5 119.0,37.7 123.8,34.5 128.6,35.7 133.3,32.9 138.1,33.3 142.9,30.5 147.6,33.5 152.4,30.2 157.1,31.2 161.9,20.9 166.7,14.2 171.4,4.0 176.2,12.1 181.0,10.7 185.7,21.9 190.5,22.6 195.2,22.5 200.0,16.2 204.8,12.7 209.5,11.6 214.3,6.5 219.0,11.3 223.8,13.6 228.6,9.5 233.3,17.0 238.1,13.3 242.9,15.3 247.6,8.0 252.4,6.7 257.1,6.8 261.9,16.5 266.7,19.9 271.4,25.9 276.2,27.1 281.0,32.4 285.7,36.4 290.5,43.8 295.2,44.9 300.0,52.4 300,64" class="area"/><polyline points="0.0,41.0 4.8,24.8 9.5,30.0 14.3,26.7 19.0,38.3 23.8,47.3 28.6,57.4 33.3,60.0 38.1,42.7 42.9,46.8 47.6,47.6 52.4,38.5 57.1,41.1 61.9,47.0 66.7,51.3 71.4,53.4 76.2,48.4 81.0,38.5 85.7,29.7 90.5,29.2 95.2,25.2 100.0,37.5 104.8,37.1 109.5,31.7 114.3,31.5 119.0,37.7 123.8,34.5 128.6,35.7 133.3,32.9 138.1,33.3 142.9,30.5 147.6,33.5 152.4,30.2 157.1,31.2 161.9,20.9 166.7,14.2 171.4,4.0 176.2,12.1 181.0,10.7 185.7,21.9 190.5,22.6 195.2,22.5 200.0,16.2 204.8,12.7 209.5,11.6 214.3,6.5 219.0,11.3 223.8,13.6 228.6,9.5 233.3,17.0 238.1,13.3 242.9,15.3 247.6,8.0 252.4,6.7 257.1,6.8 261.9,16.5 266.7,19.9 271.4,25.9 276.2,27.1 281.0,32.4 285.7,36.4 290.5,43.8 295.2,44.9 300.0,52.4" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="52.4" r="3" class="dot"/></svg>
+  <div class="range"><span>126.79</span><div class="bar"><i style="left:14%"></i></div><span>198.63</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-19.25%</b></div><div class="chip"><span>1개월</span><b class="down">-21.95%</b></div><div class="chip"><span>3개월</span><b class="down">-11.39%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/equities/palo-alto-networks" target="_blank" rel="noopener">팔로알토</a></h3>
+  <span class="sym">PANW · 10/16</span></header>
+  <div class="price"><small>$</small>342.00 </div>
+  <div class="delta"><span class="down">▼ 28.27 (-7.63%)</span></div>
+  <svg class="spark down" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,41.7 4.8,45.2 9.5,48.8 14.3,53.9 19.0,54.9 23.8,58.3 28.6,57.4 33.3,60.0 38.1,53.9 42.9,50.6 47.6,42.5 52.4,32.4 57.1,34.3 61.9,36.0 66.7,33.7 71.4,22.5 76.2,23.1 81.0,21.4 85.7,16.7 90.5,22.9 95.2,27.4 100.0,28.2 104.8,35.8 109.5,41.3 114.3,36.9 119.0,40.5 123.8,46.4 128.6,46.7 133.3,23.6 138.1,29.6 142.9,24.0 147.6,34.6 152.4,52.4 157.1,50.6 161.9,49.9 166.7,47.9 171.4,48.9 176.2,47.1 181.0,51.3 185.7,28.3 190.5,27.7 195.2,27.4 200.0,27.7 204.8,33.8 209.5,29.5 214.3,28.0 219.0,18.1 223.8,19.9 228.6,27.9 233.3,18.7 238.1,20.7 242.9,16.0 247.6,16.5 252.4,12.8 257.1,11.0 261.9,4.0 266.7,11.6 271.4,15.3 276.2,4.6 281.0,12.5 285.7,16.1 290.5,27.8 295.2,30.3 300.0,45.3 300,64" class="area"/><polyline points="0.0,41.7 4.8,45.2 9.5,48.8 14.3,53.9 19.0,54.9 23.8,58.3 28.6,57.4 33.3,60.0 38.1,53.9 42.9,50.6 47.6,42.5 52.4,32.4 57.1,34.3 61.9,36.0 66.7,33.7 71.4,22.5 76.2,23.1 81.0,21.4 85.7,16.7 90.5,22.9 95.2,27.4 100.0,28.2 104.8,35.8 109.5,41.3 114.3,36.9 119.0,40.5 123.8,46.4 128.6,46.7 133.3,23.6 138.1,29.6 142.9,24.0 147.6,34.6 152.4,52.4 157.1,50.6 161.9,49.9 166.7,47.9 171.4,48.9 176.2,47.1 181.0,51.3 185.7,28.3 190.5,27.7 195.2,27.4 200.0,27.7 204.8,33.8 209.5,29.5 214.3,28.0 219.0,18.1 223.8,19.9 228.6,27.9 233.3,18.7 238.1,20.7 242.9,16.0 247.6,16.5 252.4,12.8 257.1,11.0 261.9,4.0 266.7,11.6 271.4,15.3 276.2,4.6 281.0,12.5 285.7,16.1 290.5,27.8 295.2,30.3 300.0,45.3" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="45.3" r="3" class="dot"/></svg>
+  <div class="range"><span>314.15</span><div class="bar"><i style="left:26%"></i></div><span>419.91</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-18.33%</b></div><div class="chip"><span>1개월</span><b class="down">-8.96%</b></div><div class="chip"><span>3개월</span><b class="down">-4.65%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://finance.yahoo.com/quote/SPCX" target="_blank" rel="noopener">스페이스X</a></h3>
+  <span class="sym">SPCX · 10/16</span></header>
+  <div class="price"><small>$</small>146.03 </div>
+  <div class="delta"><span class="down">▼ 2.59 (-1.74%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,49.8 4.8,46.6 9.5,53.9 14.3,51.2 19.0,54.0 23.8,55.4 28.6,52.8 33.3,56.2 38.1,56.5 42.9,59.9 47.6,54.5 52.4,45.0 57.1,60.0 61.9,54.1 66.7,38.1 71.4,33.2 76.2,38.0 81.0,26.7 85.7,30.9 90.5,32.1 95.2,26.6 100.0,29.1 104.8,32.4 109.5,37.4 114.3,34.7 119.0,36.5 123.8,33.9 128.6,32.4 133.3,31.3 138.1,30.8 142.9,28.8 147.6,30.1 152.4,31.5 157.1,23.5 161.9,25.1 166.7,20.2 171.4,25.4 176.2,24.9 181.0,22.2 185.7,24.9 190.5,29.0 195.2,22.5 200.0,19.1 204.8,20.9 209.5,21.7 214.3,19.1 219.0,24.7 223.8,25.0 228.6,24.4 233.3,27.3 238.1,24.0 242.9,22.5 247.6,25.0 252.4,15.4 257.1,4.7 261.9,4.0 266.7,7.8 271.4,14.0 276.2,12.2 281.0,11.5 285.7,17.5 290.5,21.4 295.2,24.5 300.0,26.8 300,64" class="area"/><polyline points="0.0,49.8 4.8,46.6 9.5,53.9 14.3,51.2 19.0,54.0 23.8,55.4 28.6,52.8 33.3,56.2 38.1,56.5 42.9,59.9 47.6,54.5 52.4,45.0 57.1,60.0 61.9,54.1 66.7,38.1 71.4,33.2 76.2,38.0 81.0,26.7 85.7,30.9 90.5,32.1 95.2,26.6 100.0,29.1 104.8,32.4 109.5,37.4 114.3,34.7 119.0,36.5 123.8,33.9 128.6,32.4 133.3,31.3 138.1,30.8 142.9,28.8 147.6,30.1 152.4,31.5 157.1,23.5 161.9,25.1 166.7,20.2 171.4,25.4 176.2,24.9 181.0,22.2 185.7,24.9 190.5,29.0 195.2,22.5 200.0,19.1 204.8,20.9 209.5,21.7 214.3,19.1 219.0,24.7 223.8,25.0 228.6,24.4 233.3,27.3 238.1,24.0 242.9,22.5 247.6,25.0 252.4,15.4 257.1,4.7 261.9,4.0 266.7,7.8 271.4,14.0 276.2,12.2 281.0,11.5 285.7,17.5 290.5,21.4 295.2,24.5 300.0,26.8" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="26.8" r="3" class="dot"/></svg>
+  <div class="range"><span>108.27</span><div class="bar"><i style="left:59%"></i></div><span>171.92</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-10.17%</b></div><div class="chip"><span>1개월</span><b class="down">-3.21%</b></div><div class="chip"><span>3개월</span><b class="up">+17.78%</b></div></div>
+</article><article class="card">
+  <header><h3><a href="https://www.investing.com/equities/lumentum-holdings-inc" target="_blank" rel="noopener">루멘텀</a></h3>
+  <span class="sym">LITE · 10/16</span></header>
+  <div class="price"><small>$</small>824.13 </div>
+  <div class="delta"><span class="down">▼ 45.41 (-5.22%)</span></div>
+  <svg class="spark up" viewBox="0 0 300 64" preserveAspectRatio="none"><polygon points="0,64 0.0,42.8 4.8,35.2 9.5,36.0 14.3,35.6 19.0,43.1 23.8,48.4 28.6,54.8 33.3,60.0 38.1,50.4 42.9,48.2 47.6,41.3 52.4,33.9 57.1,36.4 61.9,35.1 66.7,29.6 71.4,37.7 76.2,37.0 81.0,25.2 85.7,30.7 90.5,25.9 95.2,21.3 100.0,31.4 104.8,36.2 109.5,30.8 114.3,32.1 119.0,36.0 123.8,30.1 128.6,24.5 133.3,22.7 138.1,29.1 142.9,27.1 147.6,31.9 152.4,31.7 157.1,34.2 161.9,30.6 166.7,20.3 171.4,19.2 176.2,24.8 181.0,25.8 185.7,35.5 190.5,35.0 195.2,26.6 200.0,29.3 204.8,25.4 209.5,22.9 214.3,23.8 219.0,24.7 223.8,25.6 228.6,24.2 233.3,26.4 238.1,20.9 242.9,21.1 247.6,13.2 252.4,9.1 257.1,8.4 261.9,4.0 266.7,6.4 271.4,12.9 276.2,7.2 281.0,18.6 285.7,19.3 290.5,29.0 295.2,31.8 300.0,36.6 300,64" class="area"/><polyline points="0.0,42.8 4.8,35.2 9.5,36.0 14.3,35.6 19.0,43.1 23.8,48.4 28.6,54.8 33.3,60.0 38.1,50.4 42.9,48.2 47.6,41.3 52.4,33.9 57.1,36.4 61.9,35.1 66.7,29.6 71.4,37.7 76.2,37.0 81.0,25.2 85.7,30.7 90.5,25.9 95.2,21.3 100.0,31.4 104.8,36.2 109.5,30.8 114.3,32.1 119.0,36.0 123.8,30.1 128.6,24.5 133.3,22.7 138.1,29.1 142.9,27.1 147.6,31.9 152.4,31.7 157.1,34.2 161.9,30.6 166.7,20.3 171.4,19.2 176.2,24.8 181.0,25.8 185.7,35.5 190.5,35.0 195.2,26.6 200.0,29.3 204.8,25.4 209.5,22.9 214.3,23.8 219.0,24.7 223.8,25.6 228.6,24.2 233.3,26.4 238.1,20.9 242.9,21.1 247.6,13.2 252.4,9.1 257.1,8.4 261.9,4.0 266.7,6.4 271.4,12.9 276.2,7.2 281.0,18.6 285.7,19.3 290.5,29.0 295.2,31.8 300.0,36.6" class="line" vector-effect="non-scaling-stroke"/><circle cx="300.0" cy="36.6" r="3" class="dot"/></svg>
+  <div class="range"><span>602.35</span><div class="bar"><i style="left:42%"></i></div><span>1,133.40</span></div>
+  <div class="range-cap">3개월 범위 내 위치</div>
+  <div class="chips"><div class="chip"><span>1주</span><b class="down">-25.31%</b></div><div class="chip"><span>1개월</span><b class="down">-10.36%</b></div><div class="chip"><span>3개월</span><b class="up">+12.46%</b></div></div>
+</article></div></div>
+<footer>출처: Yahoo Finance(시세, 지연 가능), CNN Fear &amp; Greed(Put/Call 비율), Google 뉴스(국내 언론 기사 제목). 카드 제목을 누르면 Investing.com(또는 Yahoo) 상세 페이지로 이동합니다.
+SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
+투자 판단의 근거가 아닌 참고용입니다.</footer>
+</div><script>
+const r=document.documentElement,g=k=>{try{return localStorage.getItem(k)}catch(e){return null}},s=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const sh=location.hash.match(/^#shot([0-9]*)(?:-([a-z]))?/);if(sh){r.dataset.shot='1';if(sh[1])r.style.zoom=innerWidth/+sh[1];const pt=sh[2];if(pt){r.dataset.part=pt;document.querySelectorAll('[data-part]').forEach(e=>{if(!e.dataset.part.includes(pt))e.style.display='none'});if(pt==='b'||pt==='c'){const cs=[...document.querySelectorAll('.grid>.card')],h=Math.ceil(cs.length/2);cs.forEach((c,i)=>{if((pt==='b')!==(i<h))c.style.display='none'});const t=document.querySelector('.ind-h');t.textContent+=pt==='b'?' (1/2)':' (2/2)';t.style.marginTop='4px'}}}if(g('color')==='us')r.dataset.color='us';if(g('theme'))r.dataset.theme=g('theme');
+document.getElementById('bc').onclick=()=>{const u=r.dataset.color!=='us';u?r.dataset.color='us':delete r.dataset.color;s('color',u?'us':'kr');lab()};
+document.getElementById('bt').onclick=()=>{const d=(r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';r.dataset.theme=d?'light':'dark';s('theme',r.dataset.theme)};
+function lab(){document.getElementById('bc').textContent=r.dataset.color==='us'?'색상: 상승 초록':'색상: 상승 빨강'}lab();
+</script>
+<script>document.documentElement.dataset.h=Math.ceil(document.querySelector('.wrap').getBoundingClientRect().bottom)</script></body></html>
