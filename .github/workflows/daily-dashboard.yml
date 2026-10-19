@@ -51,6 +51,13 @@ jobs:
             if [ "$n" != "0" ]; then send=0; why="already sent this morning ($n run since $ws)"; fi
             # 예비 예약이 정오(KST) 넘어 뒤늦게 돌면 보내지 않는다
             if [ "$EVENT" = "schedule" ] && [ "$hour" -ge 3 ] && [ "$hour" -lt 20 ]; then send=0; why="scheduled run started too late (UTC hour $hour)"; fi
+            # push는 아침 루틴의 트리거 커밋('trigger: ...')만 발송한다. 다른 작업 브랜치를 새로 올리면
+            # main과의 차이에 trigger/ 파일이 잡혀 이 워크플로가 깨어나는데(2026-10-19 16:21 오발송), 그건 무시한다.
+            if [ "$EVENT" = "push" ]; then
+              case "$COMMIT_MSG" in trigger:*) ;; *) send=0; why="push is not a trigger commit";; esac
+              # 트리거 커밋이라도 아침(05:00~12:00 KST = 20:00~03:00 UTC)을 벗어나면 보내지 않는다
+              if [ "$hour" -ge 3 ] && [ "$hour" -lt 20 ]; then send=0; why="push outside the morning window (UTC hour $hour)"; fi
+            fi
             case "$COMMIT_MSG" in *"[test]"*) send=1; why="[test] push";; esac
           fi
           echo "send=$send ($why)"
