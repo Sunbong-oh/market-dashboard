@@ -159,11 +159,12 @@ GRID3 = """<style>.panel.kr{display:none!important}  /* 사이트에서는 '돈�
 .g3 .price{font-size:27px!important;margin-top:4px}.g3 .price small{font-size:15px!important}
 .g3 .badge{font-size:12px!important;padding:1px 6px!important}.g3 .delta{font-size:15px!important}
 .g3 .spark{height:46px!important;margin-top:6px}
-.g3 .range,.g3 .range-cap{display:none!important}
+.g3 .range{font-size:10px!important;gap:3px!important;margin-top:6px!important;overflow:hidden}.g3 .range span{white-space:nowrap}.g3 .range-cap{display:none!important}
 .g3 .chips{gap:2px!important;margin-top:8px}.g3 .chip{padding:4px 3px!important;font-size:12px!important;border-radius:6px;overflow:hidden}
 .g3 .chip b{font-size:13px!important;letter-spacing:-.04em}.g3 .chip small{display:none!important}}</style>
 <script>(function(){function f(){var g=document.querySelector('.grid');if(!g)return;g.classList.add('g3');
-if(innerWidth<=640){g.style.width='600px';g.style.zoom=(g.parentElement.clientWidth/600)}else{g.style.width='';g.style.zoom=''}}
+if(innerWidth<=640){var p=g.parentElement,s=getComputedStyle(p);  // clientWidth 는 좌우 여백을 포함해 그만큼 오른쪽이 잘렸다
+g.style.width='600px';g.style.zoom=(p.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight))/600}else{g.style.width='';g.style.zoom=''}}
 addEventListener('DOMContentLoaded',f);addEventListener('resize',f)})()</script>"""
 
 
