@@ -62,6 +62,17 @@ def fetch_json(url, headers=None):
         return json.loads(r.read())
 
 
+def fetch_intraday(sym):
+    """가장 최근 거래일의 5분봉 종가 (미니차트용). 못 받으면 None → 일봉 흐름으로 대체."""
+    try:
+        res = fetch_json(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=1d&interval=5m")["chart"]["result"][0]
+        vals = [c for c in (res["indicators"]["quote"][0].get("close") or []) if c is not None]
+        return vals if len(vals) >= 5 else None
+    except Exception as e:
+        print("분봉 실패:", sym, type(e).__name__, e, file=sys.stderr)
+        return None
+
+
 def fetch_quote(item):
     name, sym, kind, unit, link = item
     try:
@@ -78,7 +89,7 @@ def fetch_quote(item):
         if len(pts) < 2:
             raise ValueError("데이터 부족")
         return dict(name=name, sym=sym, kind=kind, unit=unit, link=link,
-                    pts=pts, meta=res["meta"], ok=True)
+                    pts=pts, meta=res["meta"], intra=fetch_intraday(sym), ok=True)
     except Exception as e:  # 한 종목 실패가 전체를 막지 않도록
         return dict(name=name, sym=sym, kind=kind, unit=unit, link=link, ok=False, err=str(e))
 
@@ -576,10 +587,11 @@ def card(q):
     if q["kind"] == "vix":
         badge = f'<span class="badge">{vix_label(last)}</span>'
 
-    recent = [pt for pt in pts if pt[0] >= pts[-1][0] - 91 * 86400]
-    vals = [c for _, c in recent]
-    trend_cls = cls(vals[-1] - vals[0])
-    lo, hi = min(vals), max(vals)
+    recent = [c for t, c in pts if t >= pts[-1][0] - 91 * 86400]
+    # 미니차트는 가장 최근 거래일의 분봉 흐름(못 받으면 3개월 일봉), 색은 전일 대비와 같게
+    vals = q.get("intra") or recent
+    trend_cls = cls(d1)
+    lo, hi = min(recent), max(recent)
     pos = (last - lo) / ((hi - lo) or 1) * 100
     fmt = (lambda v: fnum(v, 3)) if is_yield else fnum
     # 미국 거래일 기준(코인은 UTC 자정 일봉이라 UTC 날짜)
@@ -1298,7 +1310,7 @@ a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
 :root[data-part=i] .price{font-size:27px;margin-top:4px}:root[data-part=i] .price small{font-size:15px}
 :root[data-part=i] .badge{font-size:12px;padding:1px 6px}:root[data-part=i] .delta{font-size:15px}
 :root[data-part=i] .spark{height:46px;margin-top:6px}
-:root[data-part=i] .range,:root[data-part=i] .range-cap{display:none}
+:root[data-part=i] .range{font-size:11px;gap:4px;margin-top:6px}:root[data-part=i] .range-cap{display:none}
 :root[data-part=i] .chips{gap:2px;margin-top:8px}:root[data-part=i] .chip{padding:4px 3px;font-size:12px;border-radius:6px;overflow:hidden}
 :root[data-part=i] .chip b{font-size:13px;letter-spacing:-.04em}:root[data-part=i] .chip small{display:none}
 footer{margin-top:24px;color:var(--muted);font-size:14px}
