@@ -1784,6 +1784,26 @@ EARN_LIVE_JS = r"""<script>
 </script>""" % json.dumps(list(EARN_LIVE_SRC))
 
 
+def earn_px_html(item):
+    """실적 발표 후 주가 반응 [{l,s,t,p,c,ref,d1}] (earnings_px.py · kb-market-report 실적 감시가 쓰는 형식)."""
+    rows = (item or {}).get("px") or []
+    if not rows:
+        return ""
+
+    def pc(v):
+        if v is None:
+            return ""
+        cls = "up" if v > 0 else "down" if v < 0 else ""
+        return f'<b class="{cls}">{v:+.2f}%</b>'
+    e = escape
+    out = "".join(f'<div class="pxr"><span class="pl">{e(r.get("l", ""))}</span> <span class="ps">{e(r.get("s", ""))} {e(r.get("t") or "")}</span> '
+                  f'<b>{e(r.get("p", ""))}</b> '
+                  + (f'<span class="pr">{e(r.get("ref", ""))} 대비</span> {pc(r.get("c"))}' if r.get("c") is not None else "")
+                  + (f' <span class="pr">· 첫 정규장</span> {pc(r.get("d1"))}' if r.get("d1") is not None else "") + "</div>"
+                  for r in rows)
+    return f'<div class="px"><div class="pxh">📈 실적 발표 후 주가 반응</div>{out}</div>'
+
+
 def earn_card(e, key):
     """실적 속보 카드 한 장 (홈페이지와 텔레그램 이미지 earnings_notify.py 가 같이 쓴다)."""
     rows = "".join(f'<tr><td>{escape(r[0])}</td><td class="v">{escape(r[1])}</td><td class="c">'
@@ -1793,7 +1813,7 @@ def earn_card(e, key):
     ts = f'{e["day"]}T{e.get("time") or "00:00"}:00+09:00'
     return (f'<div class="earn" data-day="{escape(e["day"])}" data-ts="{escape(ts)}" data-key="{escape(key)}"><h2>📊 실적 속보 · {escape(e["company"])}'
             f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time", ""))} 발표</small></h2>'
-            f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>'
+            f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>{earn_px_html(e)}'
             + (f"<h3>향후 가이던스</h3><ul>{guide}</ul>" if guide else "")
             + (f'<div class="src">출처: {src}</div>' if src else "") + "</div>")
 

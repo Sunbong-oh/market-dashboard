@@ -14,7 +14,6 @@ import subprocess
 import sys
 import urllib.request
 from datetime import date, datetime, timedelta
-from html import escape
 from pathlib import Path
 
 import build_site as b
@@ -36,30 +35,10 @@ def live_items():
         return {}
 
 
-def px_html(item):
-    rows = (item or {}).get("px") or []
-    if not rows:
-        return ""
-
-    def pc(v):
-        if v is None:
-            return ""
-        cls = "up" if v > 0 else "down" if v < 0 else ""
-        return f'<b class="{cls}">{v:+.2f}%</b>'
-    e = escape
-    out = "".join(f'<div class="pxr"><span class="pl">{e(r.get("l", ""))}</span> <span class="ps">{e(r.get("s", ""))} {e(r.get("t") or "")}</span> '
-                  f'<b>{e(r.get("p", ""))}</b> '
-                  + (f'<span class="pr">{e(r.get("ref", ""))} 대비</span> {pc(r.get("c"))}' if r.get("c") is not None else "")
-                  + (f' <span class="pr">· 첫 정규장</span> {pc(r.get("d1"))}' if r.get("d1") is not None else "") + "</div>"
-                  for r in rows)
-    return f'<div class="px"><div class="pxh">📈 실적 발표 후 주가 반응</div>{out}</div>'
-
-
 def card_page(c, key, item=None):
+    if (item or {}).get("px"):        # 실적 감시가 살아 있으면 그쪽 최신 주가 반응을 쓴다
+        c = {**c, "px": item["px"]}
     card = b.earn_card(c, key)
-    px = px_html(item)
-    if px:
-        card = card.replace("</table>", "</table>" + px, 1)
     root = b.CSS[b.CSS.index(":root{"):].split("}", 1)[0] + "}"
     return (f'<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>{root}{b.EARN_CSS}'
             f'body{{margin:0;padding:10px;background:var(--bg);color:var(--text);width:{SHOT_W}px;box-sizing:border-box;word-break:keep-all;'
@@ -87,7 +66,8 @@ def changed(before, after):
         cmd = ["git", "show", "--name-status", "--format=", after]
     else:
         cmd = ["git", "diff", "--name-status", before, after]
-    out = subprocess.run(cmd + ["--", "earnings_flash/"], cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    # core.quotePath=false: 한글 파일명(20261021-넷플릭스.json)이 "\353..." 처럼 따옴표로 감싸져 빠지던 문제
+    out = subprocess.run(cmd[:1] + ["-c", "core.quotePath=false"] + cmd[1:] + ["--", "earnings_flash/"], cwd=ROOT, capture_output=True, text=True, check=True).stdout
     res = []
     for line in out.splitlines():
         st, _, path = line.partition("\t")
@@ -136,6 +116,8 @@ def main():
     ap.add_argument("files", nargs="*")
     a = ap.parse_args()
     items = changed(*a.diff) if a.diff else [(Path(f), "A") for f in a.files]
+    if not items:
+        print("보낼 카드 없음 (추가·수정된 earnings_flash/*.json 이 없다)")
     today = datetime.now(d.KST).date()
     ok = True
     live = live_items() if items else {}
