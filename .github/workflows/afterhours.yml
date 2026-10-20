@@ -1,0 +1,38 @@
+name: US After-hours Movers
+
+# 미국 증시 시간외 급등락 알림 (afterhours.py → 텔레그램).
+#   애프터마켓 16:00~20:00 ET: 한국시간 08시 전까지 5분마다, 그 뒤 정시마다
+#   프리마켓   04:00~09:30 ET: 정시마다
+# 한 번 실행되면 그 세션이 끝날 때까지 돈다. 주 실행은 Claude 예약 작업의 workflow_dispatch
+# (세션 15분 전, 미국 동부시간 기준이라 서머타임 자동 반영). 아래 schedule 은 예비이며 늦게 돌면 남은 시간만 감시한다.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "50 19 * * 1-5"   # 애프터마켓 (서머타임) 04:50 KST
+    - cron: "50 20 * * 1-5"   # 애프터마켓 (겨울) 05:50 KST
+    - cron: "50 7 * * 1-5"    # 프리마켓 (서머타임) 16:50 KST
+    - cron: "50 8 * * 1-5"    # 프리마켓 (겨울) 17:50 KST
+
+permissions:
+  contents: read
+
+# 같은 세션을 두 번 감시하지 않도록 차례로 돌린다 (뒤엣것은 앞엣것이 끝난 뒤 세션이 지났으면 바로 끝난다)
+concurrency:
+  group: afterhours
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      PYTHONIOENCODING: utf-8
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 시간외 급등락 감시
+        run: python afterhours.py
