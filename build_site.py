@@ -90,11 +90,15 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("stocks/", "관심 종목"), ("target/", "목표주가"),
-        ("us/", "해외주식"), ("close/", "장마감 리포트"))
+        ("us/", "해외주식"), ("close/", "장마감 리포트"),
+        # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
+        ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
+        ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
 
 
 def nav(root, active):
-    links = "".join(f'<a href="{root}{href}" style="{NAV_ON if href == active else NAV_LINK}">{label}</a>'
+    links = "".join(f'<a href="{href if href.startswith("http") else root + href}" style="{NAV_ON if href == active else NAV_LINK}"'
+                    f'{" target=_blank rel=noopener" if href.startswith("http") else ""}>{label}</a>'
                     for href, label in MENU)
     return f'<nav style="{NAV_STYLE}"><b style="color:#ffd43b;margin-right:8px">📈 {SITE_NAME}</b>{links}</nav>'
 
@@ -1634,6 +1638,28 @@ addEventListener('resize',function(){document.querySelectorAll('iframe.embed').f
 </script>"""
 
 
+TOOLS_CSS = """.tools-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.tools-g{grid-template-columns:1fr}}
+.tool{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.tool:active{background:var(--line)}
+.tool b{display:block;font-size:17px}
+.tool span{display:block;font-size:13px;color:var(--muted);margin-top:4px;line-height:1.45}
+.tool em{display:block;font-size:12px;color:var(--accent);font-style:normal;font-weight:700;margin-top:8px}"""
+# 아티팩트로 만든 계산기 두 가지 (주소는 MENU 와 같은 것을 쓴다)
+TOOLS = (("연금 계산기", "💰", "퇴직연금·개인연금을 연금으로 받을 때 내는 세금과 해마다의 수령한도를 계산합니다."),
+         ("라이프 플랜", "🗓️", "소득·지출·교육비·주택을 넣어 평생 현금흐름과 자산 흐름을 그려 봅니다."))
+
+
+def tools_home():
+    """퇴직연금 계산기·라이프 플랜(아티팩트)로 가는 카드. 눌러서 새 탭으로 연다."""
+    url = dict((label, href) for href, label in MENU)
+    cards = "".join(f'<a class="tool" href="{url[name]}" target="_blank" rel="noopener">'
+                    f'<b>{icon} {name}</b><span>{desc}</span><em>눌러서 열기 ›</em></a>'
+                    for name, icon, desc in TOOLS if name in url)
+    return (f'<section class="sec" id="tools"><style>{TOOLS_CSS}</style>'
+            f'<div class="sec-h"><h2>🧮 계산기</h2></div><div class="tools-g">{cards}</div></section>')
+
+
 def target_home(target):
     if not target:
         return ""
@@ -1858,7 +1884,7 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
-            f'{target_home(target)}{us_home(us)}'
+            f'{target_home(target)}{us_home(us)}{tools_home()}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
             f'{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
