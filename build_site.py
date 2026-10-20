@@ -90,11 +90,13 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("stocks/", "관심 종목"), ("target/", "목표주가"),
-        ("us/", "해외주식"), ("close/", "장마감 리포트"))
+        ("us/", "해외주식"), ("close/", "장마감 리포트"),
+        ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"))  # 외부 페이지(Claude Artifact): 새 탭으로 연다
 
 
 def nav(root, active):
-    links = "".join(f'<a href="{root}{href}" style="{NAV_ON if href == active else NAV_LINK}">{label}</a>'
+    links = "".join(f'<a href="{href}" target="_blank" rel="noopener" style="{NAV_LINK}">{label}</a>' if href.startswith("http")
+                    else f'<a href="{root}{href}" style="{NAV_ON if href == active else NAV_LINK}">{label}</a>'
                     for href, label in MENU)
     return f'<nav style="{NAV_STYLE}"><b style="color:#ffd43b;margin-right:8px">📈 {SITE_NAME}</b>{links}</nav>'
 
