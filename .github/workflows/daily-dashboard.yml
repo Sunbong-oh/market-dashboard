@@ -45,10 +45,18 @@ jobs:
             hour=$((10#$(date -u +%H)))
             # 아침 창의 시작: 가장 최근의 05:00 KST(= 20:00 UTC)
             if [ "$hour" -ge 20 ]; then ws=$(date -u +%Y-%m-%dT20:00:00Z); else ws=$(date -u -d 'yesterday' +%Y-%m-%dT20:00:00Z); fi
-            n=$(gh api "repos/${{ github.repository }}/actions/workflows/daily-dashboard.yml/runs?status=success&created=>$ws&per_page=50" \
-                --jq "[.workflow_runs[] | select(.event==\"schedule\" or .event==\"push\") | select(.id != ${{ github.run_id }})] | length")
+            # 그 사이 실행 중 '실제로 발송 단계를 마친' 것만 센다. 발송하지 않고 끝난 실행(다른 브랜치 push 등)까지
+            # 세면 진짜 아침 트리거가 '이미 보냄'으로 막힌다(2026-10-21 아침 누락).
+            ids=$(gh api "repos/${{ github.repository }}/actions/workflows/daily-dashboard.yml/runs?created=>$ws&per_page=50" \
+                --jq ".workflow_runs[] | select(.event==\"schedule\" or .event==\"push\") | select(.id != ${{ github.run_id }}) | .id")
+            n=0
+            for id in $ids; do
+              c=$(gh api "repos/${{ github.repository }}/actions/runs/$id/jobs" \
+                  --jq '[.jobs[].steps[]? | select(.name=="Build dashboard and send to Telegram" and .conclusion=="success")] | length')
+              [ "$c" != "0" ] && n=$((n+1))
+            done
             why="first run since $ws"
-            if [ "$n" != "0" ]; then send=0; why="already sent this morning ($n run since $ws)"; fi
+            if [ "$n" != "0" ]; then send=0; why="already sent this morning ($n sent run since $ws)"; fi
             # 예비 예약이 정오(KST) 넘어 뒤늦게 돌면 보내지 않는다
             if [ "$EVENT" = "schedule" ] && [ "$hour" -ge 3 ] && [ "$hour" -lt 20 ]; then send=0; why="scheduled run started too late (UTC hour $hour)"; fi
             # push는 아침 루틴의 트리거 커밋('trigger: ...')만 발송한다. 다른 작업 브랜치를 새로 올리면
