@@ -716,7 +716,7 @@ INDEX_KPI = re.compile(r"나스닥|다우|S&P|코스피|코스닥|러셀|SOX|필
 
 def build_theme():
     """가장 최근 테마 뉴스 카드(4장)를 사이트에 넣는다. theme_news/ 와 archive/theme/ 중 최신 날짜."""
-    if not d.THEME_ON:
+    if not d.THEME_SITE_ON:
         return None
     files = {}
     for folder in (THEME_ARCHIVE, d.THEME_DIR):
