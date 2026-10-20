@@ -1023,10 +1023,19 @@ if(typeof drawMinis==='function'){drawMinis=function(){document.querySelectorAll
  var prev=d.prev_close!=null?d.prev_close:pts[0].c,vals=pts.map(function(p){return p.c}).concat([prev]);
  var lo=Math.min.apply(0,vals),hi=Math.max.apply(0,vals),span=hi-lo||1;
  var x=function(t){return 2+((toMin(t)-t0)/Math.max(1,t1-t0))*(W-4)},y=function(v){return H-14-((v-lo)/span)*(H-20)};
- var last=pts[pts.length-1].c,color=last>=prev?'var(--up)':'var(--down)',line=pts.map(function(p){return x(p.t)+','+y(p.c)}).join(' '),lx=x(pts[pts.length-1].t);
- svg.innerHTML='<polygon points="'+x(pts[0].t)+','+y(prev)+' '+line+' '+lx+','+y(prev)+'" fill="'+color+'" opacity=".12"/>'+
-  '<line x1="0" x2="'+W+'" y1="'+y(prev)+'" y2="'+y(prev)+'" stroke="var(--muted)" stroke-dasharray="3 3" opacity=".7"/>'+
-  '<polyline fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linejoin="round" points="'+line+'"/>'+
+ var last=pts[pts.length-1].c,color=last>=prev?'var(--up)':'var(--down)',lx=x(pts[pts.length-1].t);
+ // 전일 종가(기준선) 위는 빨강, 아래는 파랑: 기준선과 만나는 곳에서 선을 잘라 토막마다 색을 준다
+ var base=y(prev),segs=[],seg=null,up=null;
+ pts.forEach(function(p){var q={x:x(p.t),y:y(p.c),up:p.c>=prev};
+  if(seg&&q.up!==up){var a=seg[seg.length-1],cx=a.x+(q.x-a.x)*((base-a.y)/((q.y-a.y)||1));
+   seg.push({x:cx,y:base});segs.push({up:up,pts:seg});seg=[{x:cx,y:base}]}
+  (seg=seg||[]).push(q);up=q.up});
+ if(seg&&seg.length>1)segs.push({up:up,pts:seg});
+ var col=function(u){return u?'var(--up)':'var(--down)'};
+ var path=function(s){return s.pts.map(function(p){return p.x+','+p.y}).join(' ')};
+ svg.innerHTML=segs.map(function(s){return '<polygon points="'+s.pts[0].x+','+base+' '+path(s)+' '+s.pts[s.pts.length-1].x+','+base+'" fill="'+col(s.up)+'" opacity=".12"/>'}).join('')+
+  '<line x1="0" x2="'+W+'" y1="'+base+'" y2="'+base+'" stroke="var(--muted)" stroke-dasharray="3 3" opacity=".7"/>'+
+  segs.map(function(s){return '<polyline fill="none" stroke="'+col(s.up)+'" stroke-width="1.8" stroke-linejoin="round" points="'+path(s)+'"/>'}).join('')+
   '<circle cx="'+lx+'" cy="'+y(last)+'" r="2.5" fill="'+color+'"/>'+
   '<text x="2" y="'+(H-1)+'">'+(d.recorded?hhmm(pts[0].t):'09:00')+'</text>'+
   '<text x="'+(W-2)+'" y="'+(H-1)+'" text-anchor="end">'+hhmm(pts[pts.length-1].t)+'</text>'})};try{drawMinis()}catch(e){}}
