@@ -5,7 +5,7 @@ earnings-flash.yml 이 main 에 카드가 새로 올라오거나 고쳐질 때 �
   python earnings_notify.py earnings_flash/20261015-TSMC.json  # 지정한 카드 (확인용)
   python earnings_notify.py --dry ...                          # 보내지 않고 메시지만 출력
 이미지는 build_site.earn_card + EARN_CSS 를 Playwright(Chromium)로 찍는다. 실패하면 글로 보낸다.
-카드에 "notify": false 가 있거나 발표일이 2일보다 오래됐으면 보내지 않는다.
+카드에 "notify": false 가 있거나 발표 후 12시간이 지났으면 보내지 않는다(홈페이지에는 그대로 올라간다).
 """
 import argparse
 import json
@@ -13,7 +13,7 @@ import os
 import subprocess
 import sys
 import urllib.request
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import build_site as b
@@ -22,6 +22,7 @@ import dashboard as d
 ROOT = Path(__file__).resolve().parent
 SITE = "https://sunbong-oh.github.io/market-dashboard/"
 EARN_LIVE = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/earnings-live/earnings.json"
+STALE_H = 12   # 발표 후 이 시간이 지나면 텔레그램으로 보내지 않는다
 SHOT_W = 480   # 폰 화면 폭(CSS px). 2배율로 찍어 글씨를 선명하게
 
 
@@ -118,7 +119,6 @@ def main():
     items = changed(*a.diff) if a.diff else [(Path(f), "A") for f in a.files]
     if not items:
         print("보낼 카드 없음 (추가·수정된 earnings_flash/*.json 이 없다)")
-    today = datetime.now(d.KST).date()
     ok = True
     live = live_items() if items else {}
     shots = ROOT / "out_earn"
@@ -131,9 +131,10 @@ def main():
         if c.get("notify") is False:
             print("notify=false, 건너뜀:", path.name)
             continue
-        try:
-            if today - date.fromisoformat(c["day"]) > timedelta(days=2):
-                print("오래된 카드, 건너뜀:", path.name)
+        try:   # 발표 후 12시간이 지난 카드는 이미 알려진 내용이라 텔레그램은 보내지 않는다 (홈페이지에만)
+            released = datetime.fromisoformat(f'{c["day"]}T{c.get("time") or "00:00"}:00+09:00')
+            if datetime.now(d.KST) - released > timedelta(hours=STALE_H):
+                print(f"발표 후 {STALE_H}시간 지난 카드, 텔레그램 건너뜀:", path.name)
                 continue
         except Exception:
             pass
