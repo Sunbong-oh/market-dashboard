@@ -1771,8 +1771,8 @@ EARN_LIVE_JS = r"""<script>
   var ts=function(i){return i.first_iso||(i.detected.replace(' ','T')+':00+09:00')};
   var its=(j&&j.items||[]).filter(function(i){return now-Date.parse(ts(i))<864e5&&!manual[i.key]});
   document.querySelectorAll('#earn-old .earn.auto').forEach(function(c){c.remove()});  /* 다시 그리기 전에 내려 둔 자동 카드 정리 */
-  box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>⚡ 실적 발표 · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
-   (i.item!==i.name?'<div class="cal">캘린더: '+e(i.item)+'</div>':'')+
+  box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>'+e(i.icon||'⚡')+' '+e(i.head||'실적 발표')+' · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
+   (i.item&&i.item!==i.name?'<div class="cal">'+e(i.note||'캘린더')+': '+e(i.item)+'</div>':'')+
    (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+px(i)+
    '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
   if(window.earnPlace)earnPlace();else box.hidden=!its.length}
