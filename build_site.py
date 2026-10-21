@@ -832,6 +832,12 @@ EXTRA_CSS = """<style>
 .site-extra .dates{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:8px 0 0}
 .site-extra .dates a{display:block;padding:7px 12px;border-radius:10px;border:1px solid #e3e6ec;text-decoration:none;color:#1c2330;font-weight:700}
 .site-extra .dates a.on{background:#f08c00;border-color:#f08c00;color:#fff}
+.site-extra .more{margin-top:10px}
+.site-extra .more>summary{cursor:pointer;display:inline-block;list-style:none;font-size:14px;font-weight:700;color:#e8590c;
+ padding:6px 12px;border:1px solid #ffd8a8;border-radius:999px;background:#fff8f0}
+.site-extra .more>summary::-webkit-details-marker{display:none}
+.site-extra .more>summary::after{content:" ▾"}
+.site-extra .more[open]>summary::after{content:" ▴"}
 </style>"""
 
 
@@ -1081,10 +1087,17 @@ def close_extra(lines, days, cur, prefix, chart=""):
     rest, one = close_extra_lines(lines)
     one_html = f'<div class="one">▶ {escape(one)}</div>' if one else ""
     body = f'<div class="box prev">{report_text(chr(10).join(rest))}{one_html}</div>' if rest or one else ""
-    chips = "".join(f'<li><a href="{prefix}{p.name}/"{" class=on" if p.name == cur else ""}>{label(p.name)}</a></li>'
-                    for p in days)
+    chip = lambda p: f'<li><a href="{prefix}{p.name}/"{" class=on" if p.name == cur else ""}>{label(p.name)}</a></li>'
+    head, rest_days = days[:2], days[2:]  # 최근 두 개만 펴 두고 나머지는 접는다
+    more = ""
+    if rest_days:
+        # 지금 보고 있는 날짜가 접힌 쪽에 있으면 펴서 보여 준다
+        open_ = " open" if any(p.name == cur for p in rest_days) else ""
+        more = (f'<details class="more"{open_}><summary>지난 리포트 더 보기 ({len(rest_days)})</summary>'
+                f'<ul class="dates">{"".join(chip(p) for p in rest_days)}</ul></details>')
     return (f'{EXTRA_CSS}{HIDE_IDX_JS}{ISSUE_JS}{map_btn(prefix + "../map/")}<div class="site-extra">{chart}{body}'
-            f'<div class="box"><h3>날짜별 장마감 리포트</h3><ul class="dates">{chips}</ul></div></div>')
+            f'<div class="box"><h3>날짜별 장마감 리포트</h3>'
+            f'<ul class="dates">{"".join(chip(p) for p in head)}</ul>{more}</div></div>')
 
 
 def with_extra(html, extra):
