@@ -5,7 +5,8 @@ on:
   # (GitHub 자체 schedule은 이 저장소에서 1.5~3시간씩 늦게 돌아 7시 발송에 쓸 수 없었다.)
   push:
     branches: [main, "claude/**"]
-    paths: ["trigger/**"]
+    # trigger-podcast/: 데일리는 이미 나갔는데 음성 브리핑만 빠졌을 때 음성만 다시 만든다(아침 점검 루틴이 사용)
+    paths: ["trigger/**", "trigger-podcast/**"]
   schedule:
     # 예비: 루틴이 실패한 날을 위한 GitHub 자체 예약. 한국 화~토 아침 = UTC 월~금 밤.
     # 이미 보냈으면 아래 gate가 건너뛴다.
@@ -40,7 +41,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          send=1; why="manual run"
+          send=1; mode=full; why="manual run"
           if [ "$EVENT" = "push" ] || [ "$EVENT" = "schedule" ]; then
             hour=$((10#$(date -u +%H)))
             # 아침 창의 시작: 가장 최근의 05:00 KST(= 20:00 UTC)
@@ -67,9 +68,17 @@ jobs:
               if [ "$hour" -ge 3 ] && [ "$hour" -lt 20 ]; then send=0; why="push outside the morning window (UTC hour $hour)"; fi
             fi
             case "$COMMIT_MSG" in *"[test]"*) send=1; why="[test] push";; esac
+            # 음성 브리핑만 다시: 텔레그램은 보내지 않으므로 '이미 보냄' 여부와 상관없이, 아침(~12:00 KST)에만
+            if [ "$EVENT" = "push" ]; then
+              case "$COMMIT_MSG" in "trigger: podcast"*)
+                if [ "$hour" -ge 20 ] || [ "$hour" -lt 3 ]; then send=1; mode=podcast; why="podcast-only rerun"
+                else send=0; why="podcast rerun outside the morning window"; fi;;
+              esac
+            fi
           fi
-          echo "send=$send ($why)"
+          echo "send=$send mode=$mode ($why)"
           echo "send=$send" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.gate.outputs.send == '1'
         with:
@@ -81,16 +90,22 @@ jobs:
         with:
           python-version: "3.12"
       - name: Build dashboard and send to Telegram
-        if: steps.gate.outputs.send == '1'
+        # 이 단계 이름은 위 gate가 '오늘 이미 보냄'을 셀 때 쓴다. 바꾸면 gate도 함께 바꿀 것.
+        if: steps.gate.outputs.send == '1' && steps.gate.outputs.mode != 'podcast'
         env:
           PYTHONIOENCODING: utf-8
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         # 주의: GitHub 식의 'A && '' || B'는 ''가 거짓으로 취급돼 항상 B가 된다. 그래서 빈 값 대신 '--no-telegram'을 넘긴다.
         run: python dashboard.py ${{ (github.event_name == 'workflow_dispatch' && !inputs.telegram) && '--no-telegram' || '--notify' }} --no-open
+      - name: Build dashboard data only (podcast rerun)
+        if: steps.gate.outputs.send == '1' && steps.gate.outputs.mode == 'podcast'
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python dashboard.py --no-telegram --no-open
       - name: Save to website archive (archive/daily/YYYY-MM-DD)
         # 웹사이트(site.yml)가 이 기록으로 '오전 데일리' 메뉴를 만든다. 실패해도 텔레그램 발송에는 영향 없음.
-        if: steps.gate.outputs.send == '1'
+        if: steps.gate.outputs.send == '1' && steps.gate.outputs.mode != 'podcast'
         continue-on-error: true
         shell: bash
         run: |
@@ -110,6 +125,7 @@ jobs:
           done
           exit 1
       - name: 출근길 음성 브리핑 (MP3 + 팟캐스트 피드 -> podcast 브랜치)
+        id: pod
         # briefing.json(위 dashboard.py가 남김)을 5분 안팎 음성으로 만들어 podcast 브랜치에 최근 14회차만 둔다.
         # 브랜치는 매번 커밋 하나로 덮어써(force push) MP3가 저장소 기록에 쌓이지 않게 한다.
         # 사이트(site.yml)가 이 브랜치를 /podcast/ 로 붙여 배포하고, 휴대폰 팟캐스트 앱이 feed.xml을 구독한다.
@@ -135,6 +151,20 @@ jobs:
           git --work-tree=_pod add -A -f .
           commit=$(git commit-tree "$(git write-tree)" -m "podcast: $day")
           git push --force origin "$commit:refs/heads/podcast"
+      - name: 음성 브리핑 실패 알림 (텔레그램)
+        # 음성 단계가 실패하면 조용히 넘어가지 않고 알린다. 아침 점검 루틴(07:20)이 음성만 다시 만든다.
+        if: steps.gate.outputs.send == '1' && steps.pod.outcome == 'failure'
+        continue-on-error: true
+        shell: bash
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          chat="${TELEGRAM_CHAT_ID%%,*}"
+          curl -s -o /dev/null -w "telegram %{http_code}\n" "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${chat}" \
+            --data-urlencode "text=⚠️ 출근길 음성 브리핑 생성 실패 — 07:20 점검에서 다시 만듭니다. ${RUN_URL}"
       - uses: actions/upload-artifact@v4
         if: always() && steps.gate.outputs.send == '1'
         with:
