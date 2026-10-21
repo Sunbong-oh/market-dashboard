@@ -30,12 +30,11 @@ def get(url):
         return json.loads(r.read())
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--hours", type=float, default=30)
-    a = ap.parse_args()
-    cut = datetime.now(timezone.utc) - timedelta(hours=a.hours)
+def recent(hours=30, foreign=True):
+    """최근 hours 시간 안의 실적 공시 [{sym, name, acc(UTC datetime), form, url}] — 새것부터."""
+    cut = datetime.now(timezone.utc) - timedelta(hours=hours)
     tickers = {v["ticker"]: v["cik_str"] for v in get("https://www.sec.gov/files/company_tickers.json").values()}
+    out = []
     for sym, name in WATCH.items():
         cik = tickers.get(sym)
         if not cik:
@@ -52,10 +51,19 @@ def main():
             if acc < cut:
                 break
             items = rec.get("items", [""] * len(rec["form"]))[i] or ""
-            if (form == "8-K" and "2.02" in items) or (form == "6-K" and sym in FOREIGN):
+            if (form == "8-K" and "2.02" in items) or (foreign and form == "6-K" and sym in FOREIGN):
                 url = (f"https://www.sec.gov/Archives/edgar/data/{cik}/{rec['accessionNumber'][i].replace('-', '')}/"
                        f"{rec['primaryDocument'][i]}")
-                print(sym, name, acc.astimezone(KST).strftime("%Y-%m-%d %H:%M"), form, url)
+                out.append({"sym": sym, "name": name, "acc": acc, "form": form, "url": url})
+    return sorted(out, key=lambda x: x["acc"], reverse=True)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--hours", type=float, default=30)
+    a = ap.parse_args()
+    for r in recent(a.hours):
+        print(r["sym"], r["name"], r["acc"].astimezone(KST).strftime("%Y-%m-%d %H:%M"), r["form"], r["url"])
 
 
 if __name__ == "__main__":

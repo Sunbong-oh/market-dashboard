@@ -1769,8 +1769,11 @@ earnPlace();setInterval(earnPlace,300000)</script>"""
 
 # 자동 실적 속보: kb-market-report earnings-watch 워크플로가 10분마다 갱신하는 earnings-live/earnings.json
 # (★ 실적·주요 반도체 실적 발표 감지 → 컨센서스 + 기사 제목). 수동 정리 카드(earnings_flash)가 있으면 그 회사는 뺀다.
-EARN_LIVE_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/earnings.json?ref=earnings-live",
-                 "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/earnings-live/earnings.json")
+# 두 곳을 합쳐 보여 준다: kb-market-report 실적 감시(노트북) + market-dashboard earnings-quick(시간외 감시가 SEC 실적 공시로 5분마다)
+EARN_LIVE_SRC = (("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/earnings.json?ref=earnings-live",
+                  "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/earnings-live/earnings.json"),
+                 ("https://api.github.com/repos/Sunbong-oh/market-dashboard/contents/earnings.json?ref=earnings-quick",
+                  "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/earnings-quick/earnings.json"))
 EARN_LIVE_JS = r"""<script>
 (function(){var SRC=%s,box=document.getElementById('earn-live');if(!box)return;
  function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -1778,23 +1781,27 @@ EARN_LIVE_JS = r"""<script>
  function px(i){if(!(i.px||[]).length)return '';return '<div class="px"><div class="pxh">📈 실적 발표 후 주가 반응</div>'+i.px.map(function(r){
    return '<div class="pxr"><span class="pl">'+e(r.l)+'</span> <span class="ps">'+e(r.s)+' '+e(r.t||'')+'</span> <b>'+e(r.p)+'</b> '+
     (r.c!=null?'<span class="pr">'+e(r.ref)+' 대비</span> '+pc(r.c):'')+(r.d1!=null?' <span class="pr">· 첫 정규장</span> '+pc(r.d1):'')+'</div>'}).join('')+'</div>'}
- function draw(j){var now=Date.now(),manual={};document.querySelectorAll('.earn[data-key]').forEach(function(c){manual[c.dataset.key]=c});
-  (j&&j.items||[]).forEach(function(i){var c=manual[i.key];if(!c)return;var o=c.querySelector('.px');if(o)o.remove();
+ function draw(j){var now=Date.now(),manual={},mname={};document.querySelectorAll('.earn[data-key]').forEach(function(c){manual[c.dataset.key]=c;
+   mname[c.dataset.key.split('-').slice(1).join('-')]=c});  /* 키 날짜 기준이 달라도(미국 날짜·한국 날짜) 회사 이름으로 같은 카드 */
+  (j&&j.items||[]).forEach(function(i){var c=manual[i.key]||mname[i.name];if(!c)return;var o=c.querySelector('.px');if(o)o.remove();
    var h=px(i);if(h){var t=c.querySelector('table');(t||c.querySelector('.vd')).insertAdjacentHTML('afterend',h)}});  /* 수동 카드에는 주가 반응만 */
   var ts=function(i){return i.first_iso||(i.detected.replace(' ','T')+':00+09:00')};
-  var its=(j&&j.items||[]).filter(function(i){return now-Date.parse(ts(i))<864e5&&!manual[i.key]});
+  var its=(j&&j.items||[]).filter(function(i){return now-Date.parse(ts(i))<864e5&&!manual[i.key]&&!mname[i.name]});
   document.querySelectorAll('#earn-old .earn.auto').forEach(function(c){c.remove()});  /* 다시 그리기 전에 내려 둔 자동 카드 정리 */
   box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>'+e(i.icon||'⚡')+' '+e(i.head||'실적 발표')+' · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
    (i.item&&i.item!==i.name?'<div class="cal">'+e(i.note||'캘린더')+': '+e(i.item)+'</div>':'')+
    (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+px(i)+
    '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
   if(window.earnPlace)earnPlace();else box.hidden=!its.length}
- function load(i){i=i||0;if(i>=SRC.length)return;
-  fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
-  .then(function(r){if(!r.ok)throw 0;return r.json()}).then(draw).catch(function(){load(i+1)})}
+ function get(g,i,cb){if(i>=g.length)return cb(null);
+  fetch(i?g[i]+'?t='+Date.now():g[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
+  .then(function(r){if(!r.ok)throw 0;return r.json()}).then(cb).catch(function(){get(g,i+1,cb)})}
+ function load(){var n=SRC.length,out=[],seen={};
+  SRC.forEach(function(g){get(g,0,function(j){(j&&j.items||[]).forEach(function(i){if(!seen[i.key]){seen[i.key]=1;out.push(i)}});
+   if(--n===0)draw({items:out})})})}
  load();setInterval(function(){if(!document.hidden)load()},300000);
 })();
-</script>""" % json.dumps(list(EARN_LIVE_SRC))
+</script>""" % json.dumps([list(g) for g in EARN_LIVE_SRC])
 
 
 def earn_px_html(item):

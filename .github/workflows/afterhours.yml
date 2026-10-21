@@ -14,7 +14,7 @@ on:
     - cron: "50 8 * * 1-5"    # 프리마켓 (겨울) 17:50 KST
 
 permissions:
-  contents: read
+  contents: write   # 실적 1차 속보를 earnings-quick 브랜치에 저장
 
 # 같은 세션을 두 번 감시하지 않도록 차례로 돌린다 (뒤엣것은 앞엣것이 끝난 뒤 세션이 지났으면 바로 끝난다)
 concurrency:
@@ -29,6 +29,7 @@ jobs:
       PYTHONIOENCODING: utf-8
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
