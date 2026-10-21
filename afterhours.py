@@ -191,20 +191,36 @@ def main():
         print("세션 시작까지 대기:", start.strftime("%H:%M ET"))
         time.sleep((start - now).total_seconds() + 300)   # 첫 5분봉이 생긴 뒤
     w = Watch(a.dry)
+    try:
+        import earnings_quick
+        q = earnings_quick.Quick(a.dry)    # 빅테크·반도체 실적 공시 1차 속보 (5분마다)
+    except Exception as e:
+        print("실적 1차 속보 준비 실패:", type(e).__name__, e, file=sys.stderr)
+        q = None
     print(f"{WINDOWS[name][2]} 감시 시작: {len(w.syms)}종목, {start:%H:%M}~{end:%H:%M} ET", flush=True)
+    nxt = datetime.now(ET)
     while True:
         now = datetime.now(ET)
         if now >= end:
             break
-        try:
-            n = w.check(name, start)
-            print(f"{now.astimezone(KST):%H:%M} KST 확인 · 알림 {n}종목", flush=True)
-        except Exception as e:
-            print("확인 실패:", type(e).__name__, e, file=sys.stderr, flush=True)
-        nxt = next_check(name, datetime.now(ET), end)
-        if nxt >= end:
+        if now >= nxt:
+            try:
+                n = w.check(name, start)
+                print(f"{now.astimezone(KST):%H:%M} KST 확인 · 알림 {n}종목", flush=True)
+            except Exception as e:
+                print("확인 실패:", type(e).__name__, e, file=sys.stderr, flush=True)
+            nxt = next_check(name, datetime.now(ET), end)
+        if q:
+            try:
+                k = q.check()
+                if k:
+                    print(f"{now.astimezone(KST):%H:%M} KST 실적 공시 {k}건 속보", flush=True)
+            except Exception as e:
+                print("실적 공시 확인 실패:", type(e).__name__, e, file=sys.stderr, flush=True)
+        wake = min(nxt, datetime.now(ET) + timedelta(minutes=5), end)   # 실적 공시는 5분마다
+        if wake >= end:
             break
-        time.sleep(max(30, (nxt - datetime.now(ET)).total_seconds()))
+        time.sleep(max(30, (wake - datetime.now(ET)).total_seconds()))
     print("세션 종료", flush=True)
     return 0
 
