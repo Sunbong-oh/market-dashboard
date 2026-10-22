@@ -1535,14 +1535,14 @@ TOOLS = (("연금 계산기", "💰", "퇴직연금·개인연금을 연금으�
          ("라이프 플랜", "🗓️", "소득·지출·교육비·주택을 넣어 평생 현금흐름과 자산 흐름을 그려 봅니다."))
 
 
-# 홈 양옆 날개 광고 (제주 만보농장). 본문(1080px) 바깥 빈 공간에만 작게 띄우고, 공간이 없는 화면(휴대폰·좁은 창)에서는 숨긴다.
+# 홈 왼쪽 날개 광고 (제주 만보농장). 본문(1080px) 왼쪽 빈 공간에만 작게 띄우고, 공간이 없는 화면(휴대폰·좁은 창)에서는 숨긴다.
 # 누르면 새 탭으로 밴드가 열리고, 클릭 수는 방문자 현황(c-ad-manbo)에서 본다.
 AD_URL = "https://www.band.us/@manbofarm"
 AD_CSS = """.wing{display:none;word-break:keep-all}
 @media (min-width:1440px){
 .wing{display:block;position:fixed;top:120px;width:150px;z-index:5;text-decoration:none;color:inherit;background:var(--card);
  border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 2px 10px rgba(0,0,0,.06);font-size:12px;line-height:1.4}
-.wing.l{right:calc(50% + 540px + 24px)}.wing.r{left:calc(50% + 540px + 24px)}
+.wing.l{right:calc(50% + 540px + 24px)}
 .wing:hover{border-color:#2f7d32}
 .wing img{display:block;width:100%;height:auto;border-radius:6px;background:#fff}
 .wing .wt{display:block;margin-top:6px;font-weight:800;color:#2f7d32}
@@ -1553,7 +1553,7 @@ AD_CSS = """.wing{display:none;word-break:keep-all}
 @media (min-width:1320px) and (max-width:1439px){
 .wing{display:block;position:fixed;top:120px;width:100px;z-index:5;text-decoration:none;color:inherit;background:var(--card);
  border:1px solid var(--line);border-radius:10px;padding:6px;font-size:11px;line-height:1.35}
-.wing.l{right:calc(50% + 540px + 8px)}.wing.r{left:calc(50% + 540px + 8px)}
+.wing.l{right:calc(50% + 540px + 8px)}
 .wing img{display:block;width:100%;height:auto;border-radius:5px;background:#fff}
 .wing .wt{display:block;margin-top:4px;font-weight:800;color:#2f7d32}
 .wing .wp{display:block;margin-top:2px;font-weight:700}.wing .wp strong{color:#e8590c;font-size:12px}
@@ -1567,16 +1567,12 @@ AD_CSS = """.wing{display:none;word-break:keep-all}
 
 
 def ad_home():
-    """홈 양옆 날개 배너 (왼쪽 포스터, 오른쪽 가격)."""
+    """홈 왼쪽 날개 배너 (포스터)."""
     a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo" aria-label="제주 만보농장 황금향 특가 (광고)"'
     foot = '<span class="wg"><i>광고</i><b>밴드 주문 ›</b></span>'
     return (f'<style>{AD_CSS}</style>'
             f'<a class="wing l" {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="제주 만보농장 황금향 비상품 특별 이벤트 포스터">'
-            f'<span class="wt">🍊 제주 만보농장</span><span class="wp">황금향 비상품 특가</span>{foot}</a>'
-            f'<a class="wing r" {a}><span class="wt" style="margin-top:0">🍊 제주 만보농장</span>'
-            '<span class="wp">황금향 가정용</span><span class="wp">5kg <strong>3만원</strong></span>'
-            '<span class="wp">10kg <strong>5만5천원</strong></span><span class="wg" style="justify-content:flex-start">택배비 포함</span>'
-            f'{foot}</a>')
+            f'<span class="wt">🍊 제주 만보농장</span><span class="wp">황금향 비상품 특가</span>{foot}</a>')
 
 
 def tools_home():
