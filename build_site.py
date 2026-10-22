@@ -1535,43 +1535,48 @@ TOOLS = (("연금 계산기", "💰", "퇴직연금·개인연금을 연금으�
          ("라이프 플랜", "🗓️", "소득·지출·교육비·주택을 넣어 평생 현금흐름과 자산 흐름을 그려 봅니다."))
 
 
-# 홈 광고 배너 (제주 만보농장). 누르면 새 탭으로 밴드가 열리고, 클릭 수는 방문자 현황(c-ad-manbo)에서 본다.
+# 홈 양옆 날개 광고 (제주 만보농장). 본문(1080px) 바깥 빈 공간에만 작게 띄우고, 공간이 없는 화면(휴대폰·좁은 창)에서는 숨긴다.
+# 누르면 새 탭으로 밴드가 열리고, 클릭 수는 방문자 현황(c-ad-manbo)에서 본다.
 AD_URL = "https://www.band.us/@manbofarm"
-AD_CSS = """.home #ad{order:-2;margin-top:0}
-.ad{display:flex;gap:14px;align-items:stretch;text-decoration:none;color:inherit;background:var(--card);
- border:1px solid var(--line);border-left:5px solid #2f7d32;border-radius:14px;padding:12px 14px 12px 12px;position:relative}
-.ad:active{background:var(--line)}
-.ad img{width:118px;height:auto;flex:none;align-self:center;border-radius:8px;border:1px solid var(--line);background:#fff}
-.ad .ad-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.ad .ad-tag{position:absolute;top:8px;right:10px;font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
-.ad .ad-k{font-size:12px;font-weight:800;color:#2f7d32;letter-spacing:.2px}
-.ad b{font-size:18px;line-height:1.3;padding-right:34px;word-break:keep-all}
-.ad p,.ad small{word-break:keep-all}
-@media (max-width:420px){.ad p{display:none}.ad b{font-size:17px}.ad img{width:104px}}
-.ad p{margin:0;font-size:13px;color:var(--muted);line-height:1.45}
-.ad .ad-px{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-.ad .ad-px span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-size:13px;font-weight:700}
-.ad .ad-px strong{font-size:18px;font-weight:900;color:#e8590c;letter-spacing:-.3px}
-.ad small{font-size:12px;color:var(--muted)}
-.ad em{margin-top:auto;padding-top:4px;font-style:normal;font-weight:800;font-size:13px;color:#2f7d32}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .ad .ad-k,:root:not([data-theme=light]) .ad em{color:#69db7c}
- :root:not([data-theme=light]) .ad{border-left-color:#69db7c}:root:not([data-theme=light]) .ad .ad-px strong{color:#ff922b}}
-:root[data-theme=dark] .ad .ad-k,:root[data-theme=dark] .ad em{color:#69db7c}
-:root[data-theme=dark] .ad{border-left-color:#69db7c}:root[data-theme=dark] .ad .ad-px strong{color:#ff922b}"""
+AD_CSS = """.wing{display:none;word-break:keep-all}
+@media (min-width:1440px){
+.wing{display:block;position:fixed;top:120px;width:150px;z-index:5;text-decoration:none;color:inherit;background:var(--card);
+ border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 2px 10px rgba(0,0,0,.06);font-size:12px;line-height:1.4}
+.wing.l{right:calc(50% + 540px + 24px)}.wing.r{left:calc(50% + 540px + 24px)}
+.wing:hover{border-color:#2f7d32}
+.wing img{display:block;width:100%;height:auto;border-radius:6px;background:#fff}
+.wing .wt{display:block;margin-top:6px;font-weight:800;color:#2f7d32}
+.wing .wp{display:block;margin-top:2px;font-weight:700}.wing .wp strong{color:#e8590c;font-size:14px}
+.wing .wg{display:flex;justify-content:space-between;align-items:center;margin-top:4px;color:var(--muted);font-size:11px}
+.wing .wg i{font-style:normal;border:1px solid var(--line);border-radius:999px;padding:0 6px}
+.wing .wg b{color:#2f7d32}}
+@media (min-width:1320px) and (max-width:1439px){
+.wing{display:block;position:fixed;top:120px;width:100px;z-index:5;text-decoration:none;color:inherit;background:var(--card);
+ border:1px solid var(--line);border-radius:10px;padding:6px;font-size:11px;line-height:1.35}
+.wing.l{right:calc(50% + 540px + 8px)}.wing.r{left:calc(50% + 540px + 8px)}
+.wing img{display:block;width:100%;height:auto;border-radius:5px;background:#fff}
+.wing .wt{display:block;margin-top:4px;font-weight:800;color:#2f7d32}
+.wing .wp{display:block;margin-top:2px;font-weight:700}.wing .wp strong{color:#e8590c;font-size:12px}
+.wing .wg{display:flex;justify-content:space-between;align-items:center;margin-top:3px;color:var(--muted);font-size:10px}
+.wing .wg i{font-style:normal;border:1px solid var(--line);border-radius:999px;padding:0 5px}
+.wing .wg b{color:#2f7d32}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .wing .wt,:root:not([data-theme=light]) .wing .wg b{color:#69db7c}
+ :root:not([data-theme=light]) .wing .wp strong{color:#ff922b}}
+:root[data-theme=dark] .wing .wt,:root[data-theme=dark] .wing .wg b{color:#69db7c}
+:root[data-theme=dark] .wing .wp strong{color:#ff922b}"""
 
 
 def ad_home():
-    """홈 광고 배너 한 칸."""
-    return (f'<section class="sec" id="ad"><style>{AD_CSS}</style>'
-            f'<a class="ad" href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo">'
-            '<img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="제주 만보농장 황금향 비상품 특별 이벤트 포스터">'
-            '<div class="ad-t"><span class="ad-tag">광고</span>'
-            '<span class="ad-k">🍊 제주 만보농장</span>'
-            '<b>맛좋은 비상품 황금향 특별 이벤트</b>'
-            '<p>당도가 너무 좋아 한정 수량까지 빅세일. 오렌지처럼 4등분해 드세요.</p>'
-            '<div class="ad-px"><span>가정용 5kg <strong>3만원</strong></span><span>10kg <strong>5만5천원</strong></span></div>'
-            '<small>택배비 포함 · 후숙 NO, 냉장보관</small>'
-            '<em>밴드에서 주문하기 ›</em></div></a></section>')
+    """홈 양옆 날개 배너 (왼쪽 포스터, 오른쪽 가격)."""
+    a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo" aria-label="제주 만보농장 황금향 특가 (광고)"'
+    foot = '<span class="wg"><i>광고</i><b>밴드 주문 ›</b></span>'
+    return (f'<style>{AD_CSS}</style>'
+            f'<a class="wing l" {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="제주 만보농장 황금향 비상품 특별 이벤트 포스터">'
+            f'<span class="wt">🍊 제주 만보농장</span><span class="wp">황금향 비상품 특가</span>{foot}</a>'
+            f'<a class="wing r" {a}><span class="wt" style="margin-top:0">🍊 제주 만보농장</span>'
+            '<span class="wp">황금향 가정용</span><span class="wp">5kg <strong>3만원</strong></span>'
+            '<span class="wp">10kg <strong>5만5천원</strong></span><span class="wg" style="justify-content:flex-start">택배비 포함</span>'
+            f'{foot}</a>')
 
 
 def tools_home():
@@ -1862,14 +1867,13 @@ def build_home(now, daily, news, close, live=None, target=None, us=None):
             f'<div id="vcnt" hidden></div>'
             f'{podcast_home()}'
             f'<section class="sec" id="issue" hidden></section>'
-            f'{ad_home()}'
             f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
             f'{target_home(target)}{us_home(us)}{tools_home()}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
-            f'{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
+            f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
