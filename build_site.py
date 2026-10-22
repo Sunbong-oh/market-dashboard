@@ -1563,13 +1563,13 @@ AD_CSS = """.wing{display:none;word-break:keep-all}
 .wing-m{display:none}
 @media (max-width:1319px){
 .home .wing-m{order:-2;display:flex;align-items:center;gap:2px;margin:0 0 12px;background:var(--card);border:1px solid var(--line);
- border-left:4px solid #2f7d32;border-radius:12px;padding:6px 4px 6px 6px;word-break:keep-all}
+ border-left:4px solid #2f7d32;border-radius:12px;padding:6px 10px 6px 6px;word-break:keep-all}
 .wing-m a{flex:1;display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;min-width:0}
 .wing-m img{width:36px;height:auto;border-radius:4px;flex:none;background:#fff}
 .wing-m .t{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:1px;font-size:12.5px;line-height:1.35;min-width:0}
 .wing-m .t b{font-size:13px;color:#2f7d32}.wing-m .t strong{color:#e8590c}
 .wing-m .t i{font-style:normal;color:var(--muted);font-size:11px}
-.wing-m button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:4px 6px;cursor:pointer}}
+}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .wing-m .t b{color:#69db7c}:root:not([data-theme=light]) .wing-m .t strong{color:#ff922b}}
 :root[data-theme=dark] .wing-m .t b{color:#69db7c}:root[data-theme=dark] .wing-m .t strong{color:#ff922b}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .wing .wt,:root:not([data-theme=light]) .wing .wg b{color:#69db7c}
@@ -1587,14 +1587,11 @@ def ad_home():
 
 
 def ad_strip():
-    """휴대폰·좁은 화면: 홈 맨 위 한 줄 광고 띠 (× 누르면 그날은 숨김). 넓은 화면에선 숨기고 왼쪽 날개를 쓴다."""
+    """휴대폰·좁은 화면: 홈 맨 위 한 줄 광고 띠 (내용을 가리지 않아 닫기 버튼은 두지 않는다). 넓은 화면에선 숨기고 왼쪽 날개를 쓴다."""
     a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo" aria-label="제주 만보농장 황금향 특가 (광고)"'
     return (f'<style>{AD_CSS}</style><div class="wing-m" id="wingm"><a {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="">'
             '<span class="t"><b>🍊 제주 만보농장</b><span>황금향 5kg <strong>3만원</strong> · 10kg <strong>5만5천원</strong></span><i>광고 · 밴드 주문 ›</i></span></a>'
-            '<button type="button" aria-label="광고 닫기" onclick="this.parentNode.remove();'
-            "try{localStorage.setItem('ad-manbo-x',new Date(Date.now()+9*36e5).toISOString().slice(0,10))}catch(e){}\">×</button></div>"
-            "<script>try{if(localStorage.getItem('ad-manbo-x')===new Date(Date.now()+9*36e5).toISOString().slice(0,10))"
-            "document.getElementById('wingm').remove()}catch(e){}</script>")
+            '</div>')
 
 
 def tools_home():
