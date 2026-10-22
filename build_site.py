@@ -1756,7 +1756,9 @@ EARN_CSS = """
 .earn .cons{font-size:14.5px;font-weight:800;margin:3px 0}.earn.auto ul{margin-top:6px}.earn.auto li{margin:3px 0}
 .earn.auto li a{color:var(--text);text-decoration:none;font-weight:600}.earn.auto li span{font-size:12px;color:var(--muted)}
 .earn .px{background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0}.earn .pxh{font-size:13.5px;font-weight:800;margin-bottom:3px}
-.earn .pxr{font-size:13.5px;line-height:1.6}.earn .pl{font-weight:700}.earn .ps,.earn .pr{font-size:12px;color:var(--muted)}
+.earn .pxr{font-size:13.5px;line-height:1.75}.earn .pl{font-weight:700}.earn .ps,.earn .pr{font-size:12px;color:var(--muted)}
+.earn .pxr b{font-size:16px;font-variant-numeric:tabular-nums}
+.earn .pxr b.up,.earn .pxr b.down{font-size:21px;font-weight:900;letter-spacing:-.3px}
 .earn .up{color:var(--up)}.earn .down{color:var(--down)}
 """
 EARN_JS = """<script>/* 실적 속보: 발표 6시간 뒤엔 맨 위에서 내려 데일리(오늘의 증시 캘린더) 칸 바로 아래로,
