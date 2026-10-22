@@ -1432,7 +1432,7 @@ def build_reports():
             '추정치는 컨센서스가 아닌 산출값이며, 투자 판단의 참고 자료입니다.</div>' + REPORT_JS)
     dest = OUT / "reports"
     dest.mkdir(parents=True, exist_ok=True)
-    (dest / "index.html").write_text(page("📑 실시간 작성 종목 보고서", body, "../", "reports/", "SURGE REPORT",
+    (dest / "index.html").write_text(page("📑 실시간 작성된 종목 보고서", body, "../", "reports/", "SURGE REPORT",
                                           "실적 급증 카드가 나간 종목 · 최신순"), encoding="utf-8")
 
 
@@ -1600,7 +1600,9 @@ EARN_CSS = """
 .earn .pxr b{font-size:16px;font-variant-numeric:tabular-nums}
 .earn .pxr b.up,.earn .pxr b.down{font-size:21px;font-weight:900;letter-spacing:-.3px}
 .earn .up{color:var(--up)}.earn .down{color:var(--down)}
-.earn .rpt{display:inline-block;margin:8px 0 4px;padding:8px 14px;border-radius:10px;background:#F2A900;color:#3D3A35;font-weight:800;font-size:14.5px;text-decoration:none}
+.earn .rptw{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
+.earn .rpt-tap{color:#E5484D;font-weight:800;font-size:14.5px;white-space:nowrap}
+.earn .rpt{display:inline-block;margin:0;padding:8px 14px;border-radius:10px;background:#F2A900;color:#3D3A35;font-weight:800;font-size:14.5px;text-decoration:none}
 """
 EARN_JS = """<script>/* 실적 속보: 오늘(한국 날짜) 발표는 하루 종일 맨 위 '오늘의 실적속보'에 두고, 날이 바뀌면 데일리(오늘의 증시 캘린더) 칸
    바로 아래로 내려 '전일 실적 발표' 표를 붙인 뒤 발표 다음 날 오전 10시에 지운다.
@@ -1652,7 +1654,7 @@ EARN_LIVE_JS = r"""<script>
   box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>'+e(i.icon||'⚡')+' '+e(i.head||'실적 발표')+' · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
    (i.item&&i.item!==i.name?'<div class="cal">'+e(i.note||'캘린더')+': '+e(i.item)+'</div>':'')+
    (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+
-   (i.report?'<a class="rpt" href="'+e(i.report)+'" target="_blank" rel="noopener">📑 실시간 작성 종목 보고서</a>':'')+px(i)+
+   (i.report?'<div class="rptw"><a class="rpt" href="'+e(i.report)+'" target="_blank" rel="noopener">📑 실시간 작성된 종목 보고서</a><span class="rpt-tap">&lt;-- 터치!!</span></div>':'')+px(i)+
    '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
   if(window.earnPlace)earnPlace();else box.hidden=!its.length}
  function get(g,i,cb){if(i>=g.length)return cb(null);
