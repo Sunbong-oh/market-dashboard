@@ -755,10 +755,16 @@ VISITS_CSS = """
 .vz .bar{height:9px;border-radius:5px;background:var(--accent);display:block;min-width:2px}
 .vz tr.today td{font-weight:900;background:var(--bg)}
 .vz .note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:14px}
+.vz .vzh{font-size:16px;font-weight:900;margin:22px 0 10px}
+.vz .vzh:first-child{margin-top:0}
+.vz .vzh a{color:inherit;text-decoration:none;border-bottom:2px solid var(--accent)}
 """
 
 VISITS_JS = """<script>
 (function(){var API='{VISIT_API}',NS='{VISIT_NS}',DAYS=14,box=document.getElementById('vz');
+ var PAGES=[{k:'',t:'투자노트 홈페이지',u:'../'},
+            {k:'pen',t:'연금 계산기',u:'https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX'},
+            {k:'life',t:'라이프 플랜',u:'https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt'}];
  function kst(off){var d=new Date(Date.now()+9*36e5-(off||0)*864e5);return d.toISOString().slice(0,10)}
  function n(v){return (v||0).toLocaleString('ko-KR')}
  function get(k){return fetch(API+'/get/'+NS+'/'+k,{cache:'no-store'}).then(function(r){return r.json()})
@@ -770,26 +776,33 @@ VISITS_JS = """<script>
     try{localStorage.setItem('brian-admin','1')}catch(e){} load()}else{alert('비밀번호가 다릅니다.')}};
   document.getElementById('vzgo').onclick=go;
   document.getElementById('vzpw').onkeydown=function(e){if(e.key==='Enter')go()}}
+ var days=[];for(var i=0;i<DAYS;i++)days.push(kst(i));
+ function keys(pg){var sfx=pg.k?pg.k+'-':'',out=[];
+  days.forEach(function(d){var y=d.replace(/-/g,'');out.push('v-'+sfx+y,'p-'+sfx+y)});
+  out.push('t-v'+(pg.k?'-'+pg.k:''),'t-p'+(pg.k?'-'+pg.k:''));return out}
+ function block(pg,vals){
+  var TV=vals[vals.length-2],TP=vals[vals.length-1],V=[],P=[];
+  for(var i=0;i<DAYS;i++){V.push(vals[i*2]||0);P.push(vals[i*2+1]||0)}
+  var wk=V.slice(0,7).reduce(function(a,b){return a+b},0),mx=Math.max.apply(0,V.concat([1]));
+  var wd='일월화수목금토';
+  var rows=days.map(function(d,i){var dt=new Date(d+'T00:00:00+09:00');
+    return '<tr'+(i?'':' class="today"')+'><td>'+d.slice(5)+'('+wd[dt.getUTCDay()]+')</td>'+
+     '<td>'+n(V[i])+'</td><td>'+n(P[i])+'</td>'+
+     '<td style="width:40%"><i class="bar" style="width:'+Math.round(V[i]/mx*100)+'%"></i></td></tr>'}).join('');
+  return '<h2 class="vzh"><a href="'+pg.u+'"'+(pg.k?' target="_blank" rel="noopener"':'')+'>'+pg.t+'</a></h2>'+
+   '<div class="tiles">'+
+   '<div class="tile"><div class="k">오늘 방문자</div><div class="v">'+n(V[0])+'</div><div class="s">'+days[0]+'</div></div>'+
+   '<div class="tile"><div class="k">오늘 조회수</div><div class="v">'+n(P[0])+'</div><div class="s">열어 본 횟수</div></div>'+
+   '<div class="tile"><div class="k">최근 7일 방문자</div><div class="v">'+n(wk)+'</div><div class="s">어제 '+n(V[1])+'명</div></div>'+
+   '<div class="tile"><div class="k">누적 방문자</div><div class="v">'+n(TV)+'</div><div class="s">조회수 '+n(TP)+'회</div></div></div>'+
+   '<section class="panel"><table><thead><tr><th>날짜</th><th>방문자</th><th>조회수</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></section>';
+ }
  function load(){box.innerHTML='<p class="note">불러오는 중…</p>';
-  var days=[],ks=[];for(var i=0;i<DAYS;i++){var d=kst(i);days.push(d);ks.push('v-'+d.replace(/-/g,''),'p-'+d.replace(/-/g,''))}
-  Promise.all(ks.map(get).concat([get('t-v'),get('t-p')])).then(function(vals){
-   var TV=vals[vals.length-2],TP=vals[vals.length-1];
-   if(vals[0]===null&&vals[1]===null){box.innerHTML='<p class="note">집계를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.</p>';return}
-   var V=[],P=[];for(var i=0;i<DAYS;i++){V.push(vals[i*2]||0);P.push(vals[i*2+1]||0)}
-   var wk=V.slice(0,7).reduce(function(a,b){return a+b},0),mx=Math.max.apply(0,V.concat([1]));
-   var wd='일월화수목금토';
-   var rows=days.map(function(d,i){var dt=new Date(d+'T00:00:00+09:00');
-     return '<tr'+(i?'':' class="today"')+'><td>'+d.slice(5)+'('+wd[dt.getUTCDay()]+')</td>'+
-      '<td>'+n(V[i])+'</td><td>'+n(P[i])+'</td>'+
-      '<td style="width:40%"><i class="bar" style="width:'+Math.round(V[i]/mx*100)+'%"></i></td></tr>'}).join('');
-   box.innerHTML='<div class="tiles">'+
-     '<div class="tile"><div class="k">오늘 방문자</div><div class="v">'+n(V[0])+'</div><div class="s">'+days[0]+'</div></div>'+
-     '<div class="tile"><div class="k">오늘 조회수</div><div class="v">'+n(P[0])+'</div><div class="s">열어 본 횟수</div></div>'+
-     '<div class="tile"><div class="k">최근 7일 방문자</div><div class="v">'+n(wk)+'</div><div class="s">어제 '+n(V[1])+'명</div></div>'+
-     '<div class="tile"><div class="k">누적 방문자</div><div class="v">'+n(TV)+'</div><div class="s">조회수 '+n(TP)+'회</div></div></div>'+
-     '<section class="panel"><table><thead><tr><th>날짜</th><th>방문자</th><th>조회수</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></section>'+
+  Promise.all(PAGES.map(function(pg){return Promise.all(keys(pg).map(get))})).then(function(all){
+   if(all[0][0]===null&&all[0][1]===null){box.innerHTML='<p class="note">집계를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.</p>';return}
+   box.innerHTML=PAGES.map(function(pg,i){return block(pg,all[i])}).join('')+
      '<p class="note">· 방문자는 브라우저 하나당 하루 한 번, 조회수는 페이지를 열 때마다 셉니다.<br>'+
-     '· 관리 화면을 켠 기기(내 휴대폰·PC)의 방문은 세지 않습니다.<br>'+
+     '· 관리 화면을 켠 기기(내 휴대폰·PC)의 홈페이지 방문은 세지 않고, 연금 계산기·라이프 플랜은 내 계정으로 열었을 때 세지 않습니다.<br>'+
      '· 숫자만 세는 무료 카운터를 쓰므로 누가 왔는지(아이피·지역·사람)는 알 수 없습니다.<br>'+
      '· 이 주소는 메뉴에 없고 비밀번호로 잠겨 있지만, 주소와 비밀번호를 아는 사람은 볼 수 있습니다.</p>'})}
  admin()?load():gate()})();
