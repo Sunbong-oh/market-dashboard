@@ -1409,6 +1409,7 @@ REPORT_CSS = """
 """
 REPORT_JS = r"""<script>
 (function(){var SRC=%s,box=document.getElementById('rp');
+ function rp(u){var m=/\/surge-reports\/reports\/(\d{4}-\d{2}-\d{2}\/\w+)\.pdf/.exec(u||'');return m?'view.html?f='+m[1]:u}
  function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function eok(v){return v==null?'-':(Math.abs(v)>=1e4?(v/1e4).toFixed(2)+'조':Math.round(v).toLocaleString()+'억')}
  function draw(rows){if(!rows||!rows.length){box.innerHTML='<p class="err">아직 만든 보고서가 없습니다. 실적 급증 카드가 나가면 몇 분 뒤 여기에 생깁니다.</p>';return}
@@ -1416,13 +1417,30 @@ REPORT_JS = r"""<script>
    var chg=r.turn?'<b class="up">흑자전환</b>':(r.chg!=null?'<b class="up">'+(r.chg>0?'+':'')+r.chg.toFixed(1)+'%%</b>':'');
    h+='<div class="rp"><div class="nm">'+e(r.name)+'<small>'+e(r.code)+(r.period?' · '+e(r.period)+' 잠정':'')+'</small></div>'+
     (r.op!=null?'<div class="op">영업이익 '+eok(r.op)+' '+chg+(r.basis?' <span>'+e(r.basis)+'</span>':'')+'</div>':'')+
-    '<a class="go" href="'+e(r.pdf)+'" target="_blank" rel="noopener">📑 보고서 열기</a></div>'});box.innerHTML=h}
+    '<a class="go" href="'+e(rp(r.pdf))+'" target="_blank" rel="noopener">📑 보고서 열기</a></div>'});box.innerHTML=h}
  function get(i){if(i>=SRC.length)return draw(null);
   fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
   .then(function(r){if(!r.ok)throw 0;return r.json()}).then(draw).catch(function(){get(i+1)})}
  get(0);
 })();
 </script>""" % json.dumps(REPORT_SRC)
+
+
+# 보고서 PDF 바로 열기: surge-reports 브랜치의 PDF를 raw 주소에서 받아 브라우저 PDF 화면으로 연다
+# (GitHub 화면이 아니라 파일 자체가 보이게). view.html?f=2026-10-22/300120
+REPORT_VIEW = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>종목 보고서</title><style>body{margin:0;background:#FAF8F3;color:#3D3A35;font:16px/1.6 'Noto Sans KR',sans-serif;display:flex;min-height:100vh;
+align-items:center;justify-content:center;text-align:center;padding:16px}a{display:inline-block;margin-top:12px;padding:9px 16px;border-radius:10px;
+background:#F2A900;color:#3D3A35;font-weight:800;text-decoration:none}</style></head><body><div id="m">📑 보고서 여는 중…</div>
+<script>
+(function(){var f=(new URLSearchParams(location.search).get('f')||'').replace(/[^0-9A-Za-z_\/-]/g,''),m=document.getElementById('m');
+ if(!/^\d{4}-\d{2}-\d{2}\/[0-9A-Za-z]{6}$/.test(f)){m.textContent='보고서 주소가 올바르지 않습니다.';return}
+ var raw='https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/surge-reports/reports/'+f+'.pdf',name=f.replace('/','_')+'_종목보고서.pdf';
+ fetch(raw+'?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw r.status;return r.blob()}).then(function(b){
+  var u=URL.createObjectURL(new Blob([b],{type:'application/pdf'}));
+  m.innerHTML='📑 보고서가 열리지 않으면 아래를 누르세요<br><a href="'+u+'" download="'+name+'">PDF 열기</a>';location.replace(u)})
+ .catch(function(s){m.innerHTML=(s===404?'보고서를 아직 만드는 중입니다. 5~10분 뒤 다시 열어 주세요.':'보고서를 불러오지 못했습니다.')+'<br><a href="javascript:location.reload()">다시 시도</a>'})})();
+</script></body></html>"""
 
 
 def build_reports():
@@ -1432,6 +1450,7 @@ def build_reports():
             '추정치는 컨센서스가 아닌 산출값이며, 투자 판단의 참고 자료입니다.</div>' + REPORT_JS)
     dest = OUT / "reports"
     dest.mkdir(parents=True, exist_ok=True)
+    (dest / "view.html").write_text(REPORT_VIEW, encoding="utf-8")
     (dest / "index.html").write_text(page("📑 실시간 작성된 종목 보고서", body, "../", "reports/", "SURGE REPORT",
                                           "실적 급증 카드가 나간 종목 · 최신순"), encoding="utf-8")
 
@@ -1641,6 +1660,7 @@ EARN_LIVE_SRC = (("https://api.github.com/repos/Sunbong-oh/kb-market-report/cont
                   "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/earnings-quick/earnings.json"))
 EARN_LIVE_JS = r"""<script>
 (function(){var SRC=%s,box=document.getElementById('earn-live');if(!box)return;
+ function rp(u){var m=/\/surge-reports\/reports\/(\d{4}-\d{2}-\d{2}\/\w+)\.pdf/.exec(u||'');return m?'reports/view.html?f='+m[1]:u}
  function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function pc(v){return v==null?'':'<b class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+Number(v).toFixed(2)+'%%</b>'}
  function px(i){if(!(i.px||[]).length)return '';return '<div class="px"><div class="pxh">📈 실적 발표 후 주가 반응</div>'+i.px.map(function(r){
@@ -1657,7 +1677,7 @@ EARN_LIVE_JS = r"""<script>
   box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>'+e(i.icon||'⚡')+' '+e(i.head||'실적 발표')+' · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
    (i.item&&i.item!==i.name?'<div class="cal">'+e(i.note||'캘린더')+': '+e(i.item)+'</div>':'')+
    (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+
-   (i.report?'<div class="rptw"><a class="rpt" href="'+e(i.report)+'" target="_blank" rel="noopener">📑 실시간 작성된 종목 보고서</a><span class="rpt-tap">&lt;-- 터치!!</span></div>':'')+px(i)+
+   (i.report?'<div class="rptw"><a class="rpt" href="'+e(rp(i.report))+'" target="_blank" rel="noopener">📑 실시간 작성된 종목 보고서</a><span class="rpt-tap">&lt;-- 터치!!</span></div>':'')+px(i)+
    '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
   if(window.earnPlace)earnPlace();else box.hidden=!its.length}
  function get(g,i,cb){if(i>=g.length)return cb(null);
