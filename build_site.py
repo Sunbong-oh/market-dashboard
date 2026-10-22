@@ -1562,15 +1562,14 @@ AD_CSS = """.wing{display:none;word-break:keep-all}
 .wing .wg b{color:#2f7d32}}
 .wing-m{display:none}
 @media (max-width:1319px){
-.wing-m{display:flex;align-items:center;gap:2px;position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:20;
- background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.18);padding:5px 4px 5px 5px;max-width:210px;word-break:keep-all}
-.wing-m a{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;min-width:0}
-.wing-m img{width:38px;height:auto;border-radius:4px;flex:none;background:#fff}
-.wing-m .t{display:flex;flex-direction:column;font-size:11.5px;line-height:1.3;min-width:0}
-.wing-m .t b{font-size:12.5px;color:#2f7d32}.wing-m .t strong{color:#e8590c}
-.wing-m .t i{font-style:normal;color:var(--muted);font-size:10px}
-.wing-m button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:4px 6px;cursor:pointer}
-.home{padding-bottom:64px}}
+.home .wing-m{order:-2;display:flex;align-items:center;gap:2px;margin:0 0 12px;background:var(--card);border:1px solid var(--line);
+ border-left:4px solid #2f7d32;border-radius:12px;padding:6px 4px 6px 6px;word-break:keep-all}
+.wing-m a{flex:1;display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;min-width:0}
+.wing-m img{width:36px;height:auto;border-radius:4px;flex:none;background:#fff}
+.wing-m .t{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:1px;font-size:12.5px;line-height:1.35;min-width:0}
+.wing-m .t b{font-size:13px;color:#2f7d32}.wing-m .t strong{color:#e8590c}
+.wing-m .t i{font-style:normal;color:var(--muted);font-size:11px}
+.wing-m button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:4px 6px;cursor:pointer}}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .wing-m .t b{color:#69db7c}:root:not([data-theme=light]) .wing-m .t strong{color:#ff922b}}
 :root[data-theme=dark] .wing-m .t b{color:#69db7c}:root[data-theme=dark] .wing-m .t strong{color:#ff922b}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .wing .wt,:root:not([data-theme=light]) .wing .wg b{color:#69db7c}
@@ -1583,12 +1582,15 @@ def ad_home():
     """홈 왼쪽 날개 배너 (포스터)."""
     a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo" aria-label="제주 만보농장 황금향 특가 (광고)"'
     foot = '<span class="wg"><i>광고</i><b>밴드 주문 ›</b></span>'
-    return (f'<style>{AD_CSS}</style>'
-            f'<a class="wing l" {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="제주 만보농장 황금향 비상품 특별 이벤트 포스터">'
-            f'<span class="wt">🍊 제주 만보농장</span><span class="wp">황금향 비상품 특가</span>{foot}</a>'
-            # 휴대폰·좁은 화면: 왼쪽 아래 작은 배너 (× 누르면 그날은 숨김)
-            f'<div class="wing-m" id="wingm"><a {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="">'
-            '<span class="t"><b>🍊 만보농장 황금향</b><span>5kg <strong>3만원</strong> · 택배비 포함</span><i>광고 · 밴드 주문 ›</i></span></a>'
+    return (f'<a class="wing l" {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="제주 만보농장 황금향 비상품 특별 이벤트 포스터">'
+            f'<span class="wt">🍊 제주 만보농장</span><span class="wp">황금향 비상품 특가</span>{foot}</a>')
+
+
+def ad_strip():
+    """휴대폰·좁은 화면: 홈 맨 위 한 줄 광고 띠 (× 누르면 그날은 숨김). 넓은 화면에선 숨기고 왼쪽 날개를 쓴다."""
+    a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo" aria-label="제주 만보농장 황금향 특가 (광고)"'
+    return (f'<style>{AD_CSS}</style><div class="wing-m" id="wingm"><a {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="">'
+            '<span class="t"><b>🍊 만보농장 황금향</b><span>5kg <strong>3만원</strong> · 10kg <strong>5만5천원</strong></span><i>광고 · 밴드 주문 ›</i></span></a>'
             '<button type="button" aria-label="광고 닫기" onclick="this.parentNode.remove();'
             "try{localStorage.setItem('ad-manbo-x',new Date(Date.now()+9*36e5).toISOString().slice(0,10))}catch(e){}\">×</button></div>"
             "<script>try{if(localStorage.getItem('ad-manbo-x')===new Date(Date.now()+9*36e5).toISOString().slice(0,10))"
@@ -1881,6 +1883,7 @@ def build_home(now, daily, news, close, live=None, target=None, us=None):
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}{ISSUE_CSS}{VCNT_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
             f'<div id="vcnt" hidden></div>'
+            f'{ad_strip()}'
             f'{podcast_home()}'
             f'<section class="sec" id="issue" hidden></section>'
             f'{earnings_home(now)}'
