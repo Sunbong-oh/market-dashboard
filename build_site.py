@@ -709,11 +709,33 @@ VISIT_JS = """<script>
  try{if(localStorage.getItem('brian-admin')==='1')return}catch(e){}  /* 내 방문은 빼고 */
  var d=new Date(Date.now()+9*36e5).toISOString().slice(0,10).replace(/-/g,'');
  var hit=function(k){try{fetch('{VISIT_API}/hit/{VISIT_NS}/'+k,{mode:'cors',cache:'no-store'}).catch(function(){})}catch(e){}};
- hit('p-'+d);
- try{if(localStorage.getItem('brian-seen')!==d){localStorage.setItem('brian-seen',d);hit('v-'+d)}}catch(e){hit('v-'+d)}
+ hit('p-'+d);hit('t-p');
+ var first=function(){hit('v-'+d);hit('t-v')};
+ try{if(localStorage.getItem('brian-seen')!==d){localStorage.setItem('brian-seen',d);first()}}catch(e){first()}
 })();
 </script>""".replace("{VISIT_API}", VISIT_API).replace("{VISIT_NS}", VISIT_NS)
 
+
+# 홈 맨 위 방문자 띠: 관리 화면(brian-admin)을 켠 기기에서만 보인다. 손님 화면에는 나오지 않는다.
+VCNT_CSS = """#vcnt{order:-3;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px;font-size:13px}
+#vcnt b{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+#vcnt .c{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;display:flex;gap:6px;align-items:center}
+#vcnt .k{color:var(--muted);font-weight:700}
+#vcnt a{margin-left:auto;color:var(--muted);text-decoration:none;font-weight:700}"""
+VCNT_JS = """<script>
+(function(){var box=document.getElementById('vcnt');if(!box)return;
+ try{if(localStorage.getItem('brian-admin')!=='1')return}catch(e){return}
+ var d=new Date(Date.now()+9*36e5).toISOString().slice(0,10).replace(/-/g,'');
+ var get=function(k){return fetch('{VISIT_API}/get/{VISIT_NS}/'+k,{cache:'no-store'}).then(function(r){return r.json()})
+   .then(function(j){return j&&j.value||0}).catch(function(){return null})};
+ Promise.all([get('v-'+d),get('t-v')]).then(function(v){
+  if(v[0]===null&&v[1]===null)return;
+  var n=function(x){return (x||0).toLocaleString('ko-KR')};
+  box.innerHTML='<span class="c"><span class="k">오늘 방문자</span><b>'+n(v[0])+'</b></span>'+
+   '<span class="c"><span class="k">누적</span><b>'+n(v[1])+'</b></span>'+
+   '<a href="visits/">자세히 ›</a>';
+  box.hidden=false})})();
+</script>""".replace("{VISIT_API}", VISIT_API).replace("{VISIT_NS}", VISIT_NS)
 
 VISITS_CSS = """
 .vz{max-width:720px}
@@ -750,7 +772,8 @@ VISITS_JS = """<script>
   document.getElementById('vzpw').onkeydown=function(e){if(e.key==='Enter')go()}}
  function load(){box.innerHTML='<p class="note">불러오는 중…</p>';
   var days=[],ks=[];for(var i=0;i<DAYS;i++){var d=kst(i);days.push(d);ks.push('v-'+d.replace(/-/g,''),'p-'+d.replace(/-/g,''))}
-  Promise.all(ks.map(get)).then(function(vals){
+  Promise.all(ks.map(get).concat([get('t-v'),get('t-p')])).then(function(vals){
+   var TV=vals[vals.length-2],TP=vals[vals.length-1];
    if(vals[0]===null&&vals[1]===null){box.innerHTML='<p class="note">집계를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.</p>';return}
    var V=[],P=[];for(var i=0;i<DAYS;i++){V.push(vals[i*2]||0);P.push(vals[i*2+1]||0)}
    var wk=V.slice(0,7).reduce(function(a,b){return a+b},0),mx=Math.max.apply(0,V.concat([1]));
@@ -762,7 +785,8 @@ VISITS_JS = """<script>
    box.innerHTML='<div class="tiles">'+
      '<div class="tile"><div class="k">오늘 방문자</div><div class="v">'+n(V[0])+'</div><div class="s">'+days[0]+'</div></div>'+
      '<div class="tile"><div class="k">오늘 조회수</div><div class="v">'+n(P[0])+'</div><div class="s">열어 본 횟수</div></div>'+
-     '<div class="tile"><div class="k">최근 7일 방문자</div><div class="v">'+n(wk)+'</div><div class="s">어제 '+n(V[1])+'명</div></div></div>'+
+     '<div class="tile"><div class="k">최근 7일 방문자</div><div class="v">'+n(wk)+'</div><div class="s">어제 '+n(V[1])+'명</div></div>'+
+     '<div class="tile"><div class="k">누적 방문자</div><div class="v">'+n(TV)+'</div><div class="s">조회수 '+n(TP)+'회</div></div></div>'+
      '<section class="panel"><table><thead><tr><th>날짜</th><th>방문자</th><th>조회수</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></section>'+
      '<p class="note">· 방문자는 브라우저 하나당 하루 한 번, 조회수는 페이지를 열 때마다 셉니다.<br>'+
      '· 관리 화면을 켠 기기(내 휴대폰·PC)의 방문은 세지 않습니다.<br>'+
@@ -2012,7 +2036,8 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=
         more3 = f'<a href="close/">{label(close["day"])}</a>'
     else:
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
-    body = (f'<style>{HOME_CSS}{ISSUE_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
+    body = (f'<style>{HOME_CSS}{ISSUE_CSS}{VCNT_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
+            f'<div id="vcnt" hidden></div>'
             f'{podcast_home()}'
             f'<section class="sec" id="issue" hidden></section>'
             f'{earnings_home(now)}'
@@ -2021,7 +2046,7 @@ def build_home(now, daily, news, close, live=None, stocks=None, target=None, us=
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
             f'{target_home(target)}{us_home(us)}{tools_home()}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
-            f'{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}')
+            f'{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
