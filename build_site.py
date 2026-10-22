@@ -400,6 +400,10 @@ VISIT_JS = """<script>
   var a=e.target&&e.target.closest?e.target.closest('a[href*="claude.ai/artifact/"]'):null;if(!a)return;
   var k=ART[(a.getAttribute('href')||'').split('/artifact/')[1]];if(!k)return;
   hit('c-'+k+'-'+d);hit('t-c-'+k)},true);
+ /* 홈 광고 배너 클릭 */
+ document.addEventListener('click',function(e){
+  var a=e.target&&e.target.closest?e.target.closest('a[data-ad]'):null;if(!a)return;
+  var k='ad-'+a.getAttribute('data-ad');hit('c-'+k+'-'+d);hit('t-c-'+k)},true);
 })();
 </script>""".replace("{VISIT_API}", VISIT_API).replace("{VISIT_NS}", VISIT_NS)
 
@@ -452,7 +456,8 @@ VISITS_JS = """<script>
 (function(){var API='{VISIT_API}',NS='{VISIT_NS}',DAYS=14,box=document.getElementById('vz');
  var PAGES=[{k:'',t:'투자노트 홈페이지',u:'../'},
             {k:'pen',t:'연금 계산기',u:'https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX'},
-            {k:'life',t:'라이프 플랜',u:'https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt'}];
+            {k:'life',t:'라이프 플랜',u:'https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt'},
+            {k:'ad-manbo',t:'광고 · 제주 만보농장',u:'https://www.band.us/@manbofarm',ad:1}];
  function kst(off){var d=new Date(Date.now()+9*36e5-(off||0)*864e5);return d.toISOString().slice(0,10)}
  function n(v){return (v||0).toLocaleString('ko-KR')}
  function get(k){return fetch(API+'/get/'+NS+'/'+k,{cache:'no-store'}).then(function(r){return r.json()})
@@ -478,6 +483,15 @@ VISITS_JS = """<script>
     return '<tr'+(i?'':' class="today"')+'><td>'+d.slice(5)+'('+wd[dt.getUTCDay()]+')</td>'+
      '<td>'+n(V[i])+'</td><td>'+n(P[i])+'</td>'+
      '<td style="width:40%"><i class="bar" style="width:'+Math.round(V[i]/mx*100)+'%"></i></td></tr>'}).join('');
+  if(pg.ad){var rws=days.map(function(d,i){var dt=new Date(d+'T00:00:00+09:00');
+     return '<tr'+(i?'':' class="today"')+'><td>'+d.slice(5)+'('+wd[dt.getUTCDay()]+')</td><td>'+n(V[i])+'</td>'+
+      '<td style="width:55%"><i class="bar" style="width:'+Math.round(V[i]/mx*100)+'%"></i></td></tr>'}).join('');
+   return '<h2 class="vzh"><a href="'+pg.u+'" target="_blank" rel="noopener">'+pg.t+'</a></h2>'+
+    '<div class="tiles">'+
+    '<div class="tile"><div class="k">오늘 배너 클릭</div><div class="v">'+n(V[0])+'</div><div class="s">'+days[0]+'</div></div>'+
+    '<div class="tile"><div class="k">최근 7일 클릭</div><div class="v">'+n(wk)+'</div><div class="s">어제 '+n(V[1])+'회</div></div>'+
+    '<div class="tile"><div class="k">누적 클릭</div><div class="v">'+n(TV)+'</div><div class="s">홈페이지 배너를 누른 횟수</div></div></div>'+
+    '<section class="panel"><table><thead><tr><th>날짜</th><th>클릭</th><th></th></tr></thead><tbody>'+rws+'</tbody></table></section>'}
   var art=!!pg.k;
   return '<h2 class="vzh"><a href="'+pg.u+'"'+(art?' target="_blank" rel="noopener"':'')+'>'+pg.t+'</a></h2>'+
    '<div class="tiles">'+
@@ -1521,6 +1535,45 @@ TOOLS = (("연금 계산기", "💰", "퇴직연금·개인연금을 연금으�
          ("라이프 플랜", "🗓️", "소득·지출·교육비·주택을 넣어 평생 현금흐름과 자산 흐름을 그려 봅니다."))
 
 
+# 홈 광고 배너 (제주 만보농장). 누르면 새 탭으로 밴드가 열리고, 클릭 수는 방문자 현황(c-ad-manbo)에서 본다.
+AD_URL = "https://www.band.us/@manbofarm"
+AD_CSS = """.home #ad{order:-2;margin-top:0}
+.ad{display:flex;gap:14px;align-items:stretch;text-decoration:none;color:inherit;background:var(--card);
+ border:1px solid var(--line);border-left:5px solid #2f7d32;border-radius:14px;padding:12px 14px 12px 12px;position:relative}
+.ad:active{background:var(--line)}
+.ad img{width:118px;height:auto;flex:none;align-self:center;border-radius:8px;border:1px solid var(--line);background:#fff}
+.ad .ad-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.ad .ad-tag{position:absolute;top:8px;right:10px;font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+.ad .ad-k{font-size:12px;font-weight:800;color:#2f7d32;letter-spacing:.2px}
+.ad b{font-size:18px;line-height:1.3;padding-right:34px;word-break:keep-all}
+.ad p,.ad small{word-break:keep-all}
+@media (max-width:420px){.ad p{display:none}.ad b{font-size:17px}.ad img{width:104px}}
+.ad p{margin:0;font-size:13px;color:var(--muted);line-height:1.45}
+.ad .ad-px{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.ad .ad-px span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-size:13px;font-weight:700}
+.ad .ad-px strong{font-size:18px;font-weight:900;color:#e8590c;letter-spacing:-.3px}
+.ad small{font-size:12px;color:var(--muted)}
+.ad em{margin-top:auto;padding-top:4px;font-style:normal;font-weight:800;font-size:13px;color:#2f7d32}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .ad .ad-k,:root:not([data-theme=light]) .ad em{color:#69db7c}
+ :root:not([data-theme=light]) .ad{border-left-color:#69db7c}:root:not([data-theme=light]) .ad .ad-px strong{color:#ff922b}}
+:root[data-theme=dark] .ad .ad-k,:root[data-theme=dark] .ad em{color:#69db7c}
+:root[data-theme=dark] .ad{border-left-color:#69db7c}:root[data-theme=dark] .ad .ad-px strong{color:#ff922b}"""
+
+
+def ad_home():
+    """홈 광고 배너 한 칸."""
+    return (f'<section class="sec" id="ad"><style>{AD_CSS}</style>'
+            f'<a class="ad" href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo">'
+            '<img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="제주 만보농장 황금향 비상품 특별 이벤트 포스터">'
+            '<div class="ad-t"><span class="ad-tag">광고</span>'
+            '<span class="ad-k">🍊 제주 만보농장</span>'
+            '<b>맛좋은 비상품 황금향 특별 이벤트</b>'
+            '<p>당도가 너무 좋아 한정 수량까지 빅세일. 오렌지처럼 4등분해 드세요.</p>'
+            '<div class="ad-px"><span>가정용 5kg <strong>3만원</strong></span><span>10kg <strong>5만5천원</strong></span></div>'
+            '<small>택배비 포함 · 후숙 NO, 냉장보관</small>'
+            '<em>밴드에서 주문하기 ›</em></div></a></section>')
+
+
 def tools_home():
     """퇴직연금 계산기·라이프 플랜(아티팩트)로 가는 카드. 눌러서 새 탭으로 연다."""
     url = dict((label, href) for href, label in MENU)
@@ -1809,6 +1862,7 @@ def build_home(now, daily, news, close, live=None, target=None, us=None):
             f'<div id="vcnt" hidden></div>'
             f'{podcast_home()}'
             f'<section class="sec" id="issue" hidden></section>'
+            f'{ad_home()}'
             f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
