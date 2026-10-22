@@ -6,6 +6,7 @@
 - 소프트웨어 기업은 SEC 실적 보도자료에서 ARR(연간 반복 매출)을 찾아 함께 표시
 단독 실행: python newhighs.py [--send]   (--send 없으면 HTML/PNG만 만든다)
 """
+import hashlib
 import json
 import os
 import re
@@ -247,7 +248,7 @@ a{color:inherit;text-decoration:none}
 """
 
 NH_JS = """
-const h=location.hash.match(/^#shot([0-9]*)(?:-(\\d))?/);
+const h=location.hash.match(/^#shot([0-9]*)(?:-(\\d+))?/);  // 10장 이상이면 번호가 두 자리
 if(h){if(h[1])document.documentElement.style.zoom=innerWidth/+h[1];
 if(h[2])document.querySelectorAll('[data-photo]').forEach(e=>{if(e.dataset.photo!==h[2])e.style.display='none'})}
 document.documentElement.dataset.h=Math.ceil(document.querySelector('.wrap').getBoundingClientRect().bottom);
@@ -351,6 +352,16 @@ def run(now=None, send=False):
         if not shoot(png, i):
             raise RuntimeError("스크린샷 실패")
         pngs.append(png)
+    # 안전장치: 캡처가 잘못돼 같은 사진이 여러 장 나오면 한 번만 보낸다 (2026-10-23 1번 사진 10장 반복 발송)
+    seen, uniq = set(), []
+    for png in pngs:
+        h = hashlib.md5(png.read_bytes()).hexdigest()
+        if h in seen:
+            print("같은 사진이라 뺌:", png.name, file=sys.stderr)
+            continue
+        seen.add(h)
+        uniq.append(png)
+    pngs = uniq
     if send:
         cap = f"🚀 미국 52주 신고가 {len(highs)}종목 · {asof:%m/%d} 마감 (시총 ${MIN_CAP / 1e9:.0f}B↑, 시총 순)"
         # 텔레그램 앨범은 한 번에 10장까지라 나눠서 보낸다
