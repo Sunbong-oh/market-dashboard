@@ -89,7 +89,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
              "padding:8px 12px;background:#1c2330;font:600 14px/1.2 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif")
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
-MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("target/", "목표주가"),
+MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("target/", "목표주가"), ("reports/", "종목 보고서"),
         ("us/", "해외주식"), ("close/", "장마감 리포트"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
@@ -1394,6 +1394,48 @@ MAP_JS = r"""<script>
 </script>"""
 
 
+# 실시간 작성 종목 보고서: 국내 실적 급증 카드가 나간 종목마다 kb-market-report surge-report 작업이 만드는 PDF.
+# 목록은 surge-reports 브랜치 reports/index.json (최신순) → 화면에서 바로 읽어 날짜별로 보여 준다(사이트 다시 빌드 필요 없음).
+REPORT_SRC = ("https://api.github.com/repos/Sunbong-oh/kb-market-report/contents/reports/index.json?ref=surge-reports",
+              "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/surge-reports/reports/index.json")
+REPORT_CSS = """
+.rp-day{margin:18px 0 6px;font-size:15px;font-weight:800;color:var(--muted)}
+.rp{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;background:var(--card);border:1px solid var(--line);border-left:5px solid #F2A900;
+  border-radius:12px;padding:12px 14px;margin-top:8px}
+.rp .nm{font-size:16.5px;font-weight:800;flex:1 1 100%;min-width:0}.rp .op{flex:1 1 auto}.rp .nm small{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:6px}
+.rp .op{font-size:14px;font-weight:700}.rp .op b.up{color:var(--up)}.rp .op span{font-size:12px;color:var(--muted);font-weight:600}
+.rp a.go{padding:7px 12px;border-radius:9px;background:#F2A900;color:#3D3A35;font-weight:800;text-decoration:none;font-size:14px;white-space:nowrap}
+.rp-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
+"""
+REPORT_JS = r"""<script>
+(function(){var SRC=%s,box=document.getElementById('rp');
+ function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function eok(v){return v==null?'-':(Math.abs(v)>=1e4?(v/1e4).toFixed(2)+'조':Math.round(v).toLocaleString()+'억')}
+ function draw(rows){if(!rows||!rows.length){box.innerHTML='<p class="err">아직 만든 보고서가 없습니다. 실적 급증 카드가 나가면 몇 분 뒤 여기에 생깁니다.</p>';return}
+  var last='',h='';rows.forEach(function(r){if(r.day!==last){last=r.day;h+='<div class="rp-day">'+e(r.day)+'</div>'}
+   var chg=r.turn?'<b class="up">흑자전환</b>':(r.chg!=null?'<b class="up">'+(r.chg>0?'+':'')+r.chg.toFixed(1)+'%%</b>':'');
+   h+='<div class="rp"><div class="nm">'+e(r.name)+'<small>'+e(r.code)+(r.period?' · '+e(r.period)+' 잠정':'')+'</small></div>'+
+    (r.op!=null?'<div class="op">영업이익 '+eok(r.op)+' '+chg+(r.basis?' <span>'+e(r.basis)+'</span>':'')+'</div>':'')+
+    '<a class="go" href="'+e(r.pdf)+'" target="_blank" rel="noopener">📑 보고서 열기</a></div>'});box.innerHTML=h}
+ function get(i){if(i>=SRC.length)return draw(null);
+  fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
+  .then(function(r){if(!r.ok)throw 0;return r.json()}).then(draw).catch(function(){get(i+1)})}
+ get(0);
+})();
+</script>""" % json.dumps(REPORT_SRC)
+
+
+def build_reports():
+    body = (f'<style>{REPORT_CSS}</style><div id="rp"><p class="err">불러오는 중…</p></div>'
+            '<div class="rp-note">국내 실적 급증 카드(전분기 대비 영업이익 +50% 이상 또는 흑자전환)가 나간 종목마다 자동으로 만든 요약 보고서입니다. '
+            '일봉·수급(KB증권 Open API), 10년·분기 영업이익, 미상환 CB·BW·EB, 주요 사업·매출처(OpenDART)를 담았습니다. '
+            '추정치는 컨센서스가 아닌 산출값이며, 투자 판단의 참고 자료입니다.</div>' + REPORT_JS)
+    dest = OUT / "reports"
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "index.html").write_text(page("📑 실시간 작성 종목 보고서", body, "../", "reports/", "SURGE REPORT",
+                                          "실적 급증 카드가 나간 종목 · 최신순"), encoding="utf-8")
+
+
 def build_map():
     body = (f'<style>{MAP_CSS}</style><div class="mp-top"><div class="mp-tabs"><button data-m="kospi" class="on">코스피</button>'
             f'<button data-m="kosdaq">코스닥</button></div><div class="mp-idx"></div></div>'
@@ -1557,6 +1599,7 @@ EARN_CSS = """
 .earn .pxr b{font-size:16px;font-variant-numeric:tabular-nums}
 .earn .pxr b.up,.earn .pxr b.down{font-size:21px;font-weight:900;letter-spacing:-.3px}
 .earn .up{color:var(--up)}.earn .down{color:var(--down)}
+.earn .rpt{display:inline-block;margin:8px 0 4px;padding:8px 14px;border-radius:10px;background:#F2A900;color:#3D3A35;font-weight:800;font-size:14.5px;text-decoration:none}
 """
 EARN_JS = """<script>/* 실적 속보: 발표 6시간 뒤엔 맨 위에서 내려 데일리(오늘의 증시 캘린더) 칸 바로 아래로,
    발표 다음 날 오전 10시에 지운다. 날이 바뀌면 '전일 실적 발표' 표를 붙인다 */
@@ -1600,7 +1643,8 @@ EARN_LIVE_JS = r"""<script>
   document.querySelectorAll('#earn-old .earn.auto').forEach(function(c){c.remove()});  /* 다시 그리기 전에 내려 둔 자동 카드 정리 */
   box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>'+e(i.icon||'⚡')+' '+e(i.head||'실적 발표')+' · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
    (i.item&&i.item!==i.name?'<div class="cal">'+e(i.note||'캘린더')+': '+e(i.item)+'</div>':'')+
-   (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+px(i)+
+   (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+
+   (i.report?'<a class="rpt" href="'+e(i.report)+'" target="_blank" rel="noopener">📑 실시간 작성 종목 보고서</a>':'')+px(i)+
    '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
   if(window.earnPlace)earnPlace();else box.hidden=!its.length}
  function get(g,i,cb){if(i>=g.length)return cb(null);
@@ -1758,6 +1802,7 @@ def main():
     live = build_live(now)
     build_visits(now)
     build_map()
+    build_reports()
     build_home(now, daily, news, close, live, target, us)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "us": us and us["day"],
