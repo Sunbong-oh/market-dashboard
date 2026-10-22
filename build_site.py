@@ -1582,7 +1582,8 @@ ISSUE_JS = r"""<script>
 # 그 뒤 24시간까지는 데일리(오늘의 증시 캘린더) 칸 바로 아래로 내려가고 그 뒤 사라진다 (EARN_JS).
 EARN_CSS = """
 #earn{order:-2}.earn{background:var(--card);border:1px solid var(--line);border-left:5px solid #2f6fdb;border-radius:14px;padding:14px 16px;margin-top:10px}
-.earn h2{margin:0 0 2px;font-size:18px}.earn h2 small{font-size:12px;color:var(--muted);font-weight:600;margin-left:6px}
+.earn h2{margin:0 0 2px;font-size:18px}.earn h2 small{display:inline-block;font-size:14.5px;color:var(--text);opacity:.8;font-weight:700;margin-left:8px}
+#earn-h{order:-2;margin-bottom:-4px}#earn-h h2{margin:0;font-size:20px;font-weight:900}#earn-h h2 small{font-size:14px;color:var(--muted);font-weight:700;margin-left:8px}
 .earn.prev{border-left-color:var(--muted)}
 .earn h2 .pvb{display:inline-block;font-size:12px;font-weight:800;color:#fff;background:var(--muted);border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:2px}
 .earn .vd{font-size:15px;font-weight:800;color:var(--up);margin:4px 0 8px}
@@ -1601,22 +1602,28 @@ EARN_CSS = """
 .earn .up{color:var(--up)}.earn .down{color:var(--down)}
 .earn .rpt{display:inline-block;margin:8px 0 4px;padding:8px 14px;border-radius:10px;background:#F2A900;color:#3D3A35;font-weight:800;font-size:14.5px;text-decoration:none}
 """
-EARN_JS = """<script>/* 실적 속보: 발표 6시간 뒤엔 맨 위에서 내려 데일리(오늘의 증시 캘린더) 칸 바로 아래로,
-   발표 다음 날 오전 10시에 지운다. 날이 바뀌면 '전일 실적 발표' 표를 붙인다 */
+EARN_JS = """<script>/* 실적 속보: 오늘(한국 날짜) 발표는 하루 종일 맨 위 '오늘의 실적속보'에 두고, 날이 바뀌면 데일리(오늘의 증시 캘린더) 칸
+   바로 아래로 내려 '전일 실적 발표' 표를 붙인 뒤 발표 다음 날 오전 10시에 지운다.
+   (예전엔 발표 6시간 뒤에 내려서, 아침 8시에 나온 실적이 오후 2시면 아래로 밀려났다) */
 window.earnKst=function(ms){return new Date(ms+9*36e5).toISOString().slice(0,10)};
 window.earnKeep=function(ts){var t=Date.parse(ts);return isNaN(t)||Date.now()<Date.parse(earnKst(t)+'T10:00:00+09:00')+864e5};
 window.earnPrev=function(ts){var t=Date.parse(ts);return !isNaN(t)&&earnKst(t)!==earnKst(Date.now())};
-window.earnPlace=function(){var now=Date.now(),daily=document.getElementById('daily'),old=document.getElementById('earn-old');
+window.earnPlace=function(){var now=Date.now(),daily=document.getElementById('daily'),old=document.getElementById('earn-old'),top=document.getElementById('earn');
+ var hd0=document.getElementById('earn-h');if(!top&&hd0){top=document.createElement('section');top.className='sec';top.id='earn';hd0.insertAdjacentElement('afterend',top)}
  if(!old&&daily){old=document.createElement('section');old.className='sec';old.id='earn-old';daily.insertAdjacentElement('afterend',old)}
  if(old&&daily)old.style.order=getComputedStyle(daily).order;
  document.querySelectorAll('.earn[data-ts]').forEach(function(c){var ts=c.dataset.ts;
   if(!earnKeep(ts)){c.remove();return}
-  if(now-Date.parse(ts)>216e5&&old&&c.parentNode!==old)old.appendChild(c);
+  if(earnPrev(ts)&&old&&c.parentNode!==old)old.appendChild(c);
+  else if(!earnPrev(ts)&&top&&c.parentNode!==top)top.appendChild(c);  /* 수동·자동 카드를 한 칸에 모아 */
   var h=c.querySelector('h2');if(!h)return;
   if(earnPrev(ts)){c.classList.add('prev');
    if(!h.querySelector('.pvb')){var b=document.createElement('span');b.className='pvb';b.textContent='전일 실적 발표';h.insertBefore(b,h.firstChild)}}
   else{c.classList.remove('prev');var o=h.querySelector('.pvb');if(o)o.remove()}});
- ['earn','earn-live','earn-old'].forEach(function(id){var x=document.getElementById(id);if(x)x.hidden=!x.querySelector('.earn')})};
+ if(top)Array.prototype.slice.call(top.querySelectorAll(':scope>.earn')).sort(function(a,b){return Date.parse(b.dataset.ts)-Date.parse(a.dataset.ts)})
+  .forEach(function(c){top.appendChild(c)});  /* 오늘 발표는 발표 시각 순, 최신이 위 */
+ ['earn','earn-live','earn-old'].forEach(function(id){var x=document.getElementById(id);if(x)x.hidden=!x.querySelector('.earn')});
+ var hd=document.getElementById('earn-h');if(hd)hd.hidden=!document.querySelector('#earn .earn,#earn-live .earn')};
 earnPlace();setInterval(earnPlace,300000)</script>"""
 
 
@@ -1639,8 +1646,9 @@ EARN_LIVE_JS = r"""<script>
   (j&&j.items||[]).forEach(function(i){var c=manual[i.key]||mname[i.name];if(!c)return;var o=c.querySelector('.px');if(o)o.remove();
    var h=px(i);if(h){var t=c.querySelector('table');(t||c.querySelector('.vd')).insertAdjacentHTML('afterend',h)}});  /* 수동 카드에는 주가 반응만 */
   var ts=function(i){return i.first_iso||(i.detected.replace(' ','T')+':00+09:00')};
-  var its=(j&&j.items||[]).filter(function(i){return (window.earnKeep?earnKeep(ts(i)):now-Date.parse(ts(i))<864e5)&&!manual[i.key]&&!mname[i.name]});
-  document.querySelectorAll('#earn-old .earn.auto').forEach(function(c){c.remove()});  /* 다시 그리기 전에 내려 둔 자동 카드 정리 */
+  var its=(j&&j.items||[]).filter(function(i){return (window.earnKeep?earnKeep(ts(i)):now-Date.parse(ts(i))<864e5)&&!manual[i.key]&&!mname[i.name]})
+   .sort(function(a,b){return Date.parse(ts(b))-Date.parse(ts(a))});  /* 두 곳(국내·미국 감시)을 합친 뒤 최근 발표가 위로 */
+  document.querySelectorAll('#earn .earn.auto,#earn-old .earn.auto').forEach(function(c){c.remove()});  /* 다시 그리기 전에 옮겨 둔 자동 카드 정리 */
   box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>'+e(i.icon||'⚡')+' '+e(i.head||'실적 발표')+' · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
    (i.item&&i.item!==i.name?'<div class="cal">'+e(i.note||'캘린더')+': '+e(i.item)+'</div>':'')+
    (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+
@@ -1703,9 +1711,10 @@ def earnings_home(now):
             continue
         cards.append(earn_card(e, f.stem))
     live = f'<section class="sec" id="earn-live" hidden></section>'
+    head = '<div class="sec-h" id="earn-h" hidden><h2>📊 오늘의 실적속보<small>발표 시각 순 · 최신이 위</small></h2></div>'
     if not cards:
-        return f'<style>{EARN_CSS}</style>{live}'
-    return f'<section class="sec" id="earn"><style>{EARN_CSS}</style>{"".join(cards)}</section>{live}'
+        return f'<style>{EARN_CSS}</style>{head}{live}'
+    return f'<style>{EARN_CSS}</style>{head}<section class="sec" id="earn">{"".join(cards)}</section>{live}'
 
 
 # 음성 브리핑(팟캐스트) 구독 주소: 고객이 주소를 복사해 팟캐스트 앱에 'URL로 추가'하거나, 바로 최신 회차를 듣는다
