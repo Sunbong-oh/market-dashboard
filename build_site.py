@@ -1560,6 +1560,19 @@ AD_CSS = """.wing{display:none;word-break:keep-all}
 .wing .wg{display:flex;justify-content:space-between;align-items:center;margin-top:3px;color:var(--muted);font-size:10px}
 .wing .wg i{font-style:normal;border:1px solid var(--line);border-radius:999px;padding:0 5px}
 .wing .wg b{color:#2f7d32}}
+.wing-m{display:none}
+@media (max-width:1319px){
+.wing-m{display:flex;align-items:center;gap:2px;position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:20;
+ background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.18);padding:5px 4px 5px 5px;max-width:210px;word-break:keep-all}
+.wing-m a{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;min-width:0}
+.wing-m img{width:38px;height:auto;border-radius:4px;flex:none;background:#fff}
+.wing-m .t{display:flex;flex-direction:column;font-size:11.5px;line-height:1.3;min-width:0}
+.wing-m .t b{font-size:12.5px;color:#2f7d32}.wing-m .t strong{color:#e8590c}
+.wing-m .t i{font-style:normal;color:var(--muted);font-size:10px}
+.wing-m button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:4px 6px;cursor:pointer}
+.home{padding-bottom:64px}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .wing-m .t b{color:#69db7c}:root:not([data-theme=light]) .wing-m .t strong{color:#ff922b}}
+:root[data-theme=dark] .wing-m .t b{color:#69db7c}:root[data-theme=dark] .wing-m .t strong{color:#ff922b}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .wing .wt,:root:not([data-theme=light]) .wing .wg b{color:#69db7c}
  :root:not([data-theme=light]) .wing .wp strong{color:#ff922b}}
 :root[data-theme=dark] .wing .wt,:root[data-theme=dark] .wing .wg b{color:#69db7c}
@@ -1572,7 +1585,14 @@ def ad_home():
     foot = '<span class="wg"><i>광고</i><b>밴드 주문 ›</b></span>'
     return (f'<style>{AD_CSS}</style>'
             f'<a class="wing l" {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="제주 만보농장 황금향 비상품 특별 이벤트 포스터">'
-            f'<span class="wt">🍊 제주 만보농장</span><span class="wp">황금향 비상품 특가</span>{foot}</a>')
+            f'<span class="wt">🍊 제주 만보농장</span><span class="wp">황금향 비상품 특가</span>{foot}</a>'
+            # 휴대폰·좁은 화면: 왼쪽 아래 작은 배너 (× 누르면 그날은 숨김)
+            f'<div class="wing-m" id="wingm"><a {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="">'
+            '<span class="t"><b>🍊 만보농장 황금향</b><span>5kg <strong>3만원</strong> · 택배비 포함</span><i>광고 · 밴드 주문 ›</i></span></a>'
+            '<button type="button" aria-label="광고 닫기" onclick="this.parentNode.remove();'
+            "try{localStorage.setItem('ad-manbo-x',new Date(Date.now()+9*36e5).toISOString().slice(0,10))}catch(e){}\">×</button></div>"
+            "<script>try{if(localStorage.getItem('ad-manbo-x')===new Date(Date.now()+9*36e5).toISOString().slice(0,10))"
+            "document.getElementById('wingm').remove()}catch(e){}</script>")
 
 
 def tools_home():
