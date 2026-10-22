@@ -133,7 +133,7 @@ def page(title, body, root, active, kicker="MY STOCK NOTE", sub="", hero=True):
 {f'''<header class="top"><div class="kicker">{kicker}</div><h1>{escape(title)}</h1>{f'<div class="sub">{sub}</div>' if sub else ""}</header>''' if hero else ""}
 {body}
 <footer>매일 자동으로 업데이트됩니다. 투자 판단의 근거가 아닌 참고용 자료이며, 투자 결과의 책임은 투자자 본인에게 있습니다.</footer>
-</div></body></html>'''
+</div>{VISIT_JS}</body></html>'''
 
 
 SUB_STYLE = ("display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 12px;background:#2b3444;"
@@ -696,6 +696,88 @@ PRICE_JS = r"""<script>
  load();setInterval(function(){if(!document.hidden)load()},60000);
  document.addEventListener('visibilitychange',function(){if(!document.hidden)load()})})();
 </script>"""
+
+
+# ---------- 방문자 집계 (나만 보는 화면) ----------
+# 정적 사이트(GitHub Pages)라 서버가 없다 → 숫자만 세어 주는 무료 카운터(Abacus)에 날짜별로 올린다.
+# 방문자(v-날짜)는 브라우저당 하루 한 번, 조회수(p-날짜)는 열 때마다. 관리자(brian-admin)는 세지 않는다.
+VISIT_NS = "brian-tujanote-k7q2"
+VISIT_API = "https://abacus.jasoncameron.dev"
+VISIT_JS = """<script>
+(function(){if(window.top!==window)return;  /* 홈에 끼워 넣은 리포트(iframe)는 세지 않는다 */
+ if(location.pathname.indexOf('/visits/')>=0)return;  /* 방문자 현황 화면 자신은 세지 않는다 */
+ try{if(localStorage.getItem('brian-admin')==='1')return}catch(e){}  /* 내 방문은 빼고 */
+ var d=new Date(Date.now()+9*36e5).toISOString().slice(0,10).replace(/-/g,'');
+ var hit=function(k){try{fetch('{VISIT_API}/hit/{VISIT_NS}/'+k,{mode:'cors',cache:'no-store'}).catch(function(){})}catch(e){}};
+ hit('p-'+d);
+ try{if(localStorage.getItem('brian-seen')!==d){localStorage.setItem('brian-seen',d);hit('v-'+d)}}catch(e){hit('v-'+d)}
+})();
+</script>""".replace("{VISIT_API}", VISIT_API).replace("{VISIT_NS}", VISIT_NS)
+
+
+VISITS_CSS = """
+.vz{max-width:720px}
+.vz .gate{text-align:center;padding:28px 16px}
+.vz .gate input{font:600 16px/1.3 inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);width:180px}
+.vz .gate button{font:800 15px/1.3 inherit;padding:10px 18px;border:0;border-radius:10px;background:var(--accent);color:#fff;margin-left:6px;cursor:pointer}
+.vz .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+@media (max-width:520px){.vz .tiles{grid-template-columns:1fr 1fr}}
+.vz .tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.vz .tile .k{font-size:13px;color:var(--muted);font-weight:700}
+.vz .tile .v{font-size:30px;font-weight:900;letter-spacing:-1px;font-variant-numeric:tabular-nums;margin-top:2px}
+.vz .tile .s{font-size:12px;color:var(--muted)}
+.vz table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.vz th,.vz td{padding:7px 6px;border-top:1px solid var(--line);text-align:right}
+.vz th:first-child,.vz td:first-child{text-align:left}
+.vz th{color:var(--muted);font-size:12.5px}
+.vz .bar{height:9px;border-radius:5px;background:var(--accent);display:block;min-width:2px}
+.vz tr.today td{font-weight:900;background:var(--bg)}
+.vz .note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:14px}
+"""
+
+VISITS_JS = """<script>
+(function(){var API='{VISIT_API}',NS='{VISIT_NS}',DAYS=14,box=document.getElementById('vz');
+ function kst(off){var d=new Date(Date.now()+9*36e5-(off||0)*864e5);return d.toISOString().slice(0,10)}
+ function n(v){return (v||0).toLocaleString('ko-KR')}
+ function get(k){return fetch(API+'/get/'+NS+'/'+k,{cache:'no-store'}).then(function(r){return r.json()})
+   .then(function(j){return j&&j.value||0}).catch(function(){return null})}
+ function admin(){try{return localStorage.getItem('brian-admin')==='1'}catch(e){return false}}
+ function gate(){box.innerHTML='<div class="gate"><p>관리 비밀번호를 넣어 주세요.</p>'+
+   '<input id="vzpw" type="password" autocomplete="off"><button id="vzgo">확인</button></div>';
+  var go=function(){if((document.getElementById('vzpw').value||'').trim()==='brian'){
+    try{localStorage.setItem('brian-admin','1')}catch(e){} load()}else{alert('비밀번호가 다릅니다.')}};
+  document.getElementById('vzgo').onclick=go;
+  document.getElementById('vzpw').onkeydown=function(e){if(e.key==='Enter')go()}}
+ function load(){box.innerHTML='<p class="note">불러오는 중…</p>';
+  var days=[],ks=[];for(var i=0;i<DAYS;i++){var d=kst(i);days.push(d);ks.push('v-'+d.replace(/-/g,''),'p-'+d.replace(/-/g,''))}
+  Promise.all(ks.map(get)).then(function(vals){
+   if(vals[0]===null&&vals[1]===null){box.innerHTML='<p class="note">집계를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.</p>';return}
+   var V=[],P=[];for(var i=0;i<DAYS;i++){V.push(vals[i*2]||0);P.push(vals[i*2+1]||0)}
+   var wk=V.slice(0,7).reduce(function(a,b){return a+b},0),mx=Math.max.apply(0,V.concat([1]));
+   var wd='일월화수목금토';
+   var rows=days.map(function(d,i){var dt=new Date(d+'T00:00:00+09:00');
+     return '<tr'+(i?'':' class="today"')+'><td>'+d.slice(5)+'('+wd[dt.getUTCDay()]+')</td>'+
+      '<td>'+n(V[i])+'</td><td>'+n(P[i])+'</td>'+
+      '<td style="width:40%"><i class="bar" style="width:'+Math.round(V[i]/mx*100)+'%"></i></td></tr>'}).join('');
+   box.innerHTML='<div class="tiles">'+
+     '<div class="tile"><div class="k">오늘 방문자</div><div class="v">'+n(V[0])+'</div><div class="s">'+days[0]+'</div></div>'+
+     '<div class="tile"><div class="k">오늘 조회수</div><div class="v">'+n(P[0])+'</div><div class="s">열어 본 횟수</div></div>'+
+     '<div class="tile"><div class="k">최근 7일 방문자</div><div class="v">'+n(wk)+'</div><div class="s">어제 '+n(V[1])+'명</div></div></div>'+
+     '<section class="panel"><table><thead><tr><th>날짜</th><th>방문자</th><th>조회수</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></section>'+
+     '<p class="note">· 방문자는 브라우저 하나당 하루 한 번, 조회수는 페이지를 열 때마다 셉니다.<br>'+
+     '· 관리 화면을 켠 기기(내 휴대폰·PC)의 방문은 세지 않습니다.<br>'+
+     '· 숫자만 세는 무료 카운터를 쓰므로 누가 왔는지(아이피·지역·사람)는 알 수 없습니다.<br>'+
+     '· 이 주소는 메뉴에 없고 비밀번호로 잠겨 있지만, 주소와 비밀번호를 아는 사람은 볼 수 있습니다.</p>'})}
+ admin()?load():gate()})();
+</script>""".replace("{VISIT_API}", VISIT_API).replace("{VISIT_NS}", VISIT_NS)
+
+
+def build_visits(now):
+    """방문자 현황 (메뉴에 없는 숨은 주소 + 관리 비밀번호)."""
+    body = f'<style>{VISITS_CSS}</style><div class="vz" id="vz"></div>{VISITS_JS}'
+    (OUT / "visits").mkdir(parents=True, exist_ok=True)
+    (OUT / "visits" / "index.html").write_text(
+        page("방문자 현황", body, "../", "", "VISITS", f"{now:%Y-%m-%d} 기준 · 나만 보는 화면"), encoding="utf-8")
 
 
 def build_stocks(now):
@@ -1959,6 +2041,7 @@ def main():
     us = build_us()
     live = build_live(now)
     stocks = build_stocks(now)
+    build_visits(now)
     build_map()
     build_home(now, daily, news, close, live, stocks, target, us)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
