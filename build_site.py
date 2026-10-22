@@ -797,8 +797,10 @@ VISITS_JS = """<script>
    '<div class="tile"><div class="k">누적 방문자</div><div class="v">'+n(TV)+'</div><div class="s">조회수 '+n(TP)+'회</div></div></div>'+
    '<section class="panel"><table><thead><tr><th>날짜</th><th>방문자</th><th>조회수</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></section>';
  }
+ function seq(pgs,all){if(!pgs.length)return Promise.resolve(all);
+  return Promise.all(keys(pgs[0]).map(get)).then(function(v){all.push(v);return seq(pgs.slice(1),all)})}
  function load(){box.innerHTML='<p class="note">불러오는 중…</p>';
-  Promise.all(PAGES.map(function(pg){return Promise.all(keys(pg).map(get))})).then(function(all){
+  seq(PAGES.slice(0),[]).then(function(all){
    if(all[0][0]===null&&all[0][1]===null){box.innerHTML='<p class="note">집계를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.</p>';return}
    box.innerHTML=PAGES.map(function(pg,i){return block(pg,all[i])}).join('')+
      '<p class="note">· 방문자는 브라우저 하나당 하루 한 번, 조회수는 페이지를 열 때마다 셉니다.<br>'+
