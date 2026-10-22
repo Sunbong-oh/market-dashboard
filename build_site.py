@@ -1601,7 +1601,10 @@ EARN_CSS = """
 .earn .pxr b.up,.earn .pxr b.down{font-size:21px;font-weight:900;letter-spacing:-.3px}
 .earn .up{color:var(--up)}.earn .down{color:var(--down)}
 .earn .rptw{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
-.earn .rpt-tap{color:#E5484D;font-weight:800;font-size:14.5px;white-space:nowrap}
+.earn .rpt-tap{color:#E5484D;font-weight:800;font-size:14.5px;white-space:nowrap;display:inline-block;animation:rpt-tap .9s ease-in-out infinite}
+@keyframes rpt-tap{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
+@media (prefers-reduced-motion:reduce){.earn .rpt-tap{animation:none}}
+@media print{.earn .rpt-tap{animation:none}}
 .earn .rpt{display:inline-block;margin:0;padding:8px 14px;border-radius:10px;background:#F2A900;color:#3D3A35;font-weight:800;font-size:14.5px;text-decoration:none}
 """
 EARN_JS = """<script>/* 실적 속보: 오늘(한국 날짜) 발표는 하루 종일 맨 위 '오늘의 실적속보'에 두고, 날이 바뀌면 데일리(오늘의 증시 캘린더) 칸
