@@ -306,9 +306,14 @@ function check(){
   var v=reds?['r','보류 · 위험 '+reds+'개']:ys?['y','주의 '+ys+'개 · 주석 확인 후 판단']:['g','지뢰 5개 통과'];
   /* 가격 위치 */
   var roe=n('c-roe'),per=n('c-per'),pbr=n('c-pbr'),tp=$('#c-type').value,pv='';
+  var all3=roe!=null&&per!=null&&pbr!=null&&per>0;
   if(pbr==null&&roe!=null&&per!=null)pbr=roe/100*per;else if(per==null&&roe&&pbr!=null)per=pbr/(roe/100);else if(roe==null&&per&&pbr!=null)roe=pbr/per*100;
   if(roe!=null&&per!=null&&pbr!=null){
-    var base='ROE '+roe.toFixed(1)+'% × PER '+per.toFixed(1)+'배 = PBR '+pbr.toFixed(2)+'배. ';
+    var base;
+    if(all3){var ir=pbr/per*100,gp=roe-ir;
+      base='ROE '+roe.toFixed(1)+'% · PER '+per.toFixed(1)+'배 · PBR '+pbr.toFixed(2)+'배. PBR ÷ PER로 거꾸로 구한 ROE는 '+ir.toFixed(1)+'%'
+        +(Math.abs(gp)>=3?(gp>0?' → 최근 ROE가 PER 기준 이익(지난 실적)보다 높다. 이익이 늘고 있어 PER이 실제보다 높아 보일 수 있다. ':' → 최근 ROE가 PER 기준 이익보다 낮다. 이익이 줄고 있어 PER이 실제보다 낮아 보일 수 있다. '):'로 비슷하다. ');}
+    else base='ROE '+roe.toFixed(1)+'% × PER '+per.toFixed(1)+'배 = PBR '+pbr.toFixed(2)+'배. ';
     var tip={gen:roe<8&&pbr<1?'ROE가 낮아 PBR이 낮은 것. 싸다기보다 이유가 있다. 주주환원·자산 가치 확인':roe>=12&&per<10?'수익성 대비 낮은 PER. 이익이 지속 가능한지(일회성·사이클) 확인':'ROE가 유지된다는 전제의 값. ROE 추세를 3년 본다',
       cyc:per<8?'경기민감주의 낮은 PER은 이익 정점일 수 있다. PER보다 PBR 밴드 위치를 본다':'PER보다 PBR 밴드 위치와 제품 가격 방향을 본다',
       gro:'PER보다 이익 성장의 기울기(PEG = PER ÷ EPS 증가율)를 본다. 성장이 꺾이면 높은 PER이 한 번에 깎인다',
@@ -374,7 +379,7 @@ function fill(d){
   setv('c-cb',d.raises?d.raises.length:null);
   $('#c-mkt').value=d.market==='코스닥'?'kosdaq':'kospi';
   setv('c-ebt',v.ebt!=null&&v.ebt<0?Math.abs(v.ebt):(v.ebt!=null?0:null));setv('c-eq',v.eq);
-  setv('c-roe',v.roe);setv('c-per','');setv('c-pbr','');
+  var px=d.px||{};setv('c-roe',v.roe);setv('c-per',px.per>0?px.per:'');setv('c-pbr',px.pbr>0?px.pbr:'');
   $('#sepPL').textContent='손익·현금흐름 · 올해 = '+b.now+', 작년 = '+b.prev;
   $('#sepBS').textContent='재무상태표 · 올해 = '+b.bs_now+(b.bs_prev?', 작년 = '+b.bs_prev:' (작년 같은 시점 자료 없음)')+' 잔액';
   var f=b.filed||'',notes=[];
@@ -382,7 +387,8 @@ function fill(d){
   if(v.int_src&&v.int_src!=='이자비용')notes.push('이자비용 칸은 '+esc(v.int_src)+' 숫자입니다');
   if(b.months<12)notes.push('법차손·ROE는 '+esc(b.now)+' 기준(ROE는 연환산)입니다');
   if(d.raises&&d.raises.length)notes.push('자금조달: '+d.raises.map(function(x){return esc(x[0].slice(0,4)+'.'+x[0].slice(4,6))+' '+esc(x[1].replace(/^주요사항보고서\(|\)$/g,''))}).join(', '));
-  notes.push('PER·PBR은 HTS에서 넣으면 가격 위치 해석이 나옵니다');
+  if(px.date)notes.push('PER·PBR은 KB증권 '+esc(px.date)+' 종가 기준'+(px.price?' (주가 '+Number(px.price).toLocaleString('ko-KR')+'원)':'')+(px.per>0?'':' · 적자라 PER 없음'));
+  else notes.push('PER·PBR은 HTS에서 넣으면 가격 위치 해석이 나옵니다');
   srcMsg('<b>'+esc(d.name)+'</b> · '+esc(d.market)+' · '+esc(b.year+' '+b.reprt+'보고서')+'('+esc(b.fs)+') · '+f.slice(0,4)+'.'+f.slice(4,6)+'.'+f.slice(6,8)+' 제출 · 감사의견 '+esc((d.audit&&d.audit.year)||'')+' '+esc(op||'확인 필요')
     +' · <a href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo='+esc(b.rcept_no)+'" target="_blank" rel="noopener">DART 원문</a><br>'+notes.join(' · '),'ok');
   check();

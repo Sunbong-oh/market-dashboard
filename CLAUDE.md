@@ -45,7 +45,7 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
   - 용어: {term, en, cat, def, formula, point}. cat 은 기존 분류 이름(재무상태표·밸류에이션·금융-은행·수주 등)을 쓴다. 같은 용어가 있으면 새로 넣지 말고 고친다.
   - 사례: {added(오늘 KST), company, industry, period, cell, what, lesson, sources[[제목, URL]]}. 숫자는 출처로 확인해서 넣고, 확인 못 한 숫자는 빼거나 "확인 필요"라고 적는다.
 - 페이지에서 직접 추가한 것은 그 기기에만 저장된다(localStorage). 다른 기기와 함께 보려면 위 방식으로 JSON 에 올린다.
-- 5분 체크 종목 불러오기: `study_fin.py` 가 OpenDART 에서 상장사별 최근 정기보고서 숫자를 받아 study-fin 브랜치(index.json, fin/<종목코드>.json)에 저장(study-fin.yml, 매일 21:40, Secret DART_API_KEY 필요). site.yml 이 /study/fin/ 에 붙인다.
+- 5분 체크 종목 불러오기: `study_fin.py` 가 OpenDART 에서 상장사별 최근 정기보고서 숫자를 받아 study-fin 브랜치(index.json, fin/<종목코드>.json)에 저장(study-fin.yml, 매일 21:40, Secret DART_API_KEY 필요). 이어서 KB증권 Open API 현재가(IVU10140)로 PER·PBR·주가를 px 에 넣는다(Secret KB_OPENAPI_APP_KEY·KB_OPENAPI_APP_SECRET, 없으면 건너뜀). site.yml 이 /study/fin/ 에 붙인다.
 - 확인: `python -c "import build_site as b, study_page; from pathlib import Path; print(study_page.build(Path('_site'), b.page))"`
 
 ## 실적발표 종목 (/reports/) 한 줄 설명

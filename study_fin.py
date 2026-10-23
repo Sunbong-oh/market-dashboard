@@ -13,6 +13,7 @@ DART 하루 호출 한도(키 하나당 2만 회)를 다른 작업과 나눠 쓰
 처음엔 며칠에 걸쳐 전체를 채우고, 그 뒤로는 새 정기보고서를 낸 회사와 오래된 회사만 다시 받는다.
 """
 import argparse
+import glob
 import io
 import json
 import os
@@ -313,11 +314,121 @@ def new_filers(dart, today, days):
     return got
 
 
+# ---------- KB증권 Open API: PER·PBR (kb-market-report 의 app/kb_client.py 와 같은 방식) ----------
+KB_BASE = os.environ.get("KB_OPENAPI_BASE_URL", "https://developer.kbsec.com:32484").rstrip("/")
+_SCALE = re.compile(r"_p(\d)(?:_\d+)?$")
+
+
+def _kb_header():
+    import socket
+    import uuid
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except OSError:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    node = uuid.getnode()
+    return {"ipAddr": ip, "macAddr": ":".join(f"{(node >> k) & 0xFF:02X}" for k in range(40, -1, -8))}
+
+
+def _kb_post(path, body, headers):
+    req = urllib.request.Request(KB_BASE + path, data=json.dumps(body).encode(), method="POST",
+                                 headers={"Content-Type": "application/json", **headers})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def _kb_num(rec, field):
+    v = rec.get(field)
+    if v is None:
+        return None
+    s = str(v).strip().replace(",", "")
+    if not s:
+        return None
+    try:
+        if "." in s:
+            return float(s)
+        n = int(s)
+    except ValueError:
+        return None
+    m = _SCALE.search(field)
+    return n / 10 ** int(m.group(1)) if m else n
+
+
+def _find(obj, key):
+    if isinstance(obj, dict):
+        if key in obj:
+            return obj
+        obj = list(obj.values())
+    if isinstance(obj, list):
+        for v in obj:
+            if isinstance(v, (dict, list)):
+                r = _find(v, key)
+                if r is not None:
+                    return r
+    return None
+
+
+def kb_prices(data, today):
+    """fin/*.json 마다 KB 현재가(IVU10140)의 PER·PBR·주가를 px 로 넣는다. 밤에 돌므로 그날 종가 기준."""
+    key, sec = os.environ.get("KB_OPENAPI_APP_KEY", "").strip(), os.environ.get("KB_OPENAPI_APP_SECRET", "").strip()
+    if not (key and sec):
+        print("KB_OPENAPI_APP_KEY/SECRET 이 없어 PER·PBR 은 건너뜀")
+        return
+    hdr = _kb_header()
+    try:
+        t = _kb_post("/oauth2/token", {"dataHeader": hdr, "dataBody": {"appKey": key, "appSecret": sec, "grantType": "client_credentials"}}, {})
+        tb = t.get("dataBody", t)
+        token = tb.get("access_token") or tb.get("accessToken")
+    except Exception as e:
+        print(f"KB 토큰 발급 실패: {e}")
+        return
+    if not token:
+        print(f"KB 토큰 응답에 access_token 없음: {str(t)[:200]}")
+        return
+    files = sorted(glob.glob(os.path.join(data, "fin", "*.json")))
+    ok = fail = streak = 0
+    day = today.strftime("%Y-%m-%d")
+    for i, fp in enumerate(files):
+        rec = json.load(open(fp, encoding="utf-8"))
+        if (rec.get("px") or {}).get("date") == day:
+            continue
+        try:
+            p = _kb_post("/api/v1/ivu10140", {"dataHeader": hdr, "dataBody": {"excg_clsf": "1", "shrt_cd": rec["code"]}},
+                         {"appKey": key, "Authorization": f"bearer {token}"})
+            body = p.get("dataBody")
+            r = _find(body, "now_prc") if isinstance(body, dict) else None
+            if not r:
+                raise ValueError(str((p.get("dataHeader") or {}).get("processMessage") or p)[:120])
+            per, pbr, price = _kb_num(r, "per_p2"), _kb_num(r, "pbr_p2"), _kb_num(r, "now_prc")
+            rec["px"] = {"per": per, "pbr": pbr, "price": price, "date": day, "src": "KB증권"}
+            if i < 3 or rec["code"] == "005930":
+                print(f"  KB {rec['code']} {rec['name']}: 주가 {price} PER {per} PBR {pbr}")
+            with open(fp, "w", encoding="utf-8") as f:
+                json.dump(rec, f, ensure_ascii=False, separators=(",", ":"))
+            ok += 1
+            streak = 0
+        except Exception as e:
+            fail += 1
+            streak += 1
+            if streak <= 3:
+                print(f"  KB {rec.get('code')} 실패: {str(e)[:160]}")
+            if streak >= 20:
+                print("KB 연속 20회 실패 → 중단")
+                break
+        time.sleep(0.12)
+    print(f"KB PER·PBR 저장 {ok}곳, 실패 {fail}곳")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--budget", type=int, default=6000)
     ap.add_argument("--days", type=int, default=4, help="최근 며칠 안에 정기보고서를 낸 회사는 다시 받는다")
+    ap.add_argument("--kb", action="store_true", help="DART 다음에 KB증권 PER·PBR 도 받는다")
     ap.add_argument("--stale", type=int, default=45, help="이보다 오래된 자료는 남는 호출로 다시 받는다(자금조달 갱신)")
     a = ap.parse_args()
     key = os.environ.get("DART_API_KEY", "").strip()
@@ -376,6 +487,8 @@ def main():
     with open(sp, "w", encoding="utf-8") as f:
         json.dump(state, f, ensure_ascii=False, separators=(",", ":"))
     print(f"저장 {n_ok}곳, 정기보고서 없음 {n_none}곳, 목록 {len(idx)}곳, DART 호출 {dart.calls}회")
+    if a.kb:
+        kb_prices(data, today)
 
 
 if __name__ == "__main__":
