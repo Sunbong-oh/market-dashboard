@@ -9,6 +9,7 @@
   /close/       장마감 리포트 (국내 장마감 수급체크) — kb-market-report 저장소의 archive/ (환경변수 CLOSE_REPO)
   /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 08:40·21:00) — kb-market-report 저장소의 consensus/*.json
   /us/          해외주식 리포트 (국내 증권사 미국주식 리포트 요약) — us_reports/*.json (us_reports.py)
+  /strong/      해외주식 강세종목 리포트 (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
 """
 import json
 import os
@@ -31,6 +32,7 @@ DAILY = ROOT / "archive" / "daily"
 CLOSE = Path(os.environ.get("CLOSE_REPO", ROOT.parent / "kb-market-report")) / "archive"
 CONSENSUS = CLOSE.parent / "consensus"
 US_REPORTS = ROOT / "us_reports"
+US_STRONG = ROOT / "us_strong"
 SITE_NAME = "Brian's 투자노트"
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 WD = "월화수목금토일"
@@ -90,7 +92,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("target/", "목표주가"), ("reports/", "종목 보고서"),
-        ("us/", "해외주식"), ("close/", "장마감 리포트"),
+        ("us/", "해외주식"), ("strong/", "강세종목"), ("close/", "장마감 리포트"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
@@ -1272,6 +1274,81 @@ def us_home(us):
             f'<section class="panel report us">{inner}</section></section>')
 
 
+# ---------- 해외주식 강세종목 리포트 (날짜별) ----------
+# Claude 프로젝트에서 만든 종목 리포트(KB 리서치 스타일 HTML)를 us_strong/ 에 넣고 index.json 에 한 줄 추가하면
+# /strong/ 목록(날짜 최신순, 같은 날은 등락률 높은 순)과 리포트 페이지가 생긴다.
+# index.json 항목: date, ticker, exchange, name, nameEn, sector, price, changePct, priceNote, headline, tags, file
+STRONG_CSS = """
+.st-day{margin:18px 0 6px;font-size:15px;font-weight:800;color:var(--muted)}
+.st{display:block;background:var(--card);border:1px solid var(--line);border-left:5px solid #F2A900;border-radius:12px;
+  padding:12px 14px;margin-top:8px;text-decoration:none}
+a.st:hover{border-color:#F2A900}
+.st .nm{font-size:17px;font-weight:800}.st .nm small{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:6px}
+.st .px{float:right;text-align:right;font-variant-numeric:tabular-nums;font-weight:800;margin-left:10px}
+.st .px b{display:block;font-size:16px}.st .px .up{color:var(--up)}.st .px .down{color:var(--down)}
+.st .hl{font-size:14px;margin-top:4px;line-height:1.55}.st .pn{font-size:12.5px;color:var(--muted);margin-top:3px}
+.st .tg{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}.st .tg span{font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:5px;
+  background:#FBE7B0;color:#3D3A35}
+.st-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
+"""
+
+
+def strong_items():
+    try:
+        items = json.loads((US_STRONG / "index.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    items = [x for x in items if DATE_RE.match(x.get("date", "")) and x.get("file") and (US_STRONG / x["file"]).is_file()]
+    return sorted(items, key=lambda x: (x["date"], x.get("changePct") or 0), reverse=True)
+
+
+def strong_card(it, href):
+    chg = it.get("changePct")
+    pct = f'<span class="{"up" if chg > 0 else "down"}">{chg:+.2f}%</span>' if chg is not None else ""
+    px = f'<div class="px"><b>${it["price"]:,.2f}</b>{pct}</div>' if it.get("price") else ""
+    tags = "".join(f"<span>{escape(t)}</span>" for t in it.get("tags", []))
+    return (f'<a class="st" href="{escape(href)}">{px}<div class="nm">{escape(it.get("name", ""))}'
+            f'<small>{escape(it["ticker"])} · {escape(it.get("exchange", ""))} · {escape(it.get("sector", ""))}</small></div>'
+            f'<div class="hl">{escape(it.get("headline", ""))}</div>'
+            + (f'<div class="pn">{escape(it["priceNote"])}</div>' if it.get("priceNote") else "")
+            + (f'<div class="tg">{tags}</div>' if tags else "") + "</a>")
+
+
+def build_strong():
+    out = OUT / "strong"
+    out.mkdir(parents=True, exist_ok=True)
+    items = strong_items()
+    rows, last = [], ""
+    for it in items:
+        if it["date"] != last:
+            last = it["date"]
+            rows.append(f'<div class="st-day">{label(last)}</div>')
+        rows.append(strong_card(it, it["file"]))
+        # 리포트 원본(Artifact용 조각 HTML)을 온전한 페이지로 감싸고 맨 위에 메뉴를 붙인다
+        src = (US_STRONG / it["file"]).read_text(encoding="utf-8")
+        if not re.search(r"<body", src, re.I):
+            src = ('<!doctype html><html lang="ko"><head><meta charset="utf-8">'
+                   '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"></head>'
+                   f'<body>{src}</body></html>')
+        (out / it["file"]).write_text(with_nav(src, "../", "strong/"), encoding="utf-8")
+    body = (f'<style>{STRONG_CSS}</style>'
+            + ("".join(rows) or '<p class="err">아직 올린 강세종목 리포트가 없습니다.</p>')
+            + '<div class="st-note">전일 미국장에서 강세를 보인 종목을 골라 만든 종목 리포트입니다. 재무는 SEC 공시(10-K·10-Q), '
+              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.</div>')
+    (out / "index.html").write_text(page("🚀 해외주식 강세종목 리포트", body, "../", "strong/", "US STRONG STOCKS",
+                                         "날짜별 · 같은 날은 등락률 높은 순"), encoding="utf-8")
+    return items
+
+
+def strong_home(items):
+    if not items:
+        return ""
+    day = items[0]["date"]
+    cards = "".join(strong_card(it, "strong/" + it["file"]) for it in items if it["date"] == day)
+    return (f'<section class="sec" id="strong"><style>{STRONG_CSS}</style><div class="sec-h"><h2>🚀 해외주식 강세종목</h2>'
+            f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}</section>')
+
+
 # ---------- 맵 (업종별 등락 트리맵) ----------
 # kb-market-report Actions가 장중 5분마다 flow-live/map.json(네이버 증권 업종별 종목 등락)을 올린다.
 # 업종 넓이 = 시가총액 합, 종목 넓이 = 시가총액, 색 = 등락률(-3%~+3%, 빨강 상승·파랑 하락).
@@ -1866,7 +1943,7 @@ def podcast_home():
             f'구독해 두면 새 회차가 자동으로 내려받아져 안드로이드 오토·카플레이에서 바로 재생됩니다.</div></section>{POD_JS}')
 
 
-def build_home(now, daily, news, close, live=None, target=None, us=None):
+def build_home(now, daily, news, close, live=None, target=None, us=None, strong=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
@@ -1887,7 +1964,7 @@ def build_home(now, daily, news, close, live=None, target=None, us=None):
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
-            f'{target_home(target)}{us_home(us)}{tools_home()}'
+            f'{target_home(target)}{us_home(us)}{strong_home(strong)}{tools_home()}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
@@ -1907,11 +1984,12 @@ def main():
     close = build_close()
     target = build_target()
     us = build_us()
+    strong = build_strong()
     live = build_live(now)
     build_visits(now)
     build_map()
     build_reports()
-    build_home(now, daily, news, close, live, target, us)
+    build_home(now, daily, news, close, live, target, us, strong)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "us": us and us["day"],
                       "live": bool(live),
