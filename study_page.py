@@ -190,7 +190,7 @@ CHECK = """
  <div class="panel">
   <div class="ex" id="ckEx">처음 보이는 숫자는 사용법을 보여 주는 가상의 예시입니다. 종목 숫자로 바꿔 넣으세요.</div>
   <form class="f" id="ckF" autocomplete="off">
-   <label class="full" for="c-audit">최근 감사의견<select id="c-audit"><option value="ok">적정</option><option value="q">한정</option><option value="bad">부적정·의견거절</option></select></label>
+   <label class="full" for="c-audit">최근 감사의견<select id="c-audit"><option value="ok">적정</option><option value="q">한정</option><option value="bad">부적정·의견거절</option><option value="na">확인 필요</option></select></label>
    <div class="sep" id="sepPL">손익·현금흐름 (올해 = 최근 4개 분기 합 또는 최근 사업연도)</div>
    <label for="c-rev1">매출 · 올해<input id="c-rev1" inputmode="decimal" value="5200"></label>
    <label for="c-rev0">매출 · 작년<input id="c-rev0" inputmode="decimal" value="4300"></label>
@@ -282,6 +282,7 @@ function pct(v){return (v>0?'+':'')+v.toFixed(0)+'%'}
 var LV={g:'통과',y:'주의',r:'위험',n:'입력 필요'};
 function check(){
   var s=[],a=$('#c-audit').value;
+  if(a==='na')s.push(['n','감사의견','DART에서 감사의견을 찾지 못했습니다. 최근 사업보고서의 감사보고서에서 확인하세요']);else
   s.push(a==='ok'?['g','감사의견','적정. 최소 조건은 통과']:a==='q'?['y','감사의견','한정. 사유(범위제한·회계기준 위반)를 감사보고서에서 확인. 유가증권시장은 2년 연속 범위제한 한정이면 상장폐지 사유']:['r','감사의견','부적정·의견거절은 상장폐지 사유. 매매 대상에서 제외']);
   var op1=n('c-op1'),op0=n('c-op0'),cf1=n('c-cf1'),cf0=n('c-cf0');
   if(op1==null||cf1==null)s.push(['n','이익 vs 현금','영업이익과 영업현금흐름을 넣어 주세요']);
@@ -296,8 +297,9 @@ function check(){
   else{var icr=op1/it;s.push([icr<1?'r':icr<3?'y':'g','이자보상배율',icr.toFixed(1)+'배 (영업이익 ÷ 이자비용). '+(icr<1?'영업이익으로 이자도 못 낸다. 3년 연속이면 한계기업':icr<3?'금리가 오르면 버티기 어렵다':'이자 부담 낮음')])}
   var gr=g(n('c-rev1'),n('c-rev0')),ga=g(n('c-ar1'),n('c-ar0')),gi=g(n('c-inv1'),n('c-inv0'));
   if(gr==null||(ga==null&&gi==null))s.push(['n','채권·재고 vs 매출','매출과 매출채권·재고를 두 해 모두 넣어 주세요']);
-  else{var gap=Math.max(ga!=null?ga-gr:-1e9,gi!=null?gi-gr:-1e9),parts=['매출 '+pct(gr)];if(ga!=null)parts.push('채권·계약자산 '+pct(ga));if(gi!=null)parts.push('재고 '+pct(gi));
-    s.push([gap>20?'r':gap>10?'y':'g','채권·재고 vs 매출',parts.join(' · ')+'. '+(gap>20?'매출보다 훨씬 빨리 는다. 못 받은 돈·안 팔린 물건이 쌓이는 중':gap>10?'매출보다 빨리 는다. 다음 분기에 줄어드는지 확인':'매출과 비슷한 속도')])}
+  else{var rel=function(x){return x==null?-1e9:((1+x/100)/Math.max(1+gr/100,0.01)-1)*100};  /* 매출 대비 몇 % 더 빨리 늘었나 (고성장 회사도 공정하게) */
+    var gap=Math.max(rel(ga),rel(gi)),parts=['매출 '+pct(gr)];if(ga!=null)parts.push('채권·계약자산 '+pct(ga));if(gi!=null)parts.push('재고 '+pct(gi));
+    s.push([gap>25?'r':gap>10?'y':'g','채권·재고 vs 매출',parts.join(' · ')+'. '+(gap>25?'매출보다 훨씬 빨리 는다. 못 받은 돈·안 팔린 물건이 쌓이는 중':gap>10?'매출보다 빨리 는다. 다음 분기에 줄어드는지 확인':'매출과 비슷한 속도')])}
   var cb=n('c-cb'),mkt=$('#c-mkt').value,ebt=n('c-ebt'),eq=n('c-eq'),lv='g',tx=[];
   if(cb!=null){if(cb>=3){lv='r';tx.push('2년간 '+cb+'번 조달. 지분 희석과 오버행 부담')}else if(cb>=1){lv='y';tx.push('2년간 '+cb+'번 조달. 전환가·잔액·리픽싱 조건 확인')}else tx.push('최근 2년 조달 없음')}
   if(mkt==='kosdaq'&&ebt!=null&&ebt>0&&eq){var lr=ebt/eq*100;if(lr>50){lv='r';tx.push('법차손이 자기자본의 '+lr.toFixed(0)+'%. 3년 중 2번이면 관리종목')}else if(lr>30){if(lv==='g')lv='y';tx.push('법차손이 자기자본의 '+lr.toFixed(0)+'%. 50% 넘으면 관리종목 요건')}}
@@ -373,7 +375,7 @@ function loadCo(){
 function fill(d){
   var v=d.v,b=d.basis;$('#ckEx').hidden=true;
   $('#c-name').value=d.name;
-  var op=(d.audit&&d.audit.opinion)||'';$('#c-audit').value=/부적정|거절/.test(op)?'bad':/한정/.test(op)?'q':'ok';
+  var op=(d.audit&&d.audit.opinion)||'';$('#c-audit').value=!op?'na':/부적정|거절/.test(op)?'bad':/한정/.test(op)?'q':/적정/.test(op)?'ok':'na';
   setv('c-rev1',v.rev[0]);setv('c-rev0',v.rev[1]);setv('c-op1',v.op[0]);setv('c-op0',v.op[1]);setv('c-cf1',v.cf[0]);setv('c-cf0',v.cf[1]);
   setv('c-int',v.int);setv('c-ar1',v.ar[0]);setv('c-ar0',v.ar[1]);setv('c-inv1',v.inv[0]);setv('c-inv0',v.inv[1]);
   setv('c-cb',d.raises?d.raises.length:null);
@@ -384,7 +386,7 @@ function fill(d){
   $('#sepBS').textContent='재무상태표 · 올해 = '+b.bs_now+(b.bs_prev?', 작년 = '+b.bs_prev:' (작년 같은 시점 자료 없음)')+' 잔액';
   var f=b.filed||'',notes=[];
   if(d.fin)notes.push('<b>금융업</b>이라 이 체크가 맞지 않습니다. 업종별 탭의 금융 체크리스트를 보세요');
-  if(v.int_src&&v.int_src!=='이자비용')notes.push('이자비용 칸은 '+esc(v.int_src)+' 숫자입니다');
+  if(v.int_src&&v.int_src!=='이자비용')notes.push('이자비용 칸은 '+esc(v.int_src)+' 숫자입니다'+(/현금흐름/.test(v.int_src)?' (금융 자회사가 있으면 그 이자도 섞여 이자보상배율이 낮게 나옵니다)':''));
   if(b.months<12)notes.push('법차손·ROE는 '+esc(b.now)+' 기준(ROE는 연환산)입니다');
   if(d.raises&&d.raises.length)notes.push('자금조달: '+d.raises.map(function(x){return esc(x[0].slice(0,4)+'.'+x[0].slice(4,6))+' '+esc(x[1].replace(/^주요사항보고서\(|\)$/g,''))}).join(', '));
   if(px.date)notes.push('PER·PBR은 KB증권 '+esc(px.date)+' 종가 기준'+(px.price?' (주가 '+Number(px.price).toLocaleString('ko-KR')+'원)':'')+(px.per>0?'':' · 적자라 PER 없음'));

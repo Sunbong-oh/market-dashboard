@@ -136,8 +136,9 @@ ACC = {
     "ni": (IS, ("ifrs-full_ProfitLoss",), ("당기순이익", "당기순이익(손실)", "분기순이익", "반기순이익", "분기순이익(손실)", "반기순이익(손실)")),
     "cf": (("CF",), ("ifrs-full_CashFlowsFromUsedInOperatingActivities",), ("영업활동현금흐름", "영업활동으로인한현금흐름", "영업활동순현금흐름")),
     "ar": (("BS",), ("ifrs-full_TradeAndOtherCurrentReceivables", "ifrs-full_CurrentTradeReceivables", "dart_ShortTermTradeReceivable"),
-           ("매출채권및기타채권", "매출채권", "매출채권및기타유동채권", "단기매출채권")),
-    "ca": (("BS",), ("ifrs-full_CurrentContractAssets", "ifrs-full_ContractAssets"), ("계약자산", "미청구공사", "유동계약자산")),
+           ("매출채권및기타채권", "매출채권", "매출채권및기타유동채권", "단기매출채권", "유동매출채권",
+            "매출채권및기타채권유동", "유동매출채권및기타채권", "매출채권및기타수취채권")),
+    "ca": (("BS",), ("ifrs-full_CurrentContractAssets", "ifrs-full_ContractAssets"), ("계약자산", "미청구공사", "유동계약자산", "미청구공사채권")),
     "inv": (("BS",), ("ifrs-full_Inventories", "ifrs-full_CurrentInventoriesHeldForSale"), ("재고자산",)),
     "eq_parent": (("BS",), ("ifrs-full_EquityAttributableToOwnersOfParent",), ("지배기업의소유주에게귀속되는자본", "지배기업소유주지분")),
     "eq": (("BS",), ("ifrs-full_Equity",), ("자본총계",)),
@@ -338,6 +339,7 @@ def build_one(dart, corp, f, info, state, today):
         "audit": {"year": ay, "opinion": au[corp][1]},
         "raises": rs,
         "updated": today.strftime("%Y-%m-%d"),
+        "ver": 2,
     }
 
 
@@ -497,8 +499,20 @@ def main():
     cut = (today - timedelta(days=a.stale)).strftime("%Y-%m-%d")
     old = sorted((c for c in filings if c in done and c not in newer and done[c].get("updated", "") < cut),
                  key=lambda c: done[c].get("updated", ""))
-    todo = newer + missing + old
-    print(f"이번에 받을 후보 {len(todo)}곳 (새 보고서 {len(newer)} · 처음 {len(missing)} · 오래됨 {len(old)})")
+    # 첫 버전으로 받은 자료(전년 현금흐름 보완 전)는 다시 받는다
+    by_code = {f["code"]: c for c, f in filings.items()}
+    redo = []
+    for fp in glob.glob(os.path.join(data, "fin", "*.json")):
+        try:
+            r = json.load(open(fp, encoding="utf-8"))
+        except Exception:
+            continue
+        c = by_code.get(r.get("code"))
+        if c and c not in newer and r.get("ver") != 2:
+            redo.append(c)
+    old = [c for c in old if c not in redo]
+    todo = newer + redo + missing + old
+    print(f"이번에 받을 후보 {len(todo)}곳 (새 보고서 {len(newer)} · 다시 {len(redo)} · 처음 {len(missing)} · 오래됨 {len(old)})")
 
     def save():
         names = {f["code"]: (f["name"], MKT.get(f["cls"], "")) for f in filings.values()}
