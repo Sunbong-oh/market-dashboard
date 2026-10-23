@@ -15,6 +15,8 @@ DART 하루 호출 한도(키 하나당 2만 회)를 다른 작업과 나눠 쓰
 """
 import argparse
 import glob
+import threading
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import re
@@ -38,12 +40,14 @@ class Budget(Exception):
 class Dart:
     def __init__(self, key, budget):
         self.key, self.left, self.calls = key, budget, 0
+        self.lock, self.stop = threading.Lock(), False
 
     def get(self, name, **params):
-        if self.left <= 0:
-            raise Budget()
-        self.left -= 1
-        self.calls += 1
+        with self.lock:
+            if self.left <= 0 or self.stop:
+                raise Budget()
+            self.left -= 1
+            self.calls += 1
         url = API + name + "?" + urllib.parse.urlencode({"crtfc_key": self.key, **params})
         for i in range(3):
             try:
@@ -64,6 +68,7 @@ class Dart:
             return None
         if j.get("status") == "020":  # 요청 제한 초과 → 오늘은 그만
             print("DART 호출 한도 초과(020). 오늘은 여기까지.", file=sys.stderr)
+            self.stop = True
             raise Budget()
         if j.get("status") in ("010", "011", "012", "901"):
             raise SystemExit(f"DART 키 오류: {j.get('status')} {j.get('message')}")
@@ -152,6 +157,11 @@ def pick(rows, key):
     return find(rows, sj, ids, names)
 
 
+def _prev_from(prev_rows, key, cum):
+    """올해 보고서에 전년 같은 기간 숫자가 없으면(현금흐름표에 흔함) 작년 같은 보고서의 당기 숫자를 쓴다."""
+    return amt(pick(prev_rows, key), cum) if prev_rows else None
+
+
 def extract(rows, prev_rows, months):
     """rows: 이번 보고서, prev_rows: 전년 같은 보고서(재무상태표 비교용). 단위 억원."""
     cum = months < 12
@@ -159,7 +169,10 @@ def extract(rows, prev_rows, months):
     out = {}
     for k in ("rev", "op", "cf"):
         r = g(k)
-        out[k] = [eok(amt(r, cum)), eok(amt_prev(r, cum))]
+        pv = amt_prev(r, cum)
+        if pv is None:
+            pv = _prev_from(prev_rows, k, cum)
+        out[k] = [eok(amt(r, cum)), eok(pv)]
     out["ebt"] = eok(amt(g("ebt"), cum))
     ni = g("ni_parent") or g("ni")
     out["ni"] = eok(amt(ni, cum))
@@ -302,6 +315,12 @@ def build_one(dart, corp, f, info, state, today):
     label, months = REPRT[rc]
     prev_rows, _ = fin_rows(dart, corp, year - 1, rc)
     v = extract(rows, prev_rows, months)
+    if not is_fin(info.get("induty")) and (v["ar"][0] is None or v["inv"][0] is None or v["rev"][0] is None):
+        names = [r.get("account_nm", "") for r in rows if r.get("sj_div") in ("BS", "IS", "CIS")
+                 and re.search(r"채권|재고|매출|수익", r.get("account_nm", ""))]
+        miss = state.setdefault("_miss", [])
+        if len(miss) < 15:
+            miss.append([f["name"], [k for k in ("rev", "ar", "inv") if v[k][0] is None], names[:14]])
     ay = f["y"] if rc == "11011" else f["y"] - 1   # 감사의견은 가장 최근 사업보고서
     au = state.setdefault("audit", {})
     if (au.get(corp) or [None])[0] != ay:
@@ -385,7 +404,7 @@ def kb_prices(data, today, minutes=25):
     key, sec = os.environ.get("KB_OPENAPI_APP_KEY", "").strip(), os.environ.get("KB_OPENAPI_APP_SECRET", "").strip()
     if not (key and sec):
         print("KB_OPENAPI_APP_KEY/SECRET 이 없어 PER·PBR 은 건너뜀")
-        return {"error": "KB 키 없음"}
+        return {"error": "KB 키 없음", "app_key_len": len(key), "app_secret_len": len(sec)}
     hdr = _kb_header()
     try:
         t = _kb_post("/oauth2/token", {"dataHeader": hdr, "dataBody": {"appKey": key, "appSecret": sec, "grantType": "client_credentials"}}, {})
@@ -448,6 +467,7 @@ def main():
     ap.add_argument("--kb", action="store_true", help="DART 다음에 KB증권 PER·PBR 도 받는다")
     ap.add_argument("--minutes", type=float, default=55, help="DART 받기 시간 상한(분) — 워크플로 제한 전에 저장하고 끝낸다")
     ap.add_argument("--kb-minutes", type=float, default=25, help="KB PER·PBR 받기 시간 상한(분)")
+    ap.add_argument("--workers", type=int, default=6, help="동시에 받는 회사 수")
     ap.add_argument("--stale", type=int, default=45, help="이보다 오래된 자료는 남는 호출로 다시 받는다(자금조달 갱신)")
     a = ap.parse_args()
     key = os.environ.get("DART_API_KEY", "").strip()
@@ -487,39 +507,65 @@ def main():
         with open(os.path.join(data, "index.json"), "w", encoding="utf-8") as fp:
             json.dump({"updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M"), "total": len(filings), "list": idx}, fp,
                       ensure_ascii=False, separators=(",", ":"))
+        for _ in range(5):   # 다른 작업자가 동시에 항목을 추가하면 직렬화가 한 번 실패할 수 있다
+            try:
+                txt = json.dumps(state, ensure_ascii=False, separators=(",", ":"))
+                break
+            except RuntimeError:
+                time.sleep(0.05)
+        else:
+            return len(idx)
         with open(sp, "w", encoding="utf-8") as fp:
-            json.dump(state, fp, ensure_ascii=False, separators=(",", ":"))
+            fp.write(txt)
         return len(idx)
 
     n_ok = n_none = 0
     t0 = time.monotonic()
-    try:
-        for k, c in enumerate(todo, 1):
-            if time.monotonic() - t0 > a.minutes * 60:
-                print(f"{a.minutes:.0f}분이 지나 여기서 멈춤. 다음 실행에서 이어 받는다.")
-                break
-            if k % 100 == 0:
-                el = time.monotonic() - t0
-                print(f"  {k}/{len(todo)}곳 · {el / 60:.0f}분 · DART {dart.calls}회 ({dart.calls / max(el, 1):.1f}회/초)", flush=True)
-                save()
-            f = filings[c]
+    lock = threading.Lock()
+    stats = {"ok": 0, "none": 0, "n": 0}
+
+    def work(c):
+        if dart.stop or time.monotonic() - t0 > a.minutes * 60:
+            return
+        f = filings[c]
+        try:
             if c not in comp:
                 comp[c] = company(dart, c)
             rec = build_one(dart, c, f, comp[c], state, today)
+        except Budget:
+            dart.stop = True
+            return
+        except Exception as e:  # 한 회사가 이상해도 나머지는 계속
+            print(f"  {f['name']} 오류: {type(e).__name__} {str(e)[:120]}")
+            return
+        with lock:
             if rec:
                 with open(os.path.join(data, "fin", f["code"] + ".json"), "w", encoding="utf-8") as fp:
                     json.dump(rec, fp, ensure_ascii=False, separators=(",", ":"))
-                n_ok += 1
+                stats["ok"] += 1
             else:
-                n_none += 1
+                stats["none"] += 1
                 log.setdefault("no_fin", []).append(f["name"])
             done[c] = {"rcept": f["rcept_no"], "updated": today.strftime("%Y-%m-%d")}
-    except Budget:
+            stats["n"] += 1
+            if stats["n"] % 100 == 0:
+                el = time.monotonic() - t0
+                print(f"  {stats['n']}/{len(todo)}곳 · {el / 60:.0f}분 · DART {dart.calls}회 ({dart.calls / max(el, 1):.1f}회/초)", flush=True)
+                save()
+
+    with ThreadPoolExecutor(max_workers=a.workers) as ex:   # DART 응답이 느려(호출당 2~3초) 몇 곳을 함께 받는다
+        list(ex.map(work, todo))
+    if dart.stop:
         print("호출 한도에 닿아 여기서 멈춤. 다음 실행에서 이어 받는다.")
+    elif time.monotonic() - t0 > a.minutes * 60:
+        print(f"{a.minutes:.0f}분이 지나 여기서 멈춤. 다음 실행에서 이어 받는다.")
+    n_ok, n_none = stats["ok"], stats["none"]
     n_idx = save()
     log.update({"saved": n_ok, "no_fin_n": n_none, "index": n_idx, "dart_calls": dart.calls,
                 "dart_min": round((time.monotonic() - t0) / 60, 1)})
     log["no_fin"] = log.get("no_fin", [])[:30]
+    log["miss"] = state.pop("_miss", [])
+    log["workers"] = a.workers
     print(f"저장 {n_ok}곳, 재무 없음 {n_none}곳, 목록 {n_idx}곳, DART 호출 {dart.calls}회, {(time.monotonic() - t0) / 60:.0f}분")
     if a.kb:
         log["kb"] = kb_prices(data, today, a.kb_minutes)
