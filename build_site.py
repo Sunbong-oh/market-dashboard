@@ -1566,17 +1566,35 @@ REPORT_JS = r"""<script>
 # 보고서 PDF 바로 열기: surge-reports 브랜치의 PDF를 raw 주소에서 받아 브라우저 PDF 화면으로 연다
 # (GitHub 화면이 아니라 파일 자체가 보이게). view.html?f=2026-10-22/300120
 REPORT_VIEW = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>종목 보고서</title><style>body{margin:0;background:#FAF8F3;color:#3D3A35;font:16px/1.6 'Noto Sans KR',sans-serif;display:flex;min-height:100vh;
-align-items:center;justify-content:center;text-align:center;padding:16px}a{display:inline-block;margin-top:12px;padding:9px 16px;border-radius:10px;
-background:#F2A900;color:#3D3A35;font-weight:800;text-decoration:none}</style></head><body><div id="m">📑 보고서 여는 중…</div>
+<title>종목 보고서</title><style>
+*{box-sizing:border-box}body{margin:0;background:#E9E5DC;color:#3D3A35;font:16px/1.5 'Noto Sans KR',sans-serif}
+.bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 14px;background:#3D3A35;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.bar .t{flex:1;min-width:0;font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar a{flex:none;display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 16px;border-radius:12px;font-weight:800;font-size:16px;text-decoration:none}
+.sv{background:#5A564F;color:#fff}.cl{background:#F2A900;color:#3D3A35;min-width:96px}
+#pg{max-width:900px;margin:0 auto;padding:12px 8px 96px}#pg canvas{display:block;width:100%;height:auto;margin:0 0 10px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+#m{padding:40px 16px;text-align:center}
+.fab{position:fixed;right:16px;bottom:18px;z-index:6;height:56px;padding:0 22px;border-radius:28px;background:#F2A900;color:#3D3A35;font-weight:900;font-size:18px;
+ display:inline-flex;align-items:center;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+</style></head><body>
+<div class="bar"><span class="t" id="t">📑 종목 보고서</span><a class="sv" id="sv" href="#" hidden>PDF 저장</a><a class="cl" href="#" data-close>✕ 닫기</a></div>
+<div id="pg"><div id="m">보고서 여는 중…</div></div><a class="fab" href="#" data-close>✕ 닫기</a>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-(function(){var f=(new URLSearchParams(location.search).get('f')||'').replace(/[^0-9A-Za-z_\/-]/g,''),m=document.getElementById('m');
+(function(){var f=(new URLSearchParams(location.search).get('f')||'').replace(/[^0-9A-Za-z_\/-]/g,''),m=document.getElementById('m'),pg=document.getElementById('pg');
+ document.querySelectorAll('[data-close]').forEach(function(a){a.onclick=function(e){e.preventDefault();  /* 이전 화면 → 창 닫기 → 홈 */
+  if(history.length>1){history.back();return}window.close();setTimeout(function(){location.href='../'},200)}});
  if(!/^\d{4}-\d{2}-\d{2}\/[0-9A-Za-z]{6}$/.test(f)){m.textContent='보고서 주소가 올바르지 않습니다.';return}
  var raw='https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/surge-reports/reports/'+f+'.pdf',name=f.replace('/','_')+'_종목보고서.pdf';
- fetch(raw+'?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw r.status;return r.blob()}).then(function(b){
-  var u=URL.createObjectURL(new Blob([b],{type:'application/pdf'}));
-  m.innerHTML='📑 보고서가 열리지 않으면 아래를 누르세요<br><a href="'+u+'" download="'+name+'">PDF 열기</a>';location.replace(u)})
- .catch(function(s){m.innerHTML=(s===404?'보고서를 아직 만드는 중입니다. 5~10분 뒤 다시 열어 주세요.':'보고서를 불러오지 못했습니다.')+'<br><a href="javascript:location.reload()">다시 시도</a>'})})();
+ fetch(raw+'?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw r.status;return r.arrayBuffer()}).then(function(buf){
+  var u=URL.createObjectURL(new Blob([buf],{type:'application/pdf'})),sv=document.getElementById('sv');sv.href=u;sv.download=name;sv.hidden=false;
+  if(!window.pdfjsLib){location.replace(u);return}  /* 그림 엔진을 못 받으면 브라우저 PDF 화면으로 */
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  return pdfjsLib.getDocument({data:buf}).promise.then(function(doc){m.remove();var w=Math.min(pg.clientWidth-16,900),dpr=Math.min(window.devicePixelRatio||1,2.5),chain=Promise.resolve();
+   for(var i=1;i<=doc.numPages;i++)(function(i){chain=chain.then(function(){return doc.getPage(i).then(function(p){var v0=p.getViewport({scale:1}),v=p.getViewport({scale:w/v0.width*dpr}),
+    c=document.createElement('canvas');c.width=v.width;c.height=v.height;pg.appendChild(c);return p.render({canvasContext:c.getContext('2d'),viewport:v}).promise})})})(i);
+   return chain})})
+ .catch(function(s){m.innerHTML=(s===404?'보고서를 아직 만드는 중입니다. 5~10분 뒤 다시 열어 주세요.':'보고서를 불러오지 못했습니다.')})})();
 </script></body></html>"""
 
 
