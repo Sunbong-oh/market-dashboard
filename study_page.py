@@ -4,6 +4,7 @@
   study/terms.json       재무용어 사전   [{term, en, cat, def, formula, point}]
   study/industries.json  업종별 체크리스트 [{group, lede, items:[{name, warp, cat, rows:[[칸, 내용]]}]}]
   study/cases.json       사례노트       [{added, company, industry, period, cell, what, lesson, sources:[[제목, URL]]}]
+  study/quiz.json        퀴즈(실전 문제) [{id, cat, q, c:[보기 4개], a(정답 번호 0~3), exp(해설), ref(용어·사례 이름)}]  용어 문제는 terms.json 에서 자동으로 만든다
 페이지에서 직접 추가한 용어·사례·5분 체크 결과는 그 기기(브라우저)에만 저장되고,
 '홈페이지에 올리기' 버튼이 Claude 에게 보낼 문장을 복사해 준다 → Claude 가 위 JSON 에 넣어 커밋한다.
 """
@@ -124,6 +125,24 @@ CSS = """
 .cs .ls b{color:var(--accent)}
 .cs .srcs{font-size:12.5px;color:var(--muted)}
 /* 추가 창 */
+.qz-modes{display:flex;gap:6px;flex-wrap:wrap}
+.qz-stat{font-size:13px;color:var(--muted)}
+.qz{gap:12px}
+.qz .pg{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.qz .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}.qz .bar i{display:block;height:100%;background:var(--accent)}
+.qz h3{font-size:17.5px;line-height:1.5;margin:0}
+.qz .ch{display:flex;flex-direction:column;gap:8px}
+.qz .ch button{font:inherit;font-size:15px;text-align:left;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.qz .ch button b{flex:none;width:22px;height:22px;border-radius:50%;background:var(--card);border:1px solid var(--line);font-size:12px;display:grid;place-items:center}
+.qz .ch button:hover:not(:disabled){border-color:var(--accent)}
+.qz .ch button:disabled{cursor:default}
+.qz .ch button.ok{border-color:var(--ok);background:var(--ok-bg)}.qz .ch button.ok b{background:var(--ok);color:#fff;border-color:var(--ok)}
+.qz .ch button.no{border-color:var(--bad);background:var(--bad-bg)}.qz .ch button.no b{background:var(--bad);color:#fff;border-color:var(--bad)}
+.qz .ex{border-radius:10px;padding:10px 12px;background:var(--soft);font-size:14.5px;display:flex;flex-direction:column;gap:6px}
+.qz .ex .vd{font-weight:800}.qz .ex .vd.ok{color:var(--ok)}.qz .ex .vd.no{color:var(--bad)}
+.qz .end{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.qz .big{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent)}
+.qz .wl{margin:0;padding-left:18px;font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:10000;padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px))}
 .sheet form{background:var(--card);color:var(--text);border-radius:14px;padding:16px;width:100%;max-width:560px;display:flex;flex-direction:column;gap:9px;max-height:92vh;overflow:auto}
 .sheet h3{margin:0;font-size:17px}
@@ -246,6 +265,19 @@ CASES = """
 <div class="list" id="cL"></div>
 </div>"""
 
+QUIZ = """
+<div class="st-p" role="tabpanel" id="p-quiz" aria-labelledby="t-quiz" hidden>
+<p class="st-lede">실전 문제는 지뢰 거르기·밸류에이션·업종별 사례에서, 용어 문제는 용어사전에서 나옵니다. 틀린 문제는 이 기기에 모아 두었다가 다시 풀 수 있습니다.</p>
+<div class="qz-modes" role="group" aria-label="문제 고르기">
+ <button class="sb" type="button" data-qm="real">실전 10문제</button>
+ <button class="sb gh" type="button" data-qm="term">용어 10문제</button>
+ <button class="sb gh" type="button" data-qm="mix">섞어서 10문제</button>
+ <button class="sb gh" type="button" data-qm="wrong" id="qzWrongBtn">틀린 문제 다시</button>
+</div>
+<div class="qz-stat" id="qzStat"></div>
+<div class="panel qz" id="qz" aria-live="polite"></div>
+</div>"""
+
 SHEET = """
 <div class="sheet" id="sh" hidden><form id="shF" autocomplete="off"></form></div>"""
 
@@ -264,7 +296,7 @@ function copy(text,btn){
 }
 
 /* ---- 탭 ---- */
-var TABS=['how','check','ind','term','case'];
+var TABS=['how','check','ind','term','case','quiz'];
 function show(id){
   TABS.forEach(function(t){var on=t===id;$('#t-'+t).setAttribute('aria-selected',on);$('#p-'+t).hidden=!on});
   try{localStorage.setItem('st-tab',id)}catch(e){}
@@ -490,24 +522,91 @@ $('#addT').addEventListener('click',function(){openT(null)});
 $('#addC').addEventListener('click',function(){openC(null)});
 
 chips();terms();cases();
+
+/* ---- 퀴즈 ---- */
+var QB=__QUIZ__,qs=[],qi=0,qok=0,qwrong=[],qmode='real',qdone=false;
+function shuf(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function termQ(t){
+  var pool=T.filter(function(x){return x.term!==t.term&&x.def&&x.def.length>8}),same=pool.filter(function(x){return x.cat===t.cat}),others=shuf(same.length>=3?same:pool).slice(0,3);
+  var esc2=t.term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),mask=function(s){return s.replace(new RegExp(esc2,'g'),'○○')};
+  if(Math.random()<0.5){
+    var ch=shuf([t].concat(others));
+    return {id:'t:'+t.term,cat:'용어 · '+t.cat,q:'다음 설명에 맞는 용어는?\n「'+mask(t.def)+'」',c:ch.map(function(x){return x.term+(x.en?' ('+x.en.split(' (')[0]+')':'')}),a:ch.indexOf(t),exp:(t.formula?'계산식: '+t.formula+'. ':'')+(t.point||''),ref:t.term,shuffled:1};
+  }
+  var ch2=shuf([t].concat(others));
+  return {id:'t:'+t.term,cat:'용어 · '+t.cat,q:'「'+t.term+'」의 뜻으로 맞는 것은?',c:ch2.map(function(x){return x.term===t.term?x.def:x.def.replace(new RegExp(x.term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),'○○')}),a:ch2.indexOf(t),exp:(t.formula?'계산식: '+t.formula+'. ':'')+(t.point||''),ref:t.term,shuffled:1};
+}
+function prep(x){if(x.shuffled)return x;var o=shuf(x.c.map(function(c,i){return [c,i]}));return Object.assign({},x,{c:o.map(function(p){return p[0]}),a:o.findIndex(function(p){return p[1]===x.a})})}
+function termPool(){return T.filter(function(x){return x.def&&x.def.length>8})}
+function qwrongIds(){return lsGet('st-quiz-wrong')}
+function qstat(){var st={};try{st=JSON.parse(localStorage.getItem('st-quiz-stat')||'{}')}catch(e){}var w=qwrongIds().length;
+  $('#qzStat').textContent=(st.n?'지금까지 '+st.n+'문제 · 정답률 '+Math.round(st.ok/st.n*100)+'%':'아직 푼 문제가 없습니다')+(w?' · 다시 볼 문제 '+w+'개':'');
+  $('#qzWrongBtn').disabled=!w;$('#qzWrongBtn').style.opacity=w?1:.5;}
+function qstart(m){
+  qmode=m;qi=0;qok=0;qwrong=[];qdone=false;var tp=termPool();
+  if(m==='real')qs=shuf(QB).slice(0,10);
+  else if(m==='term')qs=shuf(tp).slice(0,10).map(termQ);
+  else if(m==='mix')qs=shuf(shuf(QB).slice(0,5).concat(shuf(tp).slice(0,5).map(termQ)));
+  else{var ids=qwrongIds();qs=ids.map(function(id){if(id.indexOf('t:')===0){var t=T.find(function(x){return 't:'+x.term===id});return t?termQ(t):null}return QB.find(function(x){return x.id===id})||null}).filter(Boolean).slice(0,20)}
+  qs=qs.map(prep);
+  document.querySelectorAll('[data-qm]').forEach(function(b){b.classList.toggle('gh',b.dataset.qm!==m)});
+  qdraw();
+}
+function qdraw(){
+  var box=$('#qz');
+  if(!qs.length){box.innerHTML='<div class="empty">풀 문제가 없습니다. 다른 묶음을 골라 주세요.</div>';return}
+  if(qi>=qs.length){
+    var pct=Math.round(qok/qs.length*100);
+    box.innerHTML='<div class="end"><div class="pg" style="width:100%"><span>'+({real:'실전',term:'용어',mix:'섞어서',wrong:'틀린 문제 다시'}[qmode])+' 결과</span></div><div class="big">'+qok+' / '+qs.length+'</div><div>'+(pct>=90?'훌륭합니다. 실전에서 바로 쓸 수 있는 수준입니다.':pct>=60?'좋습니다. 틀린 문제의 해설만 다시 읽어 보세요.':'틀린 문제를 다시 풀면서 해설을 읽어 보세요. 용어사전·사례노트와 같이 보면 빨리 늡니다.')+'</div>'
+      +(qwrong.length?'<b style="font-size:14px">틀린 문제</b><ol class="wl">'+qwrong.map(function(x){return '<li>'+esc(x.q.split('\n')[0])+'</li>'}).join('')+'</ol>':'')
+      +'<div class="row-btn"><button class="sb" type="button" data-qm="'+qmode+'">한 번 더</button>'+(qwrongIds().length?'<button class="sb gh" type="button" data-qm="wrong">틀린 문제 다시</button>':'')+'</div></div>';
+    qstat();return;
+  }
+  var x=qs[qi],qt=esc(x.q).replace(/\n/g,'<br>');
+  box.innerHTML='<div class="pg"><span>'+(qi+1)+' / '+qs.length+' · '+esc(x.cat)+'</span><span>맞힘 '+qok+'</span></div><div class="bar"><i style="width:'+(qi/qs.length*100)+'%"></i></div>'
+    +'<h3>'+qt+'</h3><div class="ch">'+x.c.map(function(c,i){return '<button type="button" data-ci="'+i+'"><b>'+(i+1)+'</b><span>'+esc(c)+'</span></button>'}).join('')+'</div><div id="qzEx"></div>';
+  qdone=false;
+}
+function qanswer(i){
+  if(qdone)return;qdone=true;var x=qs[qi],ok=i===x.a,btns=document.querySelectorAll('#qz .ch button');
+  btns.forEach(function(b,k){b.disabled=true;if(k===x.a)b.classList.add('ok');else if(k===i)b.classList.add('no')});
+  var W=qwrongIds(),pos=W.indexOf(x.id);
+  if(ok){qok++;if(pos>=0)W.splice(pos,1)}else{qwrong.push(x);if(pos<0)W.unshift(x.id)}
+  lsSet('st-quiz-wrong',W.slice(0,100));
+  var st={};try{st=JSON.parse(localStorage.getItem('st-quiz-stat')||'{}')}catch(e){}st.n=(st.n||0)+1;st.ok=(st.ok||0)+(ok?1:0);try{localStorage.setItem('st-quiz-stat',JSON.stringify(st))}catch(e){}
+  var hasT=x.ref&&T.some(function(t){return t.term===x.ref}),hasC=x.ref&&C.some(function(c){return c.company===x.ref});
+  $('#qzEx').innerHTML='<div class="ex"><span class="vd '+(ok?'ok':'no')+'">'+(ok?'정답입니다':'아쉽습니다 · 정답은 '+(x.a+1)+'번')+'</span>'+(x.exp?'<span>'+esc(x.exp)+'</span>':'')+'</div>'
+    +'<div class="row-btn" style="margin-top:10px"><button class="sb" type="button" id="qzNext">'+(qi+1<qs.length?'다음 문제':'결과 보기')+'</button>'
+    +(hasT?'<button class="sb gh" type="button" data-qref="t">용어사전에서 「'+esc(x.ref)+'」</button>':hasC?'<button class="sb gh" type="button" data-qref="c">사례노트에서 「'+esc(x.ref)+'」</button>':'')+'</div>';
+  $('#qzNext').focus();
+}
+$('#p-quiz').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  if(b.dataset.qm){qstart(b.dataset.qm);return}
+  if(b.dataset.ci!=null){qanswer(+b.dataset.ci);return}
+  if(b.id==='qzNext'){qi++;qdraw();$('#qz').scrollIntoView({block:'nearest'});return}
+  if(b.dataset.qref){var r=qs[qi].ref;if(b.dataset.qref==='t'){cat='전체';$('#q').value=r;chips();terms();show('term')}else{$('#cq').value=r;cases();show('case')}scrollTo(0,0)}
+});
+document.addEventListener('keydown',function(e){if($('#p-quiz').hidden||!sh.hidden)return;if(/^[1-4]$/.test(e.key)&&!qdone&&qi<qs.length&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))qanswer(+e.key-1)});
+qstat();qstart('real');
 })();
 </script>"""
 
 
 def build(out, page):
     """out: 사이트 출력 폴더, page: build_site.page (메뉴·머리 공통 틀)."""
-    terms, inds, cases = _load("terms.json"), _load("industries.json"), _load("cases.json")
+    terms, inds, cases, quiz = _load("terms.json"), _load("industries.json"), _load("cases.json"), _load("quiz.json")
     n_ind = sum(len(g.get("items", [])) for g in inds)
     tabs = ('<div class="st-tabs" role="tablist" aria-label="재무제표 공부">'
             + "".join(f'<button role="tab" id="t-{k}" aria-controls="p-{k}" aria-selected="false" type="button">{v}</button>'
-                      for k, v in (("how", "활용법"), ("check", "5분 체크"), ("ind", "업종별"), ("term", "용어사전"), ("case", "사례노트")))
+                      for k, v in (("how", "활용법"), ("check", "5분 체크"), ("ind", "업종별"), ("term", "용어사전"), ("case", "사례노트"), ("quiz", "퀴즈")))
             + "</div>")
-    js = JS.replace("__TERMS__", _js(terms)).replace("__IND__", _js(inds)).replace("__CASES__", _js(cases))
-    body = f'<style>{CSS}</style><div class="st">{tabs}{HOW}{CHECK}{IND}{TERMS}{CASES}</div>{SHEET}{js}'
+    js = JS.replace("__TERMS__", _js(terms)).replace("__IND__", _js(inds)).replace("__CASES__", _js(cases)).replace("__QUIZ__", _js(quiz))
+    body = f'<style>{CSS}</style><div class="st">{tabs}{HOW}{CHECK}{IND}{TERMS}{CASES}{QUIZ}</div>{SHEET}{js}'
     dest = out / "study"
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "index.html").write_text(
         page("📒 재무제표 공부", body, "../", "study/", "FINANCIAL STATEMENTS",
-             f"용어 {len(terms)}개 · 업종 {n_ind}개 · 사례 {len(cases)}개 · 재무제표를 주식에 쓰는 법"),
+             f"용어 {len(terms)}개 · 업종 {n_ind}개 · 사례 {len(cases)}개 · 퀴즈 {len(quiz)}문제 · 재무제표를 주식에 쓰는 법"),
         encoding="utf-8")
     return {"terms": len(terms), "industries": n_ind, "cases": len(cases)}
