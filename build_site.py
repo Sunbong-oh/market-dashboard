@@ -976,6 +976,12 @@ def build_close():
 # kb-market-report Actions가 평일 08:40·21:00에 consensus/YYYY-MM-DD.json 을 올린다 (consensus_report.py).
 # 원문(PDF) 링크가 있는 제목 옆 '<-- 원문링크는 터치' (실적속보·강세종목의 '터치!!'처럼 좌우로 움직인다)
 TP_TAP = '<i class="tp-tap">&lt;-- 원문링크는 터치</i>'
+
+
+def one_tap(html):
+    """'<-- 원문링크는 터치'는 페이지(칸)마다 첫 종목 한 줄에만 남긴다. 한 줄에 제목이 두 번(휴대폰용·PC용) 들어가 첫 두 개를 둔다."""
+    parts = html.split(TP_TAP)
+    return TP_TAP.join(parts[:3]) + "".join(parts[3:])
 TARGET_CSS = """
 .tp .tp-tap{font-style:normal;color:#E5484D;font-weight:800;font-size:12.5px;white-space:nowrap;display:inline-block;
  margin-left:12px;animation:tp-tap .9s ease-in-out infinite}
@@ -1075,7 +1081,7 @@ def build_target():
             body += ('<section class="panel report"><h3>투자의견 변경</h3><ul>' + "".join(
                 f'<li>{escape(i["company"])}: {escape(i.get("prev_opinion") or "")} → {escape(i["opinion"])} · {escape(i["broker"])}</li>'
                 for i in opch) + '</ul></section>')
-        body += all_reports(items)
+        body = one_tap(body + all_reports(items))
         sub = f'{label(p.stem)} · {escape(doc.get("made", ""))} 기준 · 같은 증권사 직전 리포트 대비 · 데이터: 한경 컨센서스·네이버 증권 리서치'
         title = f'{label(p.stem)} 목표주가 변동'
         for dest, root in ((out / p.stem, "../../"),) + (((out, "../"),) if i == 0 else ()):
@@ -1763,6 +1769,7 @@ def target_home(target):
              f'<h3>🔺 상향 상위</h3>{target_rows(up, "up", 5)}<h3>🔻 하향 상위</h3>{target_rows(down, "down", 5)}'
              + (f'<div class="tp-one">▶ {escape(target["one"])}</div>' if target["one"] else "")
              + f'<a class="btn" href="target/#all">전체 리포트 {target["n"]}건 보기 (신규·유지 포함)</a>')
+    inner = one_tap(inner)
     return (f'<section class="sec" id="target"><style>{TARGET_CSS}</style><div class="sec-h"><h2>🎯 목표주가 변동</h2>'
             f'<a href="target/">{label(target["day"])} {escape(target["made"][-5:])} · 전체 보기</a></div>'
             f'<section class="panel report">{inner}</section></section>')
