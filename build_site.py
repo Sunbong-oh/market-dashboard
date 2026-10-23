@@ -1255,22 +1255,30 @@ def strong_bar(it):
              for k, n in (("nasdaq", "나스닥"), ("sp500", "S&amp;P500")) if m.get(k) is not None]
     mk = (f'<span style="margin-right:10px">전일 미국장 {escape(m.get("day", "")[5:].replace("-", "/"))} · {" · ".join(parts)}</span>'
           if parts else "")
-    return (f'<div style="{SUB_STYLE}">{mk}<a href="./" style="{SUB_LINK}">← 강세종목 목록</a></div>')
+    close = ('<a href="./" class="st-close-bar" style="margin-left:auto;background:#F2A900;color:#3D3A35;font-weight:900;'
+             'text-decoration:none;padding:5px 14px;border-radius:16px" '
+             'onclick="event.preventDefault();if(history.length>1){history.back()}else{window.close();'
+             'setTimeout(function(){location.href=\'./\'},200)}">✕ 닫기</a>')
+    return (f'<div style="{SUB_STYLE}">{mk}<a href="./" style="{SUB_LINK}">← 강세종목 목록</a>{close}</div>')
 
 
 # 강세종목 리포트 페이지에 덧붙이는 것 (리포트 원본은 Claude가 만들어 모양이 조금씩 달라도 같게 적용):
-#  - 큰 닫기 버튼(오른쪽 아래 고정): 이전 화면 → 창 닫기 → 강세종목 목록
+#  - 큰 닫기 버튼(오른쪽 아래 고정) + 오른쪽 위 닫기(처음엔 메뉴 아래 막대 오른쪽, 스크롤하면 화면 오른쪽 위에 고정): 이전 화면 → 창 닫기 → 강세종목 목록
 #  - 인쇄·PDF: 배경색 유지, 섹션마다 쪽을 나누지 않고 이어서 (빈 쪽·큰 여백 금지), 차트·표 한 덩어리만 안 잘리게, 쪽번호
 STRONG_FIX = """<style>
 .st-close{position:fixed;right:16px;bottom:18px;z-index:50;height:56px;padding:0 22px;border-radius:28px;background:#F2A900;color:#3D3A35!important;
  font:900 18px/56px 'Noto Sans KR',sans-serif;text-decoration:none!important;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.st-close.st-top{top:12px;bottom:auto;z-index:10000;height:40px;padding:0 16px;border-radius:20px;font-size:15px;line-height:40px;opacity:0;pointer-events:none;transition:opacity .2s}
+.st-close.st-top.on{opacity:1;pointer-events:auto}
 html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @page{size:A4;margin:10mm 9mm 13mm;@bottom-right{content:counter(page) " / " counter(pages);font:9pt 'Noto Sans KR',sans-serif;color:#7A746A}}
-@media print{.st-close,.topnav,nav{display:none!important}
+@media print{.st-close,.st-close-bar,.topnav,nav{display:none!important}
  *{break-before:auto!important;page-break-before:auto!important}
  .page,.sec,section{break-after:auto!important;page-break-after:auto!important;min-height:0!important;height:auto!important;box-shadow:none!important;margin-bottom:6mm!important}
  svg,.chart,figure,.keydata,.photos,.mixbar,.legend,tr{break-inside:avoid} h2,h3,.figt{break-after:avoid}}
-</style><a class="st-close" href="./" onclick="event.preventDefault();if(history.length>1){history.back()}else{window.close();setTimeout(function(){location.href='./'},200)}">✕ 닫기</a>"""
+</style><a class="st-close st-top" href="./" onclick="event.preventDefault();if(history.length>1){history.back()}else{window.close();setTimeout(function(){location.href='./'},200)}">✕ 닫기</a><a class="st-close" href="./" onclick="event.preventDefault();if(history.length>1){history.back()}else{window.close();setTimeout(function(){location.href='./'},200)}">✕ 닫기</a><script>(function(){var t=document.querySelector('.st-close.st-top'),b=document.querySelector('.st-close-bar');
+var n=document.querySelector('nav');
+function f(){var nb=n?Math.max(0,n.getBoundingClientRect().bottom):0,r=b?b.getBoundingClientRect().bottom:0;t.style.top=(nb+10)+'px';t.classList.toggle('on',r<nb)}addEventListener('scroll',f,{passive:true});f()})()</script>"""
 
 
 def build_strong():
