@@ -1042,7 +1042,7 @@ def save_blog_post(png, now):
 CALENDAR = Path(__file__).with_name("market_calendar.json")
 THEME_DIR = Path(__file__).with_name("theme_news")
 THEME_ON = False  # 관심 테마 뉴스 일시 중지(2026-10-13, 사용자 요청): 텔레그램·금주 캘린더. 다시 켜려면 True
-THEME_SITE_ON = True  # 사이트(홈·돈이 되는 뉴스)에는 다시 보이기(2026-10-20, 사용자 요청). THEME_ON과 따로 켜고 끈다
+THEME_SITE_ON = False  # 사이트(홈·돈이 되는 뉴스)에서도 중지(2026-10-23, 사용자 요청). 2026-10-20엔 True였다. THEME_ON과 따로 켜고 끈다
 THEME_W = 1123  # A4 가로 폭(px). 테마 뉴스 한 장(A4판)은 이 폭 그대로 찍는다
 THEME_CARD_W = 540  # 모바일판 카드 폭(px)
 
