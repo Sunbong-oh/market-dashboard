@@ -39,9 +39,10 @@ jobs:
           python-version: "3.12"
       - name: DART 에서 받기
         env:
-          DART_API_KEY: ${{ secrets.DART_API_KEY }}
-          KB_OPENAPI_APP_KEY: ${{ secrets.KB_OPENAPI_APP_KEY }}
-          KB_OPENAPI_APP_SECRET: ${{ secrets.KB_OPENAPI_APP_SECRET }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY || secrets.DART_KEY || secrets.OPENDART_API_KEY || vars.DART_API_KEY }}
+          # 시크릿 이름이 조금 달라도 찾도록 흔한 이름을 차례로 본다 (kb-market-report 와 같은 방식)
+          KB_OPENAPI_APP_KEY: ${{ secrets.KB_OPENAPI_APP_KEY || secrets.KB_APP_KEY || secrets.KB_APPKEY || secrets.KB_OPENAPI_KEY || vars.KB_OPENAPI_APP_KEY }}
+          KB_OPENAPI_APP_SECRET: ${{ secrets.KB_OPENAPI_APP_SECRET || secrets.KB_APP_SECRET || secrets.KB_APPSECRET || secrets.KB_OPENAPI_SECRET || vars.KB_OPENAPI_APP_SECRET }}
           PYTHONIOENCODING: utf-8
         run: |
           mkdir -p _fin
