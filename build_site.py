@@ -1681,7 +1681,8 @@ addEventListener('resize',function(){document.querySelectorAll('iframe.embed').f
 </script>"""
 
 
-TOOLS_CSS = """.tools-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+TOOLS_CSS = """.home>#tools{order:99}  /* 계산기·공부는 시간대(장중 수급 맨 위 등)와 상관없이 항상 홈 맨 아래 */
+.tools-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:520px){.tools-g{grid-template-columns:1fr}}
 .tool{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .tool:active{background:var(--line)}
@@ -2047,8 +2048,9 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None):
             f'<section class="sec" id="issue" hidden></section>'
             f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
-            f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}{tools_home()}'
-            f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
+            f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}'
+            f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
+            f'{tools_home()}</div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
