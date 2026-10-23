@@ -91,7 +91,10 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
              "padding:8px 12px;background:#1c2330;font:600 14px/1.2 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif")
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
-MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
+# '돈이 되는 뉴스'(홈 섹션·news/ 페이지·메뉴) 중지(2026-10-23, 사용자 요청). 다시 켜려면 True
+NEWS_SITE_ON = False
+MENU = (("", "홈"), ("daily/", "오전 데일리")) + ((("news/", "돈이 되는 뉴스"),) if NEWS_SITE_ON else ()) + (
+        ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
         ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
@@ -2023,6 +2026,13 @@ def podcast_home():
             f'구독해 두면 새 회차가 자동으로 내려받아져 안드로이드 오토·카플레이에서 바로 재생됩니다.</div></section>{POD_JS}')
 
 
+def news_home(news):
+    if not news:
+        return ""
+    return (f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
+            f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>')
+
+
 def build_home(now, daily, news, close, live=None, target=None, us=None, strong=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
@@ -2043,8 +2053,7 @@ def build_home(now, daily, news, close, live=None, target=None, us=None, strong=
             f'<section class="sec" id="issue" hidden></section>'
             f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
-            f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
-            f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
+            f'{news_home(news)}'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}{tools_home()}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
@@ -2060,8 +2069,7 @@ def main():
     (OUT / ".nojekyll").write_text("")
     write_app_files()
     daily = build_daily()
-    theme_doc = build_theme()
-    news = build_news(now, theme_doc)
+    news = build_news(now, build_theme()) if NEWS_SITE_ON else None
     close = build_close()
     target = build_target()
     us = build_us()
@@ -2074,7 +2082,7 @@ def main():
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "us": us and us["day"],
                       "live": bool(live),
-                      "news": [len(news["kr"]), len(news["theme"])]}, ensure_ascii=False))
+                      "news": news and [len(news["kr"]), len(news["theme"])]}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
