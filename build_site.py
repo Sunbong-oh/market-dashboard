@@ -1345,8 +1345,15 @@ def strong_home(items):
         return ""
     day = items[0]["date"]
     cards = "".join(strong_card(it, "strong/" + it["file"]) for it in items if it["date"] == day)
-    return (f'<section class="sec" id="strong"><style>{STRONG_CSS}</style><div class="sec-h"><h2>🚀 해외주식 강세종목</h2>'
+    # 전일 미국장 강세종목이라 등록일 17:00(KST)까지는 홈 맨 위에 두고, 그 뒤로는 해외주식 리포트 아래(#strong-low)로 내린다.
+    # 사이트를 다시 빌드하지 않아도 되게 보는 사람 브라우저 시각으로 옮긴다.
+    return (f'<section class="sec" id="strong" data-until="{day}T17:00:00+09:00"><style>{STRONG_CSS}</style>'
+            f'<div class="sec-h"><h2>🚀 전일 미국시장 강세종목</h2>'
             f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}</section>')
+
+
+STRONG_LOW_JS = """<div id="strong-low"></div><script>(function(){var s=document.getElementById('strong'),l=document.getElementById('strong-low');
+ if(s&&l&&Date.now()>=Date.parse(s.dataset.until))l.appendChild(s)})()</script>"""
 
 
 # ---------- 맵 (업종별 등락 트리맵) ----------
@@ -1957,6 +1964,7 @@ def build_home(now, daily, news, close, live=None, target=None, us=None, strong=
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}{ISSUE_CSS}{VCNT_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
             f'<div id="vcnt" hidden></div>'
+            f'{strong_home(strong)}'
             f'{ad_strip()}'
             f'{podcast_home()}'
             f'<section class="sec" id="issue" hidden></section>'
@@ -1964,7 +1972,7 @@ def build_home(now, daily, news, close, live=None, target=None, us=None, strong=
             f'<section class="sec" id="daily">{s1}</section>'
             f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
             f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
-            f'{target_home(target)}{us_home(us)}{strong_home(strong)}{tools_home()}'
+            f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}{tools_home()}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
