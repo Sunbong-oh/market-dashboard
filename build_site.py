@@ -675,6 +675,8 @@ FUT_CSS = """<style>
 .fut .badge2>div{border-radius:12px;padding:9px 12px;background:#f4f5f8}.fut .badge2 .k{display:block;font-size:12.5px;font-weight:700;color:#6b7385}
 .fut .badge2 b{display:block;font-size:22px;letter-spacing:-.4px;line-height:1.25}.fut .badge2 .fg b{font-size:26px}
 .fut .badge2 .c{display:block;font-size:13px;font-weight:800}.fut .badge2 .fu .c{white-space:nowrap;font-size:13.5px}
+/* 등락률을 크게 (가격과 같은 크기), 포인트 변화는 옆에 작게 */
+.fut .badge2 .fu .c{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:6px}.fut .badge2 .fu .pc{font-style:normal;font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.2}
 .fut .badge2 .fu .k{color:#15803d;font-size:14px;font-weight:800}
 .fut .badge2 .up{background:#fff0f0}.fut .badge2 .up b,.fut .badge2 .up .c{color:#e03131}
 .fut .badge2 .dn{background:#eef4ff}.fut .badge2 .dn b,.fut .badge2 .dn .c{color:#1c6dd0}
@@ -729,8 +731,8 @@ function futChart(el,d,live){
  var gc=fg>0?'up':fg<0?'dn':'';
  var badge='<div class="badge2">'+(fg!=null?'<div class="fg '+gc+'"><span class="k">외국인 선물 누적 · 주간장'+(hf?'':' (마감)')+'</span><b>'+sg0(fg)+'억</b>'+
   '<span class="c">'+(fg>0?'순매수':fg<0?'순매도':'')+(d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+'억 '+(d30>0?'사는 중':d30<0?'파는 중':''):'')+'</span></div>':'')+
-  (ch!=null?'<div class="fu '+cls+'"><span class="k">KOSPI200 선물</span><b>'+f2(last)+'</b><span class="c">'+(ch>0?'▲':ch<0?'▼':'')+
-  f2(Math.abs(ch))+' ('+(pct>0?'+':'')+pct.toFixed(2)+'%)</span></div>':'')+'</div>';
+  (ch!=null?'<div class="fu '+cls+'"><span class="k">KOSPI200 선물</span><b>'+f2(last)+'</b><span class="c"><em class="pc">'+(pct>0?'+':'')+pct.toFixed(2)+'%</em> '+
+  (ch>0?'▲':ch<0?'▼':'')+f2(Math.abs(ch))+'</span></div>':'')+'</div>';
  var rest=hf?(d.flows||[]).slice(-1)[0]||{}:cf,oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])}).join(' · ');
  var hh=lf[0]+525,hhmm=Math.floor(hh/60)+':'+('0'+hh%60).slice(-2);
  el.innerHTML=badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) · ':'')+
@@ -1293,8 +1295,8 @@ a.st:hover{border-color:#F2A900}
 .st .go{display:inline-flex;align-items:center;gap:8px}
 .st .go b{display:inline-block;white-space:nowrap;padding:5px 12px;border-radius:10px;background:#F2A900;color:#3D3A35;font-size:14px;font-weight:800}
 .st .go i{font-style:normal;color:#E5484D;font-weight:800;font-size:14px;white-space:nowrap;display:inline-block;animation:rpt-tap .9s ease-in-out infinite}
+/* '<-- 터치!!' 좌우 움직임: 윈도우·휴대폰의 '애니메이션 줄이기' 설정과 관계없이 항상 움직인다 (8px 정도라 부담 없음) */
 @keyframes rpt-tap{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
-@media (prefers-reduced-motion:reduce){.st .go i{animation:none}}
 .st-mk{font-size:13.5px;font-weight:700;color:var(--muted);white-space:nowrap}.st-mk b{margin-left:3px}.st-mk .up{color:var(--up)}.st-mk .down{color:var(--down)}
 .sec-h.st-h{flex-wrap:wrap;justify-content:flex-start;column-gap:12px}.sec-h.st-h>a{margin-left:auto}
 /* 홈: 광고·핵심 이슈·실적속보(order:-2)와 장중 수급(order:-1)보다 위. 17시 뒤 #strong-low 안으로 옮겨지면 이 값은 상관없다 */
@@ -1805,7 +1807,6 @@ EARN_CSS = """
 .earn .rptw{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
 .earn .rpt-tap{color:#E5484D;font-weight:800;font-size:14.5px;white-space:nowrap;display:inline-block;animation:rpt-tap .9s ease-in-out infinite}
 @keyframes rpt-tap{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
-@media (prefers-reduced-motion:reduce){.earn .rpt-tap{animation:none}}
 @media print{.earn .rpt-tap{animation:none}}
 .earn .rpt{display:inline-block;margin:0;padding:8px 14px;border-radius:10px;background:#F2A900;color:#3D3A35;font-weight:800;font-size:14.5px;text-decoration:none}
 """
