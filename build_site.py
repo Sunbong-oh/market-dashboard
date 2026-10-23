@@ -974,7 +974,13 @@ def build_close():
 
 # ---------- 목표주가 변동 (증권사 리포트 상향·하향) ----------
 # kb-market-report Actions가 평일 08:40·21:00에 consensus/YYYY-MM-DD.json 을 올린다 (consensus_report.py).
+# 원문(PDF) 링크가 있는 제목 옆 '<-- 원문링크는 터치' (실적속보·강세종목의 '터치!!'처럼 좌우로 움직인다)
+TP_TAP = '<i class="tp-tap">&lt;-- 원문링크는 터치</i>'
 TARGET_CSS = """
+.tp .tp-tap{font-style:normal;color:#E5484D;font-weight:800;font-size:12.5px;white-space:nowrap;display:inline-block;
+ margin-left:12px;animation:tp-tap .9s ease-in-out infinite}
+@keyframes tp-tap{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
+@media print{.tp .tp-tap{animation:none}}
 .tp-sum{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
 .tp-sum b{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:14px}
 .tp-sum b.up{color:#fff;background:var(--up);border-color:var(--up)}.tp-sum b.down{color:#fff;background:var(--down);border-color:var(--down)}
@@ -1005,7 +1011,7 @@ def target_rows(items, cls, limit=None):
         op = f'{escape(it.get("prev_opinion") or "")}→{escape(it["opinion"])}' if it.get("opinion_changed") else escape(it.get("opinion") or "")
         title = escape(it.get("title") or "")
         if it.get("pdf"):
-            title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>'
+            title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>{TP_TAP}'
         rows.append(f'<tr><td class="co">{escape(it["company"])}<div class="t">{escape(it["broker"])}{src_tag(it)} · {op}</div>'
                     f'<div class="t m">{title}</div></td><td class="ti">{title}</td><td class="px">{_won(it.get("prev_target"))} →<br><b>{_won(it.get("target"))}</b></td>'
                     f'<td class="pct {cls}">{it["pct"]:+.1f}%</td></tr>')
@@ -1030,7 +1036,7 @@ def all_reports(items):
     for it in sorted(items, key=lambda i: (i["company"], i["broker"])):
         title = escape(it.get("title") or "")
         if it.get("pdf"):
-            title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>'
+            title = f'<a href="{escape(it["pdf"])}" target="_blank" rel="noopener">{title}</a>{TP_TAP}'
         key = escape(f'{it["company"]} {it.get("code", "")} {it["broker"]}'.lower())
         rows.append(f'<tr data-k="{key}"><td class="co">{escape(it["company"])}<div class="t">{escape(it["broker"])}{src_tag(it)} · '
                     f'{escape(it.get("opinion") or "-")}</div><div class="t m">{title}</div></td><td class="ti">{title}</td>'
