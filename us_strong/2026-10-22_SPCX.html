@@ -1,0 +1,338 @@
+<title>SpaceX 강세종목 리포트</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 세로로 이어지는 A4 리서치 지면, 표지 우측 KEY DATA 패널, 지면마다 상단 노란 띠와 하단 출처·쪽번호 */
+:root {
+  --kb: #F2A900; --kb-soft: #FBE7B0; --ink: #3D3A35; --ink-2: #6B665D;
+  --paper: #FFFFFF; --ground: #FAF8F3; --rule: #E6E0D2; --tint: #F4EFE3;
+  --good: #2F7D4F; --warn: #B7791F; --bad: #B23A3A;
+  --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: light;
+}
+body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px; }
+.page { max-width: 920px; margin: 0 auto 28px; background: var(--paper); box-shadow: 0 1px 3px rgba(61,58,53,.12); display: flex; flex-direction: column; }
+.ph { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 6px solid var(--kb); padding: 12px 32px 10px; border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+.ph b { color: var(--ink); font-weight: 700; }
+.pb { padding: 24px 32px 28px; display: flex; flex-direction: column; gap: 22px; flex: 1; }
+.pf { display: flex; justify-content: space-between; gap: 16px; padding: 10px 32px 14px; border-top: 1px solid var(--rule); font-size: 11px; color: var(--ink-2); }
+.pf .pn { font-weight: 700; color: var(--ink); white-space: nowrap; }
+h1 { font-size: 30px; line-height: 1.3; font-weight: 900; margin: 0; text-wrap: balance; letter-spacing: -0.5px; }
+h2 { font-size: 19px; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; text-wrap: balance; }
+h2::before { content: ""; width: 5px; height: 20px; background: var(--kb); flex: none; }
+h3 { font-size: 15px; margin: 0 0 6px; font-weight: 700; }
+p { margin: 0; }
+.lead { font-size: 15px; font-weight: 500; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--ink-2); font-weight: 700; }
+.sec { display: flex; flex-direction: column; gap: 12px; }
+.cover { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 24px; }
+.keydata { background: var(--ink); color: #FAF8F3; padding: 18px 18px 14px; align-self: start; }
+.keydata h3 { color: var(--kb); font-size: 13px; letter-spacing: .12em; margin-bottom: 10px; }
+.keydata dl { margin: 0; display: grid; grid-template-columns: auto auto; row-gap: 7px; column-gap: 10px; font-size: 12.5px; }
+.keydata dt { color: #CFC8B8; }
+.keydata dd { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.keydata .krw { display: block; font-size: 11px; font-weight: 500; color: #E9D9A8; }
+.keydata dd.up, .pricebar .up { color: #E0483E; }
+.pricebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; background: var(--tint); padding: 8px 12px; font-size: 12.5px; color: var(--ink-2); }
+.pricebar b { font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pricebar b.up { font-size: 15px; color: #C8372D; }
+.keydata .src { margin-top: 12px; font-size: 10.5px; color: #CFC8B8; line-height: 1.5; }
+.typebox { background: var(--tint); border-left: 5px solid var(--kb); padding: 12px 16px; }
+.typebox b { font-size: 16px; }
+ul.pts { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+ul.pts li { padding-left: 18px; position: relative; }
+ul.pts li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 7px; height: 7px; background: var(--kb); }
+.grid2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+.box { border: 1px solid var(--rule); padding: 14px 16px; }
+.box .big { font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.box .cap { font-size: 12px; color: var(--ink-2); }
+.tw { overflow-x: auto; }
+table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+table.t th, table.t td { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+table.t thead th { background: var(--ink); color: #FAF8F3; font-weight: 500; white-space: nowrap; }
+table.t tbody th { font-weight: 500; white-space: nowrap; background: var(--tint); }
+table.num td { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.num thead th { text-align: right; } table.num thead th:first-child { text-align: left; }
+table.sm { font-size: 11.5px; } table.sm th, table.sm td { padding: 5px 6px; }
+td.est, th.est { background: #FFF7E0; } thead th.est { background: #8A6A1E; } th.est span { font-size: 10px; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .ax { font-size: 11px; fill: var(--ink-2); font-family: var(--sans); }
+.chart .xl { font-size: 11.5px; fill: var(--ink); font-family: var(--sans); font-weight: 500; }
+.chart .bv { font-size: 10.5px; fill: var(--ink); font-family: var(--sans); font-weight: 700; }
+.chart .mv { font-size: 10.5px; fill: var(--ink); font-family: var(--sans); }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 10px; display: inline-block; }
+.photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.photos.p3 { grid-template-columns: repeat(3, 1fr); }
+.photos figure { margin: 0; background: #fff; border: 1px solid var(--rule); }
+.photos img { width: 100%; aspect-ratio: 5/4; object-fit: cover; display: block; }
+.photos figcaption { font-size: 11.5px; padding: 6px 8px; line-height: 1.45; color: var(--ink-2); }
+.photos figcaption b { color: var(--ink); display: block; font-size: 12px; }
+@media (max-width: 640px) { .photos, .photos.p3 { grid-template-columns: repeat(2, 1fr); } }
+.figt { font-size: 13px; font-weight: 700; }
+.note { font-size: 11.5px; color: var(--ink-2); }
+.mixrow { display: grid; grid-template-columns: 70px minmax(0,1fr); align-items: center; gap: 10px; }
+.mixlab { font-size: 12px; font-weight: 700; }
+.mixbar { display: flex; height: 24px; }
+.mixbar i { font-style: normal; font-size: 11px; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.c0 { background: #F2A900; } .c1 { background: #3D3A35; } .c2 { background: #C98B00; } .c3 { background: #8C877C; } .c4 { background: #D9C79A; } .c5 { background: #BDB6A6; }
+.mixbar .c0, .mixbar .c4, .mixbar .c5 { color: var(--ink); }
+.legend i { width: 12px; height: 12px; display: inline-block; }
+.struct { display: grid; grid-template-columns: minmax(0,1.25fr) minmax(0,1fr); gap: 14px; }
+.core { background: var(--ink); color: #FAF8F3; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.core h3 { color: var(--kb); }
+.core .kv { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.core .kv div { background: rgba(250,248,243,.08); padding: 8px; }
+.core .kv b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.core .kv span { font-size: 11px; color: #CFC8B8; }
+.newb { display: flex; flex-direction: column; gap: 8px; }
+.newb div { border: 1px solid var(--rule); padding: 8px 12px; font-size: 12.5px; }
+.newb b { display: block; font-size: 13px; }
+.newb .end { background: var(--tint); }
+.pill { display: inline-block; padding: 1px 9px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.ok { background: #E3F1E8; color: var(--good); } .chk { background: #FCF0D6; color: var(--warn); } .ng { background: #F6E1E1; color: var(--bad); }
+.disc { font-size: 11.5px; color: var(--ink-2); line-height: 1.7; display: flex; flex-direction: column; gap: 8px; }
+.callout { background: #FFF7E0; border: 1px solid var(--kb-soft); padding: 12px 16px; font-size: 13px; }
+@media (max-width: 720px) {
+  .cover, .grid2, .struct { grid-template-columns: minmax(0,1fr); }
+  .grid3 { grid-template-columns: minmax(0,1fr); }
+  .ph, .pb, .pf { padding-left: 16px; padding-right: 16px; }
+  h1 { font-size: 24px; }
+  .pf { flex-direction: column; gap: 4px; }
+}
+</style>
+
+<!-- 1. 표지 -->
+<section class="page">
+  <div class="ph"><span><b>해외주식 Company Note</b> · 미국 · 우주·위성통신·AI</span><span>2026년 10월 22일</span></div>
+  <div class="pb">
+    <div class="cover">
+      <div class="sec">
+        <span class="eyebrow">SPACEX (SPCX.US · NASDAQ)</span>
+        <h1>스페이스X: 상장 후 첫 흑자에 테슬라 합병 검토까지, 하루 +7.8%</h1>
+        <div class="pricebar"><span>작성 시점 주가</span><b>$159.31</b><b class="up">▲ $11.52 (+7.79%)</b><span>10/21 종가, 전일 $147.79 · 거래량 221백만 주(20일 평균의 2.6배) · 시가총액 약 2,868조 원 · 환율 1,325.6원/달러(10/21)</span></div>
+        <p class="note">기준일 2026-10-22 (KST) · 상장 2026-06-12(공모가 $135) · 회계연도 = 역년(12월 결산)</p>
+        <div class="sec" style="gap:8px">
+          <h2>주가 강세 요약</h2>
+          <ul class="pts">
+            <li><b>계기는 3분기 실적(10/20 장후).</b> 매출 $145.8억(컨센서스 약 $129억, +161%), EPS $0.35(컨센서스 $0.13)로 상장 후 첫 분기 흑자. 1Q27 매출 가이던스 $330~370억으로 3분기의 2.3~2.5배를 제시했다.</li>
+            <li><b>합병 카드.</b> 같은 콜에서 머스크가 "스페이스X와 테슬라가 주주 요청으로 합병을 논의할 특별위원회를 꾸렸다"고 밝혔다. 조건은 미정이며 머스크는 "보장은 없다"고 했다.</li>
+            <li><b>거래량 2.6배.</b> 10/21 하루 +7.8%, 시가총액이 하루에 약 $1,564억 늘었다. 나스닥(+1.05%)의 7배 넘는 상승.</li>
+            <li><b>아직 고점 아래.</b> 상장 직후 고점 $211.39(6/16)보다 25% 낮고, 공모가 대비 +18%. 20일 이평($155) 위, 60일 이평($144)보다 10% 위.</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="keydata">
+        <h3>KEY DATA</h3>
+        <dl>
+          <dt>주가 (10/21 종가)</dt><dd>$159.31</dd>
+          <dt>전일 대비</dt><dd class="up">▲ $11.52 (+7.79%)</dd>
+          <dt>상장 후 종가 최고 / 최저</dt><dd>$211.39 / $108.27</dd>
+          <dt>공모가 대비</dt><dd>+18.0%</dd>
+          <dt>20 / 60일 이평</dt><dd>155 / 144</dd>
+          <dt>시가총액</dt><dd>$2.16조<small class='krw'>약 2,868조 원</small></dd>
+          <dt>발행주식수</dt><dd>135.8억 주</dd>
+          <dt>순현금 (9월 말)</dt><dd>$511억<small class='krw'>현금·유가증권 $899억 − 차입 $388억</small></dd>
+          <dt>EV</dt><dd>$2.11조</dd>
+          <dt>EV/매출 (3Q 연환산)</dt><dd>36x</dd>
+          <dt>EV/매출 (1Q27 가이던스 연환산)</dt><dd>15x</dd>
+          <dt>EV/EBITDA (3Q 연환산)</dt><dd>60x</dd>
+          <dt>PER (3Q 연환산)</dt><dd>123x</dd>
+          <dt>1~9월 잉여현금흐름</dt><dd>−$350억</dd>
+          <dt>머스크 의결권</dt><dd>82%+</dd>
+          <dt>목표가 컨센서스</dt><dd>$228~256</dd>
+        </dl>
+        <p class="src">주가·이평: Yahoo Finance 일봉(상장 후 92거래일이라 120일 이평은 없음). 주식수·재무: SpaceX 3Q26 실적 발표(SEC 8-K, 2026-10-20). 연환산 = 분기 × 4. 목표가: Benzinga(33명 $228)·MarketBeat($244)·Yahoo($256) 집계로 출처마다 다름. 원화 환산은 대략치.</p>
+      </aside>
+    </div>
+    <div class="sec">
+      <p class="figt">그림 1. SPCX 상장 후 주가 (일봉 종가, USD) · 20·60일 이동평균</p>
+      <svg viewBox="0 0 760 300" class="chart" role="img" aria-label="스페이스X 상장 후 일봉 종가와 20·60일 이동평균"><line x1="52" x2="690" y1="262.0" y2="262.0" stroke="#E6E0D2"/><text x="44" y="266.0" text-anchor="end" class="ax">100</text><line x1="52" x2="690" y1="221.7" y2="221.7" stroke="#E6E0D2"/><text x="44" y="225.7" text-anchor="end" class="ax">120</text><line x1="52" x2="690" y1="181.3" y2="181.3" stroke="#E6E0D2"/><text x="44" y="185.3" text-anchor="end" class="ax">140</text><line x1="52" x2="690" y1="141.0" y2="141.0" stroke="#E6E0D2"/><text x="44" y="145.0" text-anchor="end" class="ax">160</text><line x1="52" x2="690" y1="100.7" y2="100.7" stroke="#E6E0D2"/><text x="44" y="104.7" text-anchor="end" class="ax">180</text><line x1="52" x2="690" y1="60.3" y2="60.3" stroke="#E6E0D2"/><text x="44" y="64.3" text-anchor="end" class="ax">200</text><line x1="52" x2="690" y1="20.0" y2="20.0" stroke="#E6E0D2"/><text x="44" y="24.0" text-anchor="end" class="ax">220</text><line x1="52" x2="690" y1="191.4" y2="191.4" stroke="#B23A3A" stroke-dasharray="4 4"/><text x="58" y="186.4" class="ax" fill="#B23A3A">공모가 $135</text><path d="M52.0,262 L52.0,139.1 L59.1,75.5 L66.2,37.4 L73.3,76.8 L80.4,90.6 L87.4,151.9 L94.5,148.8 L101.6,152.0 L108.7,155.1 L115.8,154.7 L122.9,132.6 L130.0,119.1 L137.1,146.0 L144.2,137.0 L151.2,140.2 L158.3,162.2 L165.4,164.6 L172.5,156.8 L179.6,170.6 L186.7,183.1 L193.8,189.2 L200.9,190.9 L208.0,199.3 L215.0,213.6 L222.1,222.0 L229.2,214.5 L236.3,231.2 L243.4,225.2 L250.5,231.6 L257.6,234.8 L264.7,228.9 L271.8,236.7 L278.8,237.4 L285.9,245.1 L293.0,232.7 L300.1,210.9 L307.2,245.3 L314.3,231.9 L321.4,195.2 L328.5,183.9 L335.6,194.9 L342.6,168.9 L349.7,178.7 L356.8,181.3 L363.9,168.8 L371.0,174.6 L378.1,182.0 L385.2,193.4 L392.3,187.4 L399.4,191.4 L406.4,185.5 L413.5,182.1 L420.6,179.6 L427.7,178.3 L434.8,173.9 L441.9,176.8 L449.0,179.9 L456.1,161.7 L463.2,165.3 L470.2,154.2 L477.3,166.1 L484.4,164.8 L491.5,158.7 L498.6,164.9 L505.7,174.3 L512.8,159.4 L519.9,151.5 L527.0,155.7 L534.0,157.4 L541.1,151.6 L548.2,164.5 L555.3,165.1 L562.4,163.8 L569.5,170.3 L576.6,162.7 L583.7,159.4 L590.8,165.1 L597.8,143.1 L604.9,118.6 L612.0,117.0 L619.1,125.7 L626.2,139.9 L633.3,135.8 L640.4,134.1 L647.5,148.0 L654.6,156.8 L661.6,163.9 L668.7,169.2 L675.8,165.3 L682.9,165.6 L690.0,142.4 L690.0,262 Z" fill="#F2A900" opacity=".16"/><path d="M52.0,139.1 L59.1,75.5 L66.2,37.4 L73.3,76.8 L80.4,90.6 L87.4,151.9 L94.5,148.8 L101.6,152.0 L108.7,155.1 L115.8,154.7 L122.9,132.6 L130.0,119.1 L137.1,146.0 L144.2,137.0 L151.2,140.2 L158.3,162.2 L165.4,164.6 L172.5,156.8 L179.6,170.6 L186.7,183.1 L193.8,189.2 L200.9,190.9 L208.0,199.3 L215.0,213.6 L222.1,222.0 L229.2,214.5 L236.3,231.2 L243.4,225.2 L250.5,231.6 L257.6,234.8 L264.7,228.9 L271.8,236.7 L278.8,237.4 L285.9,245.1 L293.0,232.7 L300.1,210.9 L307.2,245.3 L314.3,231.9 L321.4,195.2 L328.5,183.9 L335.6,194.9 L342.6,168.9 L349.7,178.7 L356.8,181.3 L363.9,168.8 L371.0,174.6 L378.1,182.0 L385.2,193.4 L392.3,187.4 L399.4,191.4 L406.4,185.5 L413.5,182.1 L420.6,179.6 L427.7,178.3 L434.8,173.9 L441.9,176.8 L449.0,179.9 L456.1,161.7 L463.2,165.3 L470.2,154.2 L477.3,166.1 L484.4,164.8 L491.5,158.7 L498.6,164.9 L505.7,174.3 L512.8,159.4 L519.9,151.5 L527.0,155.7 L534.0,157.4 L541.1,151.6 L548.2,164.5 L555.3,165.1 L562.4,163.8 L569.5,170.3 L576.6,162.7 L583.7,159.4 L590.8,165.1 L597.8,143.1 L604.9,118.6 L612.0,117.0 L619.1,125.7 L626.2,139.9 L633.3,135.8 L640.4,134.1 L647.5,148.0 L654.6,156.8 L661.6,163.9 L668.7,169.2 L675.8,165.3 L682.9,165.6 L690.0,142.4" fill="none" stroke="#3D3A35" stroke-width="1.8"/><polyline points="186.7,134.7 193.8,137.2 200.9,143.0 208.0,151.1 215.0,157.9 222.1,164.5 229.2,167.6 236.3,171.7 243.4,175.4 250.5,179.2 257.6,183.2 264.7,188.0 271.8,193.9 278.8,198.5 285.9,203.9 293.0,208.5 300.1,211.0 307.2,215.0 314.3,218.7 321.4,220.0 328.5,220.0 335.6,220.3 342.6,219.2 349.7,218.2 356.8,216.6 363.9,213.9 371.0,211.9 378.1,209.4 385.2,207.9 392.3,205.6 399.4,203.5 406.4,201.3 413.5,198.6 420.6,195.7 427.7,192.3 434.8,189.4 441.9,187.7 449.0,184.4 456.1,180.9 463.2,179.4 470.2,177.9 477.3,176.5 484.4,176.3 491.5,175.3 498.6,174.5 505.7,174.8 512.8,174.0 519.9,172.5 527.0,170.6 534.0,169.1 541.1,167.1 548.2,166.0 555.3,165.2 562.4,164.4 569.5,164.0 576.6,163.4 583.7,162.6 590.8,161.8 597.8,160.9 604.9,158.6 612.0,156.7 619.1,154.7 626.2,153.4 633.3,152.3 640.4,150.8 647.5,149.4 654.6,149.3 661.6,149.9 668.7,150.6 675.8,151.0 682.9,151.7 690.0,150.6" fill="none" stroke="#F2A900" stroke-width="1.6"/><polyline points="470.2,177.6 477.3,178.0 484.4,179.5 491.5,181.5 498.6,183.0 505.7,184.4 512.8,184.5 519.9,184.5 527.0,184.6 534.0,184.6 541.1,184.6 548.2,185.1 555.3,185.9 562.4,186.2 569.5,186.7 576.6,187.1 583.7,187.1 590.8,187.1 597.8,186.9 604.9,186.0 612.0,184.9 619.1,183.8 626.2,183.0 633.3,181.9 640.4,180.6 647.5,179.4 654.6,178.4 661.6,177.3 668.7,176.3 675.8,175.2 682.9,174.1 690.0,172.6" fill="none" stroke="#8C877C" stroke-width="1.6"/><text x="52.0" y="280" class="xl" text-anchor="middle">6월</text><text x="137.1" y="280" class="xl" text-anchor="middle">7월</text><text x="293.0" y="280" class="xl" text-anchor="middle">8월</text><text x="441.9" y="280" class="xl" text-anchor="middle">9월</text><text x="590.8" y="280" class="xl" text-anchor="middle">10월</text><circle cx="66.2" cy="37.4" r="3.5" fill="#3D3A35"/><text x="72.2" y="41.4" class="bv">고점 $211.39 (6/16)</text><circle cx="307.2" cy="245.3" r="3.5" fill="#3D3A35"/><text x="313.2" y="259.3" class="bv">저점 $108.27 (8/5, 보호예수 첫 해제 직전)</text><circle cx="690.0" cy="142.4" r="4.5" fill="#C8372D"/><text x="684.0" y="116.4" class="bv" text-anchor="end">10/21 $159.31 (+7.8%)</text></svg><div class="legend"><span><i style="background:#3D3A35"></i>종가</span><span><i style="background:#F2A900"></i>20일 이평</span><span><i style="background:#8C877C"></i>60일 이평</span><span><i style="background:#B23A3A"></i>공모가</span></div>
+    </div>
+    <div class="callout"><b>작성 후 추가 (10/23 오전).</b> 다음 거래일인 10/22에는 $144.75(−9.14%)로 상승분을 모두 반납했다. 이란·호르무즈 긴장에 나스닥이 −2.6% 빠졌고, 실적 뒤 보호예수 물량(최대 28%) 해제와 "합병은 스페이스X 주주에게 희석"이라는 비판(Fortune)이 겹쳤다. 아래 분석의 숫자는 10/21 종가 기준이다.</div>
+  </div>
+  <div class="pf"><span>자료: Yahoo Finance, SpaceX 3Q26 실적 발표(8-K), 컨퍼런스콜(2026-10-20)</span><span class="pn">1 / 6</span></div>
+</section>
+
+<!-- 2. 실적 -->
+<section class="page">
+  <div class="ph"><span><b>해외주식 Company Note</b> · 미국 · 우주·위성통신·AI</span><span>2026년 10월 22일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>3분기 실적: 매출 +161%, 영업이익 흑자 전환</h2>
+      <div class="grid3">
+        <div class="box"><div class="cap">매출</div><div class="big">$145.8억</div><div class="cap">컨센서스 약 $129억을 13% 상회 · 전년 +161%, 전분기 +87%</div></div>
+        <div class="box"><div class="cap">영업이익 · 조정 EBITDA</div><div class="big">$27.9억</div><div class="cap">전년 −$2.7억 → 흑자 · 조정 EBITDA $88.1억(마진 60%)</div></div>
+        <div class="box"><div class="cap">순이익 · EPS</div><div class="big">$44.0억</div><div class="cap">EPS $0.35 (컨센서스 $0.13) · 영업 외 이익이 약 1/3</div></div>
+      </div>
+      <p class="figt">그림 2. 분기 매출과 1Q27 가이던스 (USD 십억)</p>
+      <svg viewBox="0 0 760 250" class="chart" role="img" aria-label="스페이스X 분기 매출과 1Q27 가이던스 (십억 달러)"><line x1="52" x2="740" y1="210.0" y2="210.0" stroke="#E6E0D2"/><text x="44" y="214.0" text-anchor="end" class="ax">0</text><line x1="52" x2="740" y1="162.0" y2="162.0" stroke="#E6E0D2"/><text x="44" y="166.0" text-anchor="end" class="ax">10</text><line x1="52" x2="740" y1="114.0" y2="114.0" stroke="#E6E0D2"/><text x="44" y="118.0" text-anchor="end" class="ax">20</text><line x1="52" x2="740" y1="66.0" y2="66.0" stroke="#E6E0D2"/><text x="44" y="70.0" text-anchor="end" class="ax">30</text><line x1="52" x2="740" y1="18.0" y2="18.0" stroke="#E6E0D2"/><text x="44" y="22.0" text-anchor="end" class="ax">40</text><rect x="92" y="183.2" width="90" height="26.8" fill="#3D3A35"/><text x="137.0" y="177.2" text-anchor="middle" class="bv">$56억</text><text x="137.0" y="228" text-anchor="middle" class="xl">3Q25</text><rect x="257" y="172.6" width="90" height="37.4" fill="#3D3A35"/><text x="302.0" y="166.6" text-anchor="middle" class="bv">$78억</text><text x="302.0" y="228" text-anchor="middle" class="xl">2Q26</text><rect x="422" y="140.0" width="90" height="70.0" fill="#F2A900"/><text x="467.0" y="134.0" text-anchor="middle" class="bv">$146억</text><text x="467.0" y="228" text-anchor="middle" class="xl">3Q26</text><rect x="587" y="42.0" width="90" height="168.0" fill="#FBE7B0" stroke="#C98B00" stroke-dasharray="4 3"/><line x1="632.0" x2="632.0" y1="32.4" y2="51.6" stroke="#3D3A35" stroke-width="2"/><line x1="622.0" x2="642.0" y1="32.4" y2="32.4" stroke="#3D3A35" stroke-width="2"/><line x1="622.0" x2="642.0" y1="51.6" y2="51.6" stroke="#3D3A35" stroke-width="2"/><text x="632.0" y="26.4" text-anchor="middle" class="bv">$330~370억</text><text x="632.0" y="228" text-anchor="middle" class="xl">1Q27 가이던스</text></svg>
+    </div>
+    <div class="sec">
+      <h2>사업부별: 성장은 SI(AI), 이익은 스타링크</h2>
+      <div class="tw"><table class="t num">
+        <thead><tr><th>3Q26 ($)</th><th>매출</th><th>전년 대비</th><th>영업이익</th><th>조정 EBITDA</th><th>설비투자</th></tr></thead>
+        <tbody>
+          <tr><th>SI (AI · xAI·Grok·클라우드)</th><td>75.6억</td><td>+830%</td><td>4.3억</td><td>49.5억</td><td>164.4억</td></tr>
+          <tr><th>Connectivity (스타링크)</th><td>52.5억</td><td>+69%</td><td>23.7억</td><td>35.0억</td><td>15.4억</td></tr>
+          <tr><th>Space (발사·스타십)</th><td>17.7억</td><td>+6%</td><td>−0.1억</td><td>3.6억</td><td>16.1억</td></tr>
+          <tr><th>합계</th><td>145.8억</td><td>+161%</td><td>27.9억</td><td>88.1억</td><td>195.9억</td></tr>
+        </tbody></table></div>
+      <ul class="pts">
+        <li><b>SI가 매출의 52%.</b> 클라우드 컴퓨트 계약 가동과 Cursor 인수(분기 매출 $6.1억)로 9배 넘게 늘었다. 컴퓨트 용량은 1.7GW(전년 0.6GW). 설비투자의 84%가 여기에 들어간다.</li>
+        <li><b>스타링크는 이익 기계.</b> 소비자 가입자 1,360만(분기 +160만), 영업이익률 45%. 다만 ARPU는 신흥국 확대로 $69(전년 $83)로 내려왔다.</li>
+        <li><b>스페이스는 투자 단계.</b> 발사 35회, 스타십 첫 상업 비행으로 V3 위성 26기 배치. 스타십 연구개발비 $12억이 이익을 누른다.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pf"><span>자료: SpaceX 3Q26 실적 발표 사업부별 표, 컨센서스 Benzinga·Investing.com · SI = Super Intelligence 사업부</span><span class="pn">2 / 6</span></div>
+</section>
+
+<!-- 3. 이익의 질·가이던스 -->
+<section class="page">
+  <div class="ph"><span><b>해외주식 Company Note</b> · 미국 · 우주·위성통신·AI</span><span>2026년 10월 22일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>이익의 질: 순이익보다 영업이익, 이익보다 현금</h2>
+      <div class="grid2">
+        <div class="tw"><table class="t num sm">
+          <thead><tr><th>순이익 $44.0억 분해</th><th>$</th></tr></thead>
+          <tbody><tr><th>영업이익</th><td>27.9억</td></tr><tr><th>순이자수익</th><td>+2.0억</td></tr>
+          <tr><th>기타이익 (투자 평가 등)</th><td>+10.3억</td></tr><tr><th>법인세 환급</th><td>+3.9억</td></tr>
+          <tr><th>순이익</th><td>44.0억</td></tr></tbody></table></div>
+        <div class="tw"><table class="t num sm">
+          <thead><tr><th>현금흐름 (1~9월)</th><th>$</th></tr></thead>
+          <tbody><tr><th>영업활동 현금흐름</th><td>+131억</td></tr><tr><th>설비투자</th><td>−481억</td></tr>
+          <tr><th>잉여현금흐름</th><td>−350억</td></tr><tr><th>현금+유가증권 (9월 말)</th><td>899억</td></tr>
+          <tr><th>차입금 (9월 말)</th><td>388억</td></tr></tbody></table></div>
+      </div>
+      <p>순이익의 약 1/3이 영업 밖에서 나왔고, 회사도 4분기 매출총이익률은 일회성(관세 환급 약 3%p)이 빠져 2분기 수준으로 돌아간다고 밝혔다. 더 중요한 건 현금이다. 9개월 동안 잉여현금흐름 −$350억, 그런데 <b>4분기 설비투자만 $350~400억</b>이다. 순현금 $511억으로는 2027년 증설(10~20GW)을 다 감당하기 어렵다.</p>
+    </div>
+    <div class="sec">
+      <h2>가이던스: 매출은 가속, 투자는 두 배</h2>
+      <div class="tw"><table class="t">
+        <thead><tr><th>항목</th><th>회사 제시</th><th>해석</th></tr></thead>
+        <tbody>
+          <tr><th>1Q27 매출</th><td>$330~370억</td><td>3Q26의 2.3~2.5배. 이례적으로 두 분기 앞을 제시</td></tr>
+          <tr><th>12월 연환산 매출</th><td>$1,000억 유지</td><td>12월 월매출 약 $83억 = 분기 $250억 수준</td></tr>
+          <tr><th>4Q26 설비투자</th><td>$350~400억</td><td>3분기 $196억의 약 2배 (멤피스·사우스헤이븐 데이터센터)</td></tr>
+          <tr><th>AI 컴퓨트</th><td>연말 2.5~3GW → 2027년 +10GW</td><td>2027년 말 13GW 이상, 최대 20GW</td></tr>
+          <tr><th>스타십</th><td>1H27 주 1회, 연말 주 2회+</td><td>V3 위성 대량 배치 → 스타링크 용량 급증</td></tr>
+          <tr><th>보호예수</th><td>3Q 실적 후 최대 28% 해제</td><td>12/9 180일 만기, 머스크 등은 2027.6.13</td></tr>
+        </tbody></table></div>
+    </div>
+  </div>
+  <div class="pf"><span>자료: SpaceX 3Q26 손익계산서·현금흐름표·재무상태표, 컨퍼런스콜 녹취(Motley Fool), 보호예수 일정은 S-1 정리 보도 기준</span><span class="pn">3 / 6</span></div>
+</section>
+
+<!-- 4. 합병 -->
+<section class="page">
+  <div class="ph"><span><b>해외주식 Company Note</b> · 미국 · 우주·위성통신·AI</span><span>2026년 10월 22일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>테슬라 합병: 무엇이 확인됐고 무엇이 미정인가</h2>
+      <div class="grid2">
+        <div class="box"><h3>확인된 것</h3><ul class="pts">
+          <li>양사 모두 독립 이사로 구성된 <b>특별위원회</b> 구성 (10/20 콜, 머스크 발언)</li>
+          <li>머스크는 이해당사자라 논의에서 빠진다. "조건 합의 없음, 보장 없음"</li>
+          <li>테슬라 승인 요건: 투표 참여가 아닌 <b>전체 발행주식의 과반</b> 찬성 (불참 = 반대)</li>
+          <li>12/3 테슬라 주총 안건(10/19 위임장)에 합병은 없다</li>
+          <li>이미 얽힌 관계: 테슬라 xAI 투자 $20억(→스페이스X 주식), 메가팩 매출, Terafab 반도체 공동 프로젝트</li>
+        </ul></div>
+        <div class="box"><h3>미정 (주가를 흔들 변수)</h3><ul class="pts">
+          <li><b>교환비율·프리미엄</b>: 공시된 숫자 없음. 기술주 인수 프리미엄은 통상 30~35%(JP모건)</li>
+          <li><b>구조</b>: 바클레이즈는 스페이스X가 주식 교환으로 테슬라를 인수하는 방식을 가장 유력하게 본다</li>
+          <li><b>시점</b>: 바클레이즈는 발표 후 6~12개월, 월가 다수는 2027년 말까지를 예상</li>
+          <li><b>머스크 지배력</b>: 테슬라 약 20% → 합병사 57~58% (애널리스트 추정)</li>
+        </ul></div>
+      </div>
+    </div>
+    <div class="sec">
+      <h2>숫자로 본 영향: 스페이스X 주주 입장</h2>
+      <p class="figt">표. 합병 시나리오 (스페이스X 시총 $2.16조 = 10/21 종가, 테슬라 시총 $1.52조)</p>
+      <div class="tw"><table class="t num">
+        <thead><tr><th>테슬라 인수 프리미엄</th><th>인수 대금</th><th>신주 발행</th><th>테슬라 주주 지분</th><th>테슬라 1주당 SPCX</th><th>연환산 EPS (현재 $1.30)</th></tr></thead>
+        <tbody><tr><th>없음(시가)</th><td>$1.52조</td><td>95억 주 (+70%)</td><td>41.3%</td><td>2.43주</td><td>$0.90 (-30%)</td></tr><tr><th>25%</th><td>$1.90조</td><td>119억 주 (+88%)</td><td>46.8%</td><td>3.03주</td><td>$0.82 (-37%)</td></tr><tr><th>30%</th><td>$1.98조</td><td>124억 주 (+91%)</td><td>47.7%</td><td>3.15주</td><td>$0.80 (-38%)</td></tr></tbody></table></div>
+      <p class="note">EPS = (스페이스X 3Q 순이익 × 4 = $176억 + 테슬라 최근 4분기 GAAP 순이익 $32.8억) ÷ 합병 후 주식수. 스페이스X 3Q 순이익에 일회성이 섞여 있어 방향을 보는 용도. 프리미엄 0%·25% 지분율은 바클레이즈 추정(41.7%·47.2%)과 비슷하다.</p>
+      <ul class="pts">
+        <li><b>희석이 크다.</b> 지금 가치로 사도 주식 수가 70% 늘고, 30% 프리미엄이면 91% 늘어 사실상 대등 합병이다. 테슬라 PER(시총 ÷ 순이익)은 약 463배로 스페이스X(3Q 연환산 123배)보다 훨씬 비싸서, 이익 기준으로는 <b>EPS가 30~38% 줄어든다</b>.</li>
+        <li><b>그래도 시장이 반긴 이유</b>: AI 컴퓨트·로봇(옵티머스)·자율주행·위성통신을 한 회사에서 묶는 그림, Terafab 같은 공동 투자의 이해상충 해소, 테슬라 현금흐름으로 설비투자 부담 분산.</li>
+        <li><b>수급 측면</b>: 신주 수백억 주가 시장에 풀리는 셈이라, 보호예수 해제와 겹치면 오버행이 더 길어진다.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pf"><span>자료: 24/7 Wall St(10/21), Fortune·Yahoo Finance(Shawn Tully, 10/22), INDmoney(바클레이즈 정리), Tesla 위임장(10/19)</span><span class="pn">4 / 6</span></div>
+</section>
+
+<!-- 5. 밸류에이션 -->
+<section class="page">
+  <div class="ph"><span><b>해외주식 Company Note</b> · 미국 · 우주·위성통신·AI</span><span>2026년 10월 22일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>밸류에이션을 구할 수 있나: "한 점"이 아니라 "SI 매출 × 배수"</h2>
+      <p class="lead">연간으로는 아직 적자(1~9월 순손실 $4.1억)라 PER로는 답이 없다. 매출 배수는 기준을 어디에 두느냐에 따라 15배에서 36배까지 벌어진다. 그래서 거꾸로, <b>지금 주가가 SI(AI)에 얼마를 매기고 있는지</b>를 계산했다.</p>
+      <div class="tw"><table class="t num sm">
+        <thead><tr><th>기준</th><th>매출(연환산)</th><th>EV/매출</th></tr></thead>
+        <tbody><tr><th>3Q26 실제 × 4</th><td>$583억</td><td>36x</td></tr>
+        <tr><th>12월 연환산 목표</th><td>$1,000억</td><td>21x</td></tr>
+        <tr><th>1Q27 가이던스 중간값 × 4</th><td>$1,400억</td><td>15x</td></tr></tbody></table></div>
+    </div>
+    <div class="sec">
+      <h3>역산 SOTP (10/21 시총 $2,163bn)</h3>
+      <div class="tw"><table class="t num sm">
+        <thead><tr><th>부문</th><th>근거 (가정)</th><th>가치 ($bn)</th></tr></thead>
+        <tbody>
+          <tr><th>Connectivity (스타링크)</th><td>3Q EBITDA $35억 × 4 × 30~40배 (성장 69%, 영업이익률 45%)</td><td>420~560</td></tr>
+          <tr><th>Space (발사)</th><td>3Q 매출 $17.7억 × 4 × 10~15배 (스타십 옵션 포함)</td><td>71~106</td></tr>
+          <tr><th>순현금</th><td>9월 말</td><td>51</td></tr>
+          <tr><th>SI (AI) = 나머지</th><td>시총 − 위 세 가지</td><td><b>1,446~1,622</b></td></tr>
+        </tbody></table></div>
+      <p class="figt">그림 3. 시총 구성 (중간값 기준)</p>
+      <div class="mixbar" style="height:30px"><i class="c0" style="width:70.9%">71%</i><i class="c1" style="width:22.6%">23%</i><i class="c3" style="width:4.1%">4%</i><i class="c4" style="width:2.4%">2%</i></div><div class="legend" style="margin-top:6px"><span><i class="c0"></i>SI(AI) 내재가치 $1,534bn</span><span><i class="c1"></i>커넥티비티(스타링크) $490bn</span><span><i class="c3"></i>스페이스(발사) $88bn</span><span><i class="c4"></i>순현금 $51bn</span></div>
+      <ul class="pts">
+        <li><b>시총의 약 71%가 SI 몫.</b> SI 3분기 연환산 매출($302억)로는 51배, 1Q27 가이던스를 맞춘다고 보면(SI 분기 약 $270억 추정) <b>연환산 14배</b>다.</li>
+        <li>즉 지금 주가는 "1Q27 가이던스 달성"을 상당 부분 이미 반영한 값이다. 가이던스를 맞추면 무리한 가격은 아니고, 못 맞추면 SI 가치가 빠르게 줄어든다.</li>
+      </ul>
+    </div>
+    <div class="sec">
+      <h3>민감도: SI 연환산 매출 × 배수 → 주당 가치</h3>
+      <div class="tw"><table class="t num">
+        <thead><tr><th>SI 연환산 매출</th><th>10배</th><th>15배</th><th>20배</th></tr></thead>
+        <tbody><tr><th>$80bn</th><td>$105</td><td>$135</td><td class=est>$164</td></tr><tr><th>$100bn</th><td>$120</td><td class=est>$157</td><td>$194</td></tr><tr><th>$120bn</th><td>$135</td><td>$179</td><td>$223</td></tr></tbody></table></div>
+      <p class="note">스타링크·스페이스·순현금은 중간값($630bn) 고정, 주식 135.8억 주(희석 약 4.5% 미반영). 노란 칸은 10/21 종가($159) 근처. 1Q27 SI 추정은 커넥티비티 분기 +8%, 스페이스 +5% 성장을 가정해 총매출 가이던스 중간값($350억)에서 뺀 값. 증권사 목표가: BofA·에버코어 $275, 바클레이즈 $300, 니덤·필립 $250, HSBC $150(보유), 다이와 $140(보유).</p>
+    </div>
+  </div>
+  <div class="pf"><span>자료: SpaceX 3Q26 실적 발표, Yahoo Finance(10/21 종가), 목표가 Investing.com·Benzinga·Google Finance · 배수는 본 리포트의 가정</span><span class="pn">5 / 6</span></div>
+</section>
+
+<!-- 6. 우선순위·고지 -->
+<section class="page">
+  <div class="ph"><span><b>해외주식 Company Note</b> · 미국 · 우주·위성통신·AI</span><span>2026년 10월 22일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>무엇을 최우선으로 볼까: 순서대로 다섯 가지</h2>
+      <div class="tw"><table class="t">
+        <thead><tr><th>순위</th><th>무엇을</th><th>왜</th><th>언제·어떻게 확인</th></tr></thead>
+        <tbody>
+          <tr><th>1</th><td><b>SI 매출의 지속성</b><br>(1Q27 $330~370억 달성 경로)</td><td>시총의 약 71%가 SI 몫. 가이던스가 흔들리면 밸류 전체가 흔들린다</td><td>4Q 실적: 12월 연환산 $1,000억 달성 여부, SI 고객 집중도(대형 클라우드 계약)와 계약 기간</td></tr>
+          <tr><th>2</th><td><b>설비투자 자금 조달</b></td><td>4Q 설비투자 $350~400억 vs 순현금 $511억. 유상증자·전환사채는 곧 희석</td><td>4Q 현금흐름표, 차입·증자 공시(8-K), 2027년 설비투자 가이던스</td></tr>
+          <tr><th>3</th><td><b>테슬라 합병 조건</b></td><td>프리미엄 30%면 주식 수 +91%, 연환산 EPS −38%. 교환비율이 스페이스X 주주의 손익을 가른다</td><td>특별위원회 결과, 합의 시 S-4 공시. 테슬라 전체 주식 과반 찬성 여부</td></tr>
+          <tr><th>4</th><td><b>보호예수 물량</b></td><td>유통 5% 남짓으로 상장해 해제 때마다 매물. 8/6 첫 해제 때 공모가 아래로 밀렸다</td><td>10/25 135일차(약 7%), 12/9 180일 만기, $175.5 이상 5일 마감 시 10% 조기 해제</td></tr>
+          <tr><th>5</th><td><b>스타링크 이익률·스타십</b></td><td>가장 확실한 현금원. ARPU 하락을 가입자 증가가 메우는지</td><td>분기 가입자·ARPU, 스타십 1·2단 회수와 발사 빈도</td></tr>
+        </tbody></table></div>
+      <div class="typebox"><b>결론.</b> 밸류에이션은 구할 수 있지만 "SI 매출이 가이던스대로 커진다"는 전제 위의 숫자다. 그래서 1순위는 합병 뉴스가 아니라 <b>4분기 실적에서 SI 매출과 현금 소진 속도를 확인하는 것</b>이다. 합병은 조건이 나오기 전까지 기대(시너지)와 희석이 맞서는 재료이고, 12/9까지는 보호예수 물량이 반등의 천장 역할을 할 가능성이 크다.</div>
+    </div>
+    <div class="sec">
+      <h2>고지사항</h2>
+      <div class="disc">
+        <p>본 자료는 투자 판단을 돕기 위한 참고 자료이며 특정 종목의 매수·매도를 권유하지 않습니다. 실적은 SpaceX가 2026년 10월 20일 SEC에 제출한 실적 발표(8-K)와 컨퍼런스콜 기준입니다. 합병 관련 수치(교환비율·지분율·EPS)는 공시된 조건이 아니라 시가총액과 가정으로 계산한 시나리오이며, SOTP 배수도 본 리포트의 가정입니다. 컨센서스·목표가·보호예수 일정은 보도와 집계 사이트를 인용해 출처마다 차이가 있습니다. 투자 결정과 그 결과의 책임은 투자자 본인에게 있습니다.</p>
+        <p>자료: SpaceX 3Q26 실적 발표(SEC 8-K) · Motley Fool 컨퍼런스콜 녹취 · 24/7 Wall St "Tesla and SpaceX Just Formed Special Committees"(10/21) · Fortune/Yahoo Finance "Elon Musk's dream merger is a nightmare for SpaceX shareholders"(10/22) · INDmoney 바클레이즈 정리 · Yahoo Finance 주가(10/21·10/22 종가) · Benzinga·MarketBeat·Investing.com 목표가.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pf"><span>작성 2026-10-22 · 주가 기준 10/21 미국 정규장 종가</span><span class="pn">6 / 6</span></div>
+</section>
