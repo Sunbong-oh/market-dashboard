@@ -92,7 +92,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
-        ("us/", "해외주식"), ("strong/", "강세종목"), ("close/", "장마감 리포트"),
+        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
@@ -143,8 +143,8 @@ SUB_STYLE = ("display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px
 SUB_LINK = "color:#ffd43b;text-decoration:none;padding:4px 8px;border-radius:6px;border:1px solid #4a5568"
 
 
-def with_nav(html, root, active, sub=None):
-    """원본 리포트 HTML의 <body> 바로 뒤에 메뉴를 넣는다. sub=(설명, [(href, 이름)...])이면 보조 막대도."""
+def with_nav(html, root, active, sub=None, extra=""):
+    """원본 리포트 HTML의 <body> 바로 뒤에 메뉴를 넣는다. sub=(설명, [(href, 이름)...])이면 보조 막대도, extra 는 그 뒤에 그대로."""
     html = re.sub(r"</head>", lambda _: head_tags(root) + "</head>", html, count=1, flags=re.I)
     m = re.search(r"<body[^>]*>", html, re.I)
     bar = nav(root, active)
@@ -152,6 +152,7 @@ def with_nav(html, root, active, sub=None):
         text, links = sub
         bar += (f'<div style="{SUB_STYLE}"><span style="margin-right:4px">{escape(text)}</span>'
                 + "".join(f'<a href="{h}" style="{SUB_LINK}">{escape(t)}</a>' for h, t in links) + "</div>")
+    bar += extra
     return html[:m.end()] + bar + html[m.end():] if m else bar + html
 
 
@@ -1281,7 +1282,7 @@ def us_home(us):
 # /strong/ 목록(날짜 최신순, 같은 날은 등락률 높은 순)과 리포트 페이지가 생긴다.
 # index.json 항목: date, ticker, exchange, name, nameEn, sector, price, changePct, priceNote, headline, tags, file
 STRONG_CSS = """
-.st-day{margin:18px 0 6px;font-size:15px;font-weight:800;color:var(--muted)}
+.st-day{margin:18px 0 6px;font-size:15px;font-weight:800;color:var(--muted);display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px}
 .st{display:block;background:var(--card);border:1px solid var(--line);border-left:5px solid #F2A900;border-radius:12px;
   padding:12px 14px;margin-top:8px;text-decoration:none}
 a.st:hover{border-color:#F2A900}
@@ -1339,6 +1340,16 @@ def strong_market(it):
     return f'<span class="st-mk" title="{escape(m.get("source", ""))}">{day} {" · ".join(parts)}</span>'
 
 
+def strong_bar(it):
+    """강세종목 리포트 페이지 메뉴 아래 막대: 전일 나스닥·S&P500 등락 + 목록으로 (홈 제목 옆과 같은 값)."""
+    m = it.get("market") or {}
+    parts = [f'{n} <b style="color:{"#ff6b6b" if m[k] > 0 else "#74c0fc"}">{m[k]:+.2f}%</b>'
+             for k, n in (("nasdaq", "나스닥"), ("sp500", "S&amp;P500")) if m.get(k) is not None]
+    mk = (f'<span style="margin-right:10px">전일 미국장 {escape(m.get("day", "")[5:].replace("-", "/"))} · {" · ".join(parts)}</span>'
+          if parts else "")
+    return (f'<div style="{SUB_STYLE}">{mk}<a href="./" style="{SUB_LINK}">← 강세종목 목록</a></div>')
+
+
 def build_strong():
     out = OUT / "strong"
     out.mkdir(parents=True, exist_ok=True)
@@ -1347,7 +1358,7 @@ def build_strong():
     for it in items:
         if it["date"] != last:
             last = it["date"]
-            rows.append(f'<div class="st-day">{label(last)}</div>')
+            rows.append(f'<div class="st-day">{label(last)}{strong_market(it)}</div>')
         rows.append(strong_card(it, it["file"]))
         # 리포트 원본(Artifact용 조각 HTML)을 온전한 페이지로 감싸고 맨 위에 메뉴를 붙인다
         src = (US_STRONG / it["file"]).read_text(encoding="utf-8")
@@ -1355,12 +1366,13 @@ def build_strong():
             src = ('<!doctype html><html lang="ko"><head><meta charset="utf-8">'
                    '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"></head>'
                    f'<body>{src}</body></html>')
-        (out / it["file"]).write_text(with_nav(src, "../", "strong/"), encoding="utf-8")
+        (out / it["file"]).write_text(with_nav(src, "../", "strong/", extra=strong_bar(it)), encoding="utf-8")
     body = (f'<style>{STRONG_CSS}</style>'
             + ("".join(rows) or '<p class="err">아직 올린 강세종목 리포트가 없습니다.</p>')
             + '<div class="st-note">전일 미국장에서 강세를 보인 종목을 골라 만든 종목 리포트입니다. 재무는 SEC 공시(10-K·10-Q), '
-              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.</div>')
-    (out / "index.html").write_text(page("🚀 해외주식 강세종목 리포트", body, "../", "strong/", "US STRONG STOCKS",
+              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.'
+              + ('<br>날짜 옆 나스닥·S&amp;P500: 전일 종가 기준 등락(Yahoo Finance)' if any(it.get("market") for it in items) else '') + '</div>')
+    (out / "index.html").write_text(page("🚀 전일 미국장 강세종목", body, "../", "strong/", "US STRONG STOCKS",
                                          "날짜별 · 같은 날은 등락률 높은 순"), encoding="utf-8")
     return items
 
