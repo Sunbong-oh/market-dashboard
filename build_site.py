@@ -1276,12 +1276,14 @@ a.st:hover{border-color:#F2A900}
 .st .tg{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}.st .tg span{font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:5px;
   background:#FBE7B0;color:#3D3A35}
 .st-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
+/* 미국 외 시장 종목(index.json 의 region): 카드 왼쪽 띠를 빨강으로 바꾸고 '🇨🇳 중국시장' 배지를 종목명 앞에 둔다 */
+.st.rg{border-left-color:#D7263D}.st .rgb{display:inline-block;font-size:13px;font-weight:900;padding:2px 9px;border-radius:6px;background:#D7263D;color:#fff;white-space:nowrap}
 .st .go{display:inline-flex;align-items:center;gap:8px}
 .st .go b{display:inline-block;white-space:nowrap;padding:5px 12px;border-radius:10px;background:#F2A900;color:#3D3A35;font-size:14px;font-weight:800}
 .st .go i{font-style:normal;color:#E5484D;font-weight:800;font-size:14px;white-space:nowrap;display:inline-block;animation:rpt-tap .9s ease-in-out infinite}
 /* '<-- 터치!!' 좌우 움직임: 윈도우·휴대폰의 '애니메이션 줄이기' 설정과 관계없이 항상 움직인다 (8px 정도라 부담 없음) */
 @keyframes rpt-tap{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
-.st-mk{font-size:13.5px;font-weight:700;color:var(--muted);white-space:nowrap}.st-mk b{margin-left:3px}.st-mk .up{color:var(--up)}.st-mk .down{color:var(--down)}
+.st-mk{font-size:13.5px;font-weight:700;color:var(--muted)}.st-mk>span{white-space:nowrap}.st-mk b{margin-left:3px}.st-mk .up{color:var(--up)}.st-mk .down{color:var(--down)}
 .sec-h.st-h{flex-wrap:wrap;justify-content:flex-start;column-gap:12px}.sec-h.st-h>a{margin-left:auto}
 /* 홈: 광고·핵심 이슈·실적속보(order:-2)와 장중 수급(order:-1)보다 위. 17시 뒤 #strong-low 안으로 옮겨지면 이 값은 상관없다 */
 .home>#strong{order:-3;margin-top:0;margin-bottom:12px}
@@ -1300,9 +1302,11 @@ def strong_items():
 def strong_card(it, href):
     chg = it.get("changePct")
     pct = f'<span class="{"up" if chg > 0 else "down"}">{chg:+.2f}%</span>' if chg is not None else ""
-    px = f'<div class="px"><b>${it["price"]:,.2f}</b>{pct}</div>' if it.get("price") else ""
+    cur = escape(it.get("currency", "$"))  # 미국 외 종목은 index.json 에 currency(예: "¥") 를 적는다
+    px = f'<div class="px"><b>{cur}{it["price"]:,.2f}</b>{pct}</div>' if it.get("price") else ""
     tags = "".join(f"<span>{escape(t)}</span>" for t in it.get("tags", []))
-    return (f'<a class="st" href="{escape(href)}">{px}<div class="nm">{escape(it.get("name", ""))}'
+    rg = f'<span class="rgb">{escape(it["region"])}</span>' if it.get("region") else ""
+    return (f'<a class="st{" rg" if rg else ""}" href="{escape(href)}">{px}<div class="nm">{rg}{escape(it.get("name", ""))}'
             f'<small>{escape(it["ticker"])} · {escape(it.get("exchange", ""))} · {escape(it.get("sector", ""))}</small>'
             # 리포트 버튼은 종목명 줄 바로 옆 (좁으면 다음 줄로)
             '<span class="go"><b>📑 실시간 작성된 리포트</b><i>&lt;-- 터치!!</i></span></div>'
@@ -1317,10 +1321,12 @@ def strong_market(it):
     m = it.get("market") or {}
     parts = [f'{n}<b class="{"up" if m[k] > 0 else "down"}">{m[k]:+.2f}%</b>'
              for k, n in (("nasdaq", "나스닥"), ("sp500", "S&amp;P500")) if m.get(k) is not None]
+    parts += [f'{escape(n)}<b class="{"up" if v > 0 else "down"}">{v:+.2f}%</b>' for n, v in m.get("idx", [])]
     if not parts:
         return ""
     day = escape(m.get("day", "")[5:].replace("-", "/"))
-    return f'<span class="st-mk" title="{escape(m.get("source", ""))}">{day} {" · ".join(parts)}</span>'
+    parts = [f"<span>{x}</span>" for x in parts]  # 지수가 많아 좁은 화면에서 넘치면 지수 단위로 줄을 바꾼다
+    return f'<span class="st-mk" title="{escape(m.get("source", ""))}"><span>{day}</span> {" · ".join(parts)}</span>'
 
 
 def strong_bar(it):
@@ -1328,7 +1334,9 @@ def strong_bar(it):
     m = it.get("market") or {}
     parts = [f'{n} <b style="color:{"#ff6b6b" if m[k] > 0 else "#74c0fc"}">{m[k]:+.2f}%</b>'
              for k, n in (("nasdaq", "나스닥"), ("sp500", "S&amp;P500")) if m.get(k) is not None]
-    mk = (f'<span style="margin-right:10px">전일 미국장 {escape(m.get("day", "")[5:].replace("-", "/"))} · {" · ".join(parts)}</span>'
+    parts += [f'{escape(n)} <b style="color:{"#ff6b6b" if v > 0 else "#74c0fc"}">{v:+.2f}%</b>' for n, v in m.get("idx", [])]
+    where = escape(m.get("label", "전일 미국장"))
+    mk = (f'<span style="margin-right:10px">{where} {escape(m.get("day", "")[5:].replace("-", "/"))} · {" · ".join(parts)}</span>'
           if parts else "")
     close = ('<a href="./" class="st-close-bar" style="margin-left:auto;background:#F2A900;color:#3D3A35;font-weight:900;'
              'text-decoration:none;padding:5px 14px;border-radius:16px" '
@@ -1377,8 +1385,8 @@ def build_strong():
     body = (f'<style>{STRONG_CSS}</style>'
             + ("".join(rows) or '<p class="err">아직 올린 강세종목 리포트가 없습니다.</p>')
             + '<div class="st-note">전일 미국장에서 강세를 보인 종목을 골라 만든 종목 리포트입니다. 재무는 SEC 공시(10-K·10-Q), '
-              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.'
-              + ('<br>날짜 옆 나스닥·S&amp;P500: 전일 종가 기준 등락(Yahoo Finance)' if any(it.get("market") for it in items) else '') + '</div>')
+              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 미국 외 시장 종목(예: 🇨🇳 중국시장)은 빨간 배지로 표시하고, 재무는 그 나라 거래소 공시를 씁니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.'
+              + ('<br>날짜 옆 지수(나스닥·S&amp;P500, 중국 종목은 상하이종합·과창판50 등): 전일 종가 기준 등락(Yahoo Finance)' if any(it.get("market") for it in items) else '') + '</div>')
     (out / "index.html").write_text(page("🚀 전일 미국장 강세종목", body, "../", "strong/", "US STRONG STOCKS",
                                          "날짜별 · 같은 날은 등락률 높은 순"), encoding="utf-8")
     return items
@@ -1388,13 +1396,17 @@ def strong_home(items):
     if not items:
         return ""
     day = items[0]["date"]
-    cards = "".join(strong_card(it, "strong/" + it["file"]) for it in items if it["date"] == day)
+    today = [it for it in items if it["date"] == day]
+    cards = "".join(strong_card(it, "strong/" + it["file"]) for it in today)
+    # 그날 카드가 전부 미국 외 시장(예: 중국)이면 제목에서 '미국'을 빼고 시장 이름을 붙인다
+    rgs = sorted({it.get("region", "") for it in today})
+    title = "🚀 전일 미국시장 강세종목" if rgs == [""] else ("🚀 전일 강세종목 · " + " · ".join(escape(r) for r in rgs if r) if "" not in rgs else "🚀 전일 강세종목")
     # 전일 미국장 강세종목이라 등록일 17:00(KST)까지는 홈 맨 위에 두고, 그 뒤로는 해외주식 리포트 아래(#strong-low)로 내린다.
     # 사이트를 다시 빌드하지 않아도 되게 보는 사람 브라우저 시각으로 옮긴다.
     return (f'<section class="sec" id="strong" data-until="{day}T17:00:00+09:00"><style>{STRONG_CSS}</style>'
-            f'<div class="sec-h st-h"><h2>🚀 전일 미국시장 강세종목</h2>{strong_market(items[0])}'
+            f'<div class="sec-h st-h"><h2>{title}</h2>{strong_market(items[0])}'
             f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}'
-            + ('<div class="st-note" style="margin-top:6px">나스닥·S&amp;P500: 전일 종가 기준 등락(Yahoo Finance)</div>'
+            + ('<div class="st-note" style="margin-top:6px">지수: 전일 종가 기준 등락(Yahoo Finance)</div>'
                if strong_market(items[0]) else "") + '</section>')
 
 
