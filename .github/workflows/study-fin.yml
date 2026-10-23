@@ -1,0 +1,56 @@
+name: 재무제표 공부 자료 (DART)
+
+# 재무제표 공부 › 5분 체크에서 종목명을 넣으면 불러오는 재무 숫자.
+# study_fin.py 가 OpenDART 에서 상장사별 최근 정기보고서(분기·반기·사업) 숫자를 받아 study-fin 브랜치에 저장하고,
+# site.yml 이 그 브랜치를 사이트의 /study/fin/ 에 붙인다.
+# 필요: 저장소 Secret DART_API_KEY (opendart.fss.or.kr 인증키).
+# DART 하루 한도(2만 회)를 다른 작업과 나눠 쓰도록 한 번에 6,000회까지만 부른다 → 처음 전체 채우기는 사흘쯤 걸린다.
+on:
+  schedule:
+    - cron: "40 12 * * *"   # 매일 21:40 KST (정기보고서는 낮에 주로 올라온다)
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "DART 호출 상한"
+        default: "6000"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: study-fin
+  cancel-in-progress: false
+
+jobs:
+  fin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: DART 에서 받기
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: |
+          mkdir -p _fin
+          if git fetch -q --depth 1 origin study-fin; then git archive FETCH_HEAD | tar -x -C _fin; fi
+          python study_fin.py --data _fin --budget "${{ github.event.inputs.budget || '6000' }}"
+      - name: study-fin 브랜치에 저장
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/fin.index"
+          rm -f "$GIT_INDEX_FILE"
+          git --work-tree=_fin add -A -f .
+          commit=$(git commit-tree "$(git write-tree)" -m "study-fin: $(date -u -d '+9 hours' +%Y-%m-%d)")
+          git push --force origin "$commit:refs/heads/study-fin"
+      - name: 사이트 다시 만들기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run site.yml --repo "${{ github.repository }}" --ref main

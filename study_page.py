@@ -58,6 +58,15 @@ CSS = """
 .st input,.st select,.st textarea{font:inherit;font-size:15px;font-weight:400;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0;width:100%}
 .st textarea{min-height:60px;resize:vertical}
 .ck .sep{grid-column:1/-1;font-size:13px;font-weight:800;color:var(--text);border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
+.ck>.nm{grid-column:1/-1;gap:6px}
+.ck .nmin{display:flex;flex-direction:column;gap:6px}
+.ck .nm label{font-size:13px;font-weight:700;color:var(--text)}
+.ck .nm label{display:block}
+.nmrow{display:flex;gap:6px}.nmrow input{flex:1}
+.ck .src{font-size:12.5px;color:var(--muted);line-height:1.5}
+.ck .src.ok{color:var(--ok)}.ck .src.bad{color:var(--bad)}
+.ck .src a{color:var(--accent)}
+.ck input.auto{background:var(--soft)}
 .ck .ex{font-size:12.5px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:6px 9px}
 .sig{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
 .sig:first-of-type{border-top:0}
@@ -121,7 +130,7 @@ CSS = """
 .sheet label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;font-weight:700;color:var(--muted)}
 .sheet .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .sheet .note{font-size:12.5px;color:var(--muted)}
-@media (max-width:720px){.ck{grid-template-columns:minmax(0,1fr)}.ck>.panel[aria-live]{order:-1}.ind .bd{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:720px){.ck{grid-template-columns:minmax(0,1fr)}.ck>.panel[aria-live]{order:0}.ck>.panel:not(.nm):not([aria-live]){order:1}.ind .bd{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:340px){.ck .f,.sheet .two{grid-template-columns:minmax(0,1fr)}}
 @media (prefers-reduced-motion:reduce){.ind .cv{transition:none}}
 """
@@ -172,14 +181,17 @@ HOW = """
 
 CHECK = """
 <div class="st-p" role="tabpanel" id="p-check" aria-labelledby="t-check" hidden>
-<p class="st-lede">사업보고서(DART)나 HTS 재무 화면에서 숫자 몇 개만 옮겨 적으면 지뢰 다섯 가지를 신호등으로 보여 줍니다. 금융업(은행·보험·증권)은 구조가 달라 이 체크가 맞지 않습니다. 단위는 <b>억원</b>.</p>
+<p class="st-lede">종목명을 넣고 <b>불러오기</b>를 누르면 DART에 낸 가장 최근 분기 보고서 숫자가 채워지고, 지뢰 다섯 가지를 신호등으로 보여 줍니다. 숫자는 직접 고쳐 넣어도 됩니다. 금융업(은행·보험·증권)은 구조가 달라 이 체크가 맞지 않습니다. 단위는 <b>억원</b>.</p>
 <div class="ck">
+ <div class="panel nm">  <div class="nmin"><label for="c-name">종목명 · 회사명이나 종목코드를 넣으면 최근 분기 숫자를 불러옵니다</label>
+   <div class="nmrow"><input id="c-name" value="예시 기업" list="c-list" autocomplete="off" enterkeyhint="search"><button class="sb" type="button" id="ckLoad">불러오기</button></div>
+   <datalist id="c-list"></datalist><div class="src" id="ckSrc" aria-live="polite"></div></div>
+ </div>
  <div class="panel">
   <div class="ex" id="ckEx">처음 보이는 숫자는 사용법을 보여 주는 가상의 예시입니다. 종목 숫자로 바꿔 넣으세요.</div>
   <form class="f" id="ckF" autocomplete="off">
-   <label class="full" for="c-name">종목명<input id="c-name" value="예시 기업"></label>
    <label class="full" for="c-audit">최근 감사의견<select id="c-audit"><option value="ok">적정</option><option value="q">한정</option><option value="bad">부적정·의견거절</option></select></label>
-   <div class="sep">손익·현금흐름 (올해 = 최근 4개 분기 합 또는 최근 사업연도)</div>
+   <div class="sep" id="sepPL">손익·현금흐름 (올해 = 최근 4개 분기 합 또는 최근 사업연도)</div>
    <label for="c-rev1">매출 · 올해<input id="c-rev1" inputmode="decimal" value="5200"></label>
    <label for="c-rev0">매출 · 작년<input id="c-rev0" inputmode="decimal" value="4300"></label>
    <label for="c-op1">영업이익 · 올해<input id="c-op1" inputmode="decimal" value="410"></label>
@@ -187,7 +199,7 @@ CHECK = """
    <label for="c-cf1">영업현금흐름 · 올해<input id="c-cf1" inputmode="decimal" value="-60"></label>
    <label for="c-cf0">영업현금흐름 · 작년<input id="c-cf0" inputmode="decimal" value="120"></label>
    <label class="full" for="c-int">이자비용 · 올해<input id="c-int" inputmode="decimal" value="95"></label>
-   <div class="sep">재무상태표 (기말 잔액)</div>
+   <div class="sep" id="sepBS">재무상태표 (기말 잔액)</div>
    <label for="c-ar1">매출채권+계약자산 · 올해<input id="c-ar1" inputmode="decimal" value="2100"></label>
    <label for="c-ar0">매출채권+계약자산 · 작년<input id="c-ar0" inputmode="decimal" value="1350"></label>
    <label for="c-inv1">재고자산 · 올해<input id="c-inv1" inputmode="decimal" value="900"></label>
@@ -308,14 +320,15 @@ function check(){
   return {v:v,s:s,pv:pv};
 }
 $('#ckF').addEventListener('input',function(){$('#ckEx').hidden=true;check()});
+$('#c-name').addEventListener('input',check);
 $('#ckF').addEventListener('submit',function(e){e.preventDefault()});
-$('#ckReset').addEventListener('click',function(){document.querySelectorAll('#ckF input').forEach(function(i){i.value=''});$('#ckEx').hidden=true;check();$('#c-name').focus()});
+$('#ckReset').addEventListener('click',function(){document.querySelectorAll('#ckF input,#c-name').forEach(function(i){i.value='';i.classList.remove('auto')});$('#sepPL').textContent=PL0;$('#sepBS').textContent=BS0;srcMsg('');$('#ckEx').hidden=true;check();$('#c-name').focus()});
 function ckList(){
   var L=lsGet('st-checks');
   $('#ckList').innerHTML=L.length?'<b style="font-size:14px">저장한 체크 (이 기기)</b>'+L.map(function(x,i){return '<div class="it"><span class="dot '+x.v+'">'+LV[x.v]+'</span><b>'+esc(x.name)+'</b><span class="when">'+esc(x.when)+'</span><button class="sb gh sm" type="button" data-load="'+i+'">불러오기</button><button class="sb del sm" type="button" data-rm="'+i+'">지우기</button></div>'}).join(''):'';
 }
 $('#ckSave').addEventListener('click',function(){
-  var r=check(),vals={};document.querySelectorAll('#ckF input,#ckF select').forEach(function(i){vals[i.id]=i.value});
+  var r=check(),vals={};document.querySelectorAll('#ckF input,#ckF select,#c-name').forEach(function(i){vals[i.id]=i.value});
   var L=lsGet('st-checks'),d=new Date();L.unshift({name:vals['c-name']||'이름 없음',v:r.v[0],when:d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2),vals:vals});
   $('#ckMsg').textContent=lsSet('st-checks',L.slice(0,50))?'저장했습니다 (이 기기에만)':'이 브라우저는 저장을 막고 있습니다';ckList();
 });
@@ -324,6 +337,61 @@ $('#ckList').addEventListener('click',function(e){
   if(b.dataset.load){var x=L[+b.dataset.load];Object.keys(x.vals).forEach(function(k){var el=document.getElementById(k);if(el)el.value=x.vals[k]});$('#ckEx').hidden=true;check();scrollTo(0,0)}
   if(b.dataset.rm){L.splice(+b.dataset.rm,1);lsSet('st-checks',L);ckList()}
 });
+
+/* ---- 종목 불러오기 (OpenDART, 매일 밤 study_fin.py 가 만든 fin/*.json) ---- */
+var FIN=null,FINP=null,PL0=$('#sepPL').textContent,BS0=$('#sepBS').textContent;
+function finIndex(){
+  if(!FINP)FINP=fetch('fin/index.json',{cache:'no-cache'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){FIN=j;
+    $('#c-list').innerHTML=j.list.map(function(x){return '<option value="'+esc(x[1])+'">'+esc(x[0]+(x[2]?' · '+x[2]:''))+'</option>'}).join('');return j})
+    .catch(function(){FIN={list:[]};return FIN});
+  return FINP;
+}
+function srcMsg(t,cls){var e=$('#ckSrc');e.className='src'+(cls?' '+cls:'');e.innerHTML=t}
+function findCo(q){
+  q=(q||'').trim().toUpperCase().replace(/\s+/g,'');if(!q||!FIN)return null;var L=FIN.list,i;
+  for(i=0;i<L.length;i++)if(L[i][0]===q||L[i][1].toUpperCase().replace(/\s+/g,'')===q)return L[i];
+  var hit=L.filter(function(x){return x[1].toUpperCase().replace(/\s+/g,'').indexOf(q)>=0});
+  return hit.length===1?hit[0]:(hit.length?hit:null);
+}
+function setv(id,v){var el=$('#'+id);if(v==null||v===''){el.value='';el.classList.remove('auto');return}el.value=v;el.classList.add('auto')}
+function loadCo(){
+  var q=$('#c-name').value;
+  finIndex().then(function(j){
+    if(!j.list.length){srcMsg('자동 불러오기 자료를 준비하는 중입니다. 지금은 숫자를 직접 넣어 주세요.','bad');return}
+    var c=findCo(q);
+    if(!c){srcMsg('"'+esc(q)+'"을(를) 찾지 못했습니다. 자료는 매일 밤 늘어납니다 (현재 '+j.list.length+'곳). 숫자를 직접 넣어도 됩니다.','bad');return}
+    if(Array.isArray(c[0])){srcMsg('여러 종목이 맞습니다: '+c.slice(0,8).map(function(x){return esc(x[1])}).join(', ')+(c.length>8?' 외':'')+'. 목록에서 골라 주세요.');return}
+    srcMsg('불러오는 중…');
+    fetch('fin/'+c[0]+'.json',{cache:'no-cache'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(fill).catch(function(){srcMsg('자료를 불러오지 못했습니다. 잠시 뒤 다시 눌러 주세요.','bad')});
+  });
+}
+function fill(d){
+  var v=d.v,b=d.basis;$('#ckEx').hidden=true;
+  $('#c-name').value=d.name;
+  var op=(d.audit&&d.audit.opinion)||'';$('#c-audit').value=/부적정|거절/.test(op)?'bad':/한정/.test(op)?'q':'ok';
+  setv('c-rev1',v.rev[0]);setv('c-rev0',v.rev[1]);setv('c-op1',v.op[0]);setv('c-op0',v.op[1]);setv('c-cf1',v.cf[0]);setv('c-cf0',v.cf[1]);
+  setv('c-int',v.int);setv('c-ar1',v.ar[0]);setv('c-ar0',v.ar[1]);setv('c-inv1',v.inv[0]);setv('c-inv0',v.inv[1]);
+  setv('c-cb',d.raises?d.raises.length:null);
+  $('#c-mkt').value=d.market==='코스닥'?'kosdaq':'kospi';
+  setv('c-ebt',v.ebt!=null&&v.ebt<0?Math.abs(v.ebt):(v.ebt!=null?0:null));setv('c-eq',v.eq);
+  setv('c-roe',v.roe);setv('c-per','');setv('c-pbr','');
+  $('#sepPL').textContent='손익·현금흐름 · 올해 = '+b.now+', 작년 = '+b.prev;
+  $('#sepBS').textContent='재무상태표 · 올해 = '+b.bs_now+(b.bs_prev?', 작년 = '+b.bs_prev:' (작년 같은 시점 자료 없음)')+' 잔액';
+  var f=b.filed||'',notes=[];
+  if(d.fin)notes.push('<b>금융업</b>이라 이 체크가 맞지 않습니다. 업종별 탭의 금융 체크리스트를 보세요');
+  if(v.int_src&&v.int_src!=='이자비용')notes.push('이자비용 칸은 '+esc(v.int_src)+' 숫자입니다');
+  if(b.months<12)notes.push('법차손·ROE는 '+esc(b.now)+' 기준(ROE는 연환산)입니다');
+  if(d.raises&&d.raises.length)notes.push('자금조달: '+d.raises.map(function(x){return esc(x[0].slice(0,4)+'.'+x[0].slice(4,6))+' '+esc(x[1].replace(/^주요사항보고서\(|\)$/g,''))}).join(', '));
+  notes.push('PER·PBR은 HTS에서 넣으면 가격 위치 해석이 나옵니다');
+  srcMsg('<b>'+esc(d.name)+'</b> · '+esc(d.market)+' · '+esc(b.year+' '+b.reprt+'보고서')+'('+esc(b.fs)+') · '+f.slice(0,4)+'.'+f.slice(4,6)+'.'+f.slice(6,8)+' 제출 · 감사의견 '+esc((d.audit&&d.audit.year)||'')+' '+esc(op||'확인 필요')
+    +' · <a href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo='+esc(b.rcept_no)+'" target="_blank" rel="noopener">DART 원문</a><br>'+notes.join(' · '),'ok');
+  check();
+}
+$('#ckLoad').addEventListener('click',loadCo);
+$('#c-name').addEventListener('focus',finIndex,{once:true});
+$('#c-name').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();loadCo()}});
+$('#c-name').addEventListener('change',function(){if(FIN&&FIN.list.length){var c=findCo(this.value);if(c&&!Array.isArray(c[0]))loadCo()}});
+$('#ckF').addEventListener('input',function(e){if(e.target.classList)e.target.classList.remove('auto')});
 check();ckList();
 
 /* ---- 업종 ---- */

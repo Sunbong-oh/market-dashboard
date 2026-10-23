@@ -71,6 +71,14 @@ jobs:
           PYTHONIOENCODING: utf-8
           CLOSE_REPO: ${{ github.workspace }}/_close
         run: python build_site.py
+      - name: 재무제표 공부 자료 붙이기 (study-fin 브랜치 -> /study/fin/)
+        # study-fin.yml 이 매일 밤 DART 에서 받은 종목별 재무 숫자. 브랜치가 아직 없으면 건너뛴다.
+        continue-on-error: true
+        run: |
+          git fetch --depth 1 origin study-fin
+          mkdir -p _site/study
+          git archive FETCH_HEAD fin | tar -x -C _site/study
+          git show FETCH_HEAD:index.json > _site/study/fin/index.json
       - name: 출근길 음성 브리핑 붙이기 (podcast 브랜치 -> /podcast/feed.xml)
         # daily-dashboard.yml이 만든 MP3·피드. 브랜치가 아직 없거나 실패해도 나머지는 배포한다.
         continue-on-error: true
