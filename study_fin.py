@@ -372,7 +372,7 @@ def _find(obj, key):
     return None
 
 
-def kb_prices(data, today):
+def kb_prices(data, today, minutes=25):
     """fin/*.json 마다 KB 현재가(IVU10140)의 PER·PBR·주가를 px 로 넣는다. 밤에 돌므로 그날 종가 기준."""
     key, sec = os.environ.get("KB_OPENAPI_APP_KEY", "").strip(), os.environ.get("KB_OPENAPI_APP_SECRET", "").strip()
     if not (key and sec):
@@ -392,7 +392,11 @@ def kb_prices(data, today):
     files = sorted(glob.glob(os.path.join(data, "fin", "*.json")))
     ok = fail = streak = 0
     day = today.strftime("%Y-%m-%d")
+    t0 = time.monotonic()
     for i, fp in enumerate(files):
+        if time.monotonic() - t0 > minutes * 60:
+            print(f"KB {minutes}분이 지나 여기서 멈춤 ({i}/{len(files)}). 다음 실행에서 나머지를 받는다.")
+            break
         rec = json.load(open(fp, encoding="utf-8"))
         if (rec.get("px") or {}).get("date") == day:
             continue
@@ -429,6 +433,8 @@ def main():
     ap.add_argument("--budget", type=int, default=6000)
     ap.add_argument("--days", type=int, default=4, help="최근 며칠 안에 정기보고서를 낸 회사는 다시 받는다")
     ap.add_argument("--kb", action="store_true", help="DART 다음에 KB증권 PER·PBR 도 받는다")
+    ap.add_argument("--minutes", type=float, default=55, help="DART 받기 시간 상한(분) — 워크플로 제한 전에 저장하고 끝낸다")
+    ap.add_argument("--kb-minutes", type=float, default=25, help="KB PER·PBR 받기 시간 상한(분)")
     ap.add_argument("--stale", type=int, default=45, help="이보다 오래된 자료는 남는 호출로 다시 받는다(자금조달 갱신)")
     a = ap.parse_args()
     key = os.environ.get("DART_API_KEY", "").strip()
@@ -459,9 +465,28 @@ def main():
     todo += [c for c in old if done[c].get("updated", "") < cut]   # 3) 오래된 회사
     print(f"이번에 받을 후보 {len(todo)}곳 (새 공시 {len(fresh)}곳)")
 
+    def save():
+        idx = sorted(([v["code"], v["name"], MKT.get(comp.get(c, {}).get("cls"), "")]
+                      for c, v in corps.items() if os.path.exists(os.path.join(data, "fin", v["code"] + ".json"))),
+                     key=lambda x: x[1])
+        with open(os.path.join(data, "index.json"), "w", encoding="utf-8") as f:
+            json.dump({"updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M"), "total": len(corps), "list": idx}, f,
+                      ensure_ascii=False, separators=(",", ":"))
+        with open(sp, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, separators=(",", ":"))
+        return len(idx)
+
     n_ok = n_none = 0
+    t0 = time.monotonic()
     try:
-        for c in todo:
+        for k, c in enumerate(todo, 1):
+            if time.monotonic() - t0 > a.minutes * 60:
+                print(f"{a.minutes}분이 지나 여기서 멈춤. 다음 실행에서 이어 받는다.")
+                break
+            if k % 100 == 0:
+                el = time.monotonic() - t0
+                print(f"  {k}/{len(todo)}곳 · {el / 60:.0f}분 · DART {dart.calls}회 ({dart.calls / max(el, 1):.1f}회/초)", flush=True)
+                save()
             info = dict(corps[c])
             if c not in comp:
                 comp[c] = company(dart, c)
@@ -478,17 +503,10 @@ def main():
     except Budget:
         print("호출 한도에 닿아 여기서 멈춤. 다음 실행에서 이어 받는다.")
 
-    idx = sorted(([v["code"], v["name"], MKT.get(comp.get(c, {}).get("cls"), "")]
-                  for c, v in corps.items() if os.path.exists(os.path.join(data, "fin", v["code"] + ".json"))),
-                 key=lambda x: x[1])
-    with open(os.path.join(data, "index.json"), "w", encoding="utf-8") as f:
-        json.dump({"updated": today.strftime("%Y-%m-%d %H:%M"), "total": len(corps), "list": idx}, f,
-                  ensure_ascii=False, separators=(",", ":"))
-    with open(sp, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"저장 {n_ok}곳, 정기보고서 없음 {n_none}곳, 목록 {len(idx)}곳, DART 호출 {dart.calls}회")
+    n_idx = save()
+    print(f"저장 {n_ok}곳, 정기보고서 없음 {n_none}곳, 목록 {n_idx}곳, DART 호출 {dart.calls}회, {(time.monotonic() - t0) / 60:.0f}분")
     if a.kb:
-        kb_prices(data, today)
+        kb_prices(data, today, a.kb_minutes)
 
 
 if __name__ == "__main__":

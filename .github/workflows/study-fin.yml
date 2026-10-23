@@ -5,7 +5,8 @@ name: 재무제표 공부 자료 (DART)
 # site.yml 이 그 브랜치를 사이트의 /study/fin/ 에 붙인다.
 # 필요: 저장소 Secret DART_API_KEY (opendart.fss.or.kr 인증키).
 # PER·PBR: 이어서 KB증권 Open API 현재가(IVU10140)로 그날 종가 기준 값을 넣는다. Secret KB_OPENAPI_APP_KEY·KB_OPENAPI_APP_SECRET (없으면 건너뜀).
-# DART 하루 한도(2만 회)를 다른 작업과 나눠 쓰도록 한 번에 6,000회까지만 부른다 → 처음 전체 채우기는 사흘쯤 걸린다.
+# DART 하루 한도(2만 회)를 다른 작업과 나눠 쓰도록 한 번에 6,000회까지만, 시간은 DART 55분·KB 25분까지만 쓰고 저장한다
+# (100곳마다 중간 저장). 처음 전체 채우기는 며칠 걸린다.
 on:
   schedule:
     - cron: "40 12 * * *"   # 매일 21:40 KST (정기보고서는 낮에 주로 올라온다)
@@ -45,6 +46,7 @@ jobs:
           if git fetch -q --depth 1 origin study-fin; then git archive FETCH_HEAD | tar -x -C _fin; fi
           python study_fin.py --data _fin --kb --budget "${{ github.event.inputs.budget || '6000' }}"
       - name: study-fin 브랜치에 저장
+        if: ${{ !cancelled() && hashFiles('_fin/index.json') != '' }}   # 앞 단계가 중간에 실패해도 받은 만큼은 저장
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
