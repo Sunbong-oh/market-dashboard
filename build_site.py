@@ -1350,6 +1350,21 @@ def strong_bar(it):
     return (f'<div style="{SUB_STYLE}">{mk}<a href="./" style="{SUB_LINK}">← 강세종목 목록</a></div>')
 
 
+# 강세종목 리포트 페이지에 덧붙이는 것 (리포트 원본은 Claude가 만들어 모양이 조금씩 달라도 같게 적용):
+#  - 큰 닫기 버튼(오른쪽 아래 고정): 이전 화면 → 창 닫기 → 강세종목 목록
+#  - 인쇄·PDF: 배경색 유지, 섹션마다 쪽을 나누지 않고 이어서 (빈 쪽·큰 여백 금지), 차트·표 한 덩어리만 안 잘리게, 쪽번호
+STRONG_FIX = """<style>
+.st-close{position:fixed;right:16px;bottom:18px;z-index:50;height:56px;padding:0 22px;border-radius:28px;background:#F2A900;color:#3D3A35!important;
+ font:900 18px/56px 'Noto Sans KR',sans-serif;text-decoration:none!important;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+@page{size:A4;margin:10mm 9mm 13mm;@bottom-right{content:counter(page) " / " counter(pages);font:9pt 'Noto Sans KR',sans-serif;color:#7A746A}}
+@media print{.st-close,.topnav,nav{display:none!important}
+ *{break-before:auto!important;page-break-before:auto!important}
+ .page,.sec,section{break-after:auto!important;page-break-after:auto!important;min-height:0!important;height:auto!important;box-shadow:none!important;margin-bottom:6mm!important}
+ svg,.chart,figure,.keydata,.photos,.mixbar,.legend,tr{break-inside:avoid} h2,h3,.figt{break-after:avoid}}
+</style><a class="st-close" href="./" onclick="event.preventDefault();if(history.length>1){history.back()}else{window.close();setTimeout(function(){location.href='./'},200)}">✕ 닫기</a>"""
+
+
 def build_strong():
     out = OUT / "strong"
     out.mkdir(parents=True, exist_ok=True)
@@ -1366,6 +1381,7 @@ def build_strong():
             src = ('<!doctype html><html lang="ko"><head><meta charset="utf-8">'
                    '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"></head>'
                    f'<body>{src}</body></html>')
+        src = re.sub(r"</body>", lambda _: STRONG_FIX + "</body>", src, count=1, flags=re.I) if re.search(r"</body>", src, re.I) else src + STRONG_FIX
         (out / it["file"]).write_text(with_nav(src, "../", "strong/", extra=strong_bar(it)), encoding="utf-8")
     body = (f'<style>{STRONG_CSS}</style>'
             + ("".join(rows) or '<p class="err">아직 올린 강세종목 리포트가 없습니다.</p>')
