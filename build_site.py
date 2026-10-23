@@ -5,11 +5,10 @@
 메뉴
   /             홈: 세 가지 리포트의 최신 요약
   /daily/       오전 데일리 (미국 데일리 마켓) — archive/daily/YYYY-MM-DD/ (daily-dashboard.yml이 매일 저장)
-  /news/        돈이 되는 뉴스 — 빌드할 때마다 Google 뉴스에서 새로 수집 (dashboard.py의 뉴스 로직 재사용)
   /close/       장마감 리포트 (국내 장마감 수급체크) — kb-market-report 저장소의 archive/ (환경변수 CLOSE_REPO)
   /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 08:40·21:00) — kb-market-report 저장소의 consensus/*.json
   /us/          해외주식 리포트 (국내 증권사 미국주식 리포트 요약) — us_reports/*.json (us_reports.py)
-  /strong/      해외주식 강세종목 리포트 (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
+  /strong/      전일 미국장 강세종목 리포트 (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
 """
 import json
 import os
@@ -91,7 +90,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
              "padding:8px 12px;background:#1c2330;font:600 14px/1.2 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif")
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
-MENU = (("", "홈"), ("daily/", "오전 데일리"), ("news/", "돈이 되는 뉴스"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
+MENU = (("", "홈"), ("daily/", "오전 데일리"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
         ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
@@ -157,7 +156,7 @@ def with_nav(html, root, active, sub=None, extra=""):
 
 
 # 데일리의 '주요 지표' 12개를 폰에서도 텔레그램처럼 3열 4줄로: 600px 폭 3열로 배치한 뒤 화면 폭에 맞게 축소
-GRID3 = """<style>.panel.kr{display:none!important}  /* 사이트에서는 '돈이 되는 뉴스'와 겹쳐 뺀다 */
+GRID3 = """<style>.panel.kr{display:none!important}  /* 사이트에서는 뉴스 칸을 보이지 않는다 (돈이 되는 뉴스는 2026-10-23 사용자 요청으로 없앰) */
 @media (max-width:640px){
 .grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
 .g3 .card{padding:11px 11px 10px!important;border-radius:12px}
@@ -268,15 +267,6 @@ def dated_dirs(base):
     return sorted((p for p in base.iterdir() if p.is_dir() and DATE_RE.match(p.name)), key=lambda p: p.name, reverse=True)
 
 
-def news_items(items, limit=None):
-    if not items:
-        return '<p class="err">관련 뉴스를 찾지 못했습니다.</p>'
-    lis = "".join(f'<li>{"<span class=rel>관련주</span>" if n.get("rel") else ""}<a href="{escape(n["link"])}" target="_blank" rel="noopener">{escape(n["title"])}</a>'
-                  f'<div class="src">{escape(n["src"])} · {datetime.fromtimestamp(n["ts"], d.KST):%m/%d %H:%M}</div></li>'
-                  for n in items[:limit])
-    return f'<ol class="items">{lis}</ol>'
-
-
 # ---------- 오전 데일리 ----------
 # '주요 지표' 제목 옆 주황 버튼 → 그날 미국 52주 신고가 페이지 (맵 버튼과 같은 모양·흔들리는 '터치!')
 NH_CSS = ("<style>.nh-btn{display:inline-block;margin-left:10px;padding:3px 10px;border-radius:8px;background:#F39800;color:#fff!important;"
@@ -370,16 +360,6 @@ def build_live(now):
     (dest / "index.html").write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
     (dest / "embed.html").write_text(embed_html(html, btc_live=True), encoding="utf-8")
     return dict(at=now, embed="daily/live/embed.html")
-
-
-# ---------- 돈이 되는 뉴스 ----------
-def theme_news(limit=10):
-    """국내 수혜주·관련주·특징주 기사 (종목 추천·부동산 등은 뺀다), 최근 24시간."""
-    since = datetime.now(d.KST).timestamp() - 86400
-    items = [x for q in d.KR_THEME_QUERIES for x in d.google_news(q)
-             if d.KR_THEME.search(x["raw"]) and not d.KR_EXCLUDE.search(x["raw"])
-             and x["ts"] >= since and not x["src"].startswith(d.KR_SKIP_SRC)]
-    return d.rank(d.market_news(items), limit=limit)
 
 
 # ---------- 방문자 집계 (나만 보는 화면) ----------
@@ -526,80 +506,6 @@ def build_visits(now):
     (OUT / "visits").mkdir(parents=True, exist_ok=True)
     (OUT / "visits" / "index.html").write_text(
         page("방문자 현황", body, "../", "", "VISITS", f"{now:%Y-%m-%d} 기준 · 나만 보는 화면"), encoding="utf-8")
-
-
-THEME_ARCHIVE = ROOT / "archive" / "theme"
-INDEX_KPI = re.compile(r"나스닥|다우|S&P|코스피|코스닥|러셀|SOX|필라델피아|반도체지수|지수")
-
-
-def build_theme():
-    """가장 최근 테마 뉴스 카드(4장)를 사이트에 넣는다. theme_news/ 와 archive/theme/ 중 최신 날짜."""
-    if not d.THEME_SITE_ON:
-        return None
-    files = {}
-    for folder in (THEME_ARCHIVE, d.THEME_DIR):
-        if folder.is_dir():
-            for f in folder.glob("*.html"):
-                if DATE_RE.match(f.stem):
-                    files[f.stem] = f
-    if not files:
-        return None
-    day = max(files)
-    (OUT / "theme").mkdir(parents=True, exist_ok=True)
-    html = d.reshape_theme(files[day].read_text(encoding="utf-8"))[0]  # 첫 카드 빼고 AI 카드 2장 합치기 (데일리·텔레그램과 같게)
-    # 카드는 540px 고정 폭이라 화면 폭에 맞춰 늘고 줄게 바꾸고, 지수 등락 박스(나스닥 등)는 뺀다
-    # 카드는 한 장씩 세로로, 여백·글자를 줄여 한 장의 크기를 작게 한다
-    fit = ("<style>html,body{margin:0!important;overflow:hidden}body{background:transparent!important}"
-           ".card{width:auto!important;max-width:540px;margin:0 auto 10px!important;padding:12px 12px 10px!important}"
-           ".topbar{margin-bottom:8px!important;padding-bottom:4px!important}.house{font-size:13px!important}.meta{font-size:11.5px!important}"
-           ".tag{font-size:11px!important;margin-bottom:4px!important}h1{font-size:19px!important}.sect{font-size:13.5px!important;margin-bottom:8px!important}"
-           "h2{font-size:16px!important;border-left-width:4px!important;padding-left:7px!important}h2 small{font-size:12px!important}"
-           ".t{font-size:14.5px!important}.p{font-size:14px!important}.w{font-size:12.5px!important;margin-top:1px!important}"
-           ".sub{font-size:12.5px!important;margin:8px 0 2px!important}.quiet{font-size:13px!important}.next div{font-size:13px!important;padding:5px 0!important}"
-           ".next b{min-width:90px!important}.legend,.foot{font-size:11px!important}.b{width:24px!important;height:24px!important;font-size:13px!important}"
-           ".sub2{font-size:15px!important;border-left-width:4px!important;padding-left:7px!important;margin:12px 0 4px!important}.kpi{padding:7px 10px!important;margin-bottom:6px!important}.kpi .v{font-size:19px!important}.kpi .n{font-size:13px!important}.kpi .s{font-size:11.5px!important}"
-           "</style>")
-    html = html.replace("</head>", fit + "</head>", 1) if "</head>" in html else fit + html
-    html = re.sub(r'<div class="kpi"><div><div class="n">([^<]*)</div>.*?<div class="v[^"]*">[^<]*</div></div>',
-                  lambda m: "" if INDEX_KPI.search(m.group(1)) else m.group(0), html)
-    (OUT / "theme" / f"{day}.html").write_text(embed_html(html), encoding="utf-8")
-    return dict(day=day, path=f"theme/{day}.html?v={VER}")
-
-
-def theme_block(theme, root):
-    if not theme:
-        return ""
-    return (f'<section class="panel"><div class="tag">관심 테마 뉴스</div>'
-            f'<p class="meta">AI 밸류체인 · 메가테크 · 모빌리티·에너지 — 전날 밤 21시 작성 ({label(theme["day"])})</p>'
-            f'<iframe class="embed" scrolling="no" src="{root}{theme["path"]}" title="관심 테마 뉴스" loading="lazy"></iframe></section>')
-
-
-def build_news(now, theme_doc=None):
-    def safe(fn, *a, **k):
-        try:
-            return fn(*a, **k)
-        except Exception as e:  # 뉴스 하나가 실패해도 사이트는 만든다
-            print("뉴스 수집 실패:", fn.__name__, type(e).__name__, e, file=sys.stderr)
-            return []
-    kr = safe(d.fetch_kr_news, n=5)  # dashboard.market_news로 주가 관련 기사만 후보에 들어간다
-    theme = safe(theme_news, limit=5)
-    # 한 목록으로: 시장 영향 뉴스와 관련주 기사를 번갈아 넣고(같은 이야기는 하나만) 5개
-    merged = []
-    for pair in zip(kr + [None] * 5, theme + [None] * 5):
-        for it in pair:
-            if it and len(merged) < 5 and all(len(d._grams(it["title"]) & d._grams(m["title"])) < 4 for m in merged):
-                merged.append(dict(it, rel=it in theme))
-    body = (f'{theme_block(theme_doc, "")}'
-            f'<section class="panel"><div class="tag">오늘 한국 시장에 영향 줄 뉴스 · 관련주</div>'
-            f'<p class="meta">직전 한국 장 마감 이후 여러 언론이 크게 다룬 시장 뉴스와 관련주 기사 중 5개'
-            f' (정치·사회, 칼럼·종목 추천성 기사 제외)</p>{news_items(merged)}</section>')
-    (OUT / "news").mkdir(parents=True, exist_ok=True)
-    news_page_body = (body.replace(f'src="{theme_doc["path"]}"', f'src="../{theme_doc["path"]}"')
-                      if theme_doc else body)
-    (OUT / "news" / "index.html").write_text(
-        page("돈이 되는 뉴스", f'<style>{HOME_CSS}</style>' + news_page_body + FIT_JS, "../", "news/", "MONEY NEWS",
-             f"{now:%Y-%m-%d}({WD[now.weekday()]}) {now:%H:%M} KST 수집 · 하루 여러 번 자동 갱신"), encoding="utf-8")
-    return dict(kr=merged, theme=[], at=now, body=body)
 
 
 # ---------- 장마감 리포트 ----------
@@ -1652,7 +1558,7 @@ def map_btn(href):
 
 
 # ---------- 홈 ----------
-# 홈 한 페이지에서 스크롤만으로 오전 데일리 → 돈이 되는 뉴스 → 장마감 수급을 모두 본다.
+# 홈 한 페이지에서 스크롤만으로 오전 데일리 → 장마감 수급 등을 모두 본다.
 # 데일리·장마감은 원본 HTML을 iframe에 넣고 내용 높이만큼 늘려 안쪽 스크롤이 생기지 않게 한다.
 CLOSE_FIRST_JS = """<script>(function(){function f(){var n=new Date(Date.now()+9*3600e3),wd=n.getUTCDay(),hm=n.toISOString().slice(11,16);
  document.documentElement.classList.toggle('close-first',wd>0&&wd<6&&hm>='08:30'&&hm<'17:00')}f();setInterval(f,60000)})();</script>"""
@@ -2023,7 +1929,7 @@ def podcast_home():
             f'구독해 두면 새 회차가 자동으로 내려받아져 안드로이드 오토·카플레이에서 바로 재생됩니다.</div></section>{POD_JS}')
 
 
-def build_home(now, daily, news, close, live=None, target=None, us=None, strong=None):
+def build_home(now, daily, close, live=None, target=None, us=None, strong=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
@@ -2043,8 +1949,6 @@ def build_home(now, daily, news, close, live=None, target=None, us=None, strong=
             f'<section class="sec" id="issue" hidden></section>'
             f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
-            f'<section class="sec" id="news"><div class="sec-h"><h2>💰 돈이 되는 뉴스</h2>'
-            f'<a href="news/">{news["at"]:%m/%d %H:%M} 수집</a></div>{news["body"]}</section>'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}{tools_home()}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section></div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
@@ -2060,8 +1964,6 @@ def main():
     (OUT / ".nojekyll").write_text("")
     write_app_files()
     daily = build_daily()
-    theme_doc = build_theme()
-    news = build_news(now, theme_doc)
     close = build_close()
     target = build_target()
     us = build_us()
@@ -2070,11 +1972,10 @@ def main():
     build_visits(now)
     build_map()
     build_reports()
-    build_home(now, daily, news, close, live, target, us, strong)
+    build_home(now, daily, close, live, target, us, strong)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "us": us and us["day"],
-                      "live": bool(live),
-                      "news": [len(news["kr"]), len(news["theme"])]}, ensure_ascii=False))
+                      "live": bool(live)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
