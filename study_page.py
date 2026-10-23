@@ -267,9 +267,10 @@ CASES = """
 
 QUIZ = """
 <div class="st-p" role="tabpanel" id="p-quiz" aria-labelledby="t-quiz" hidden>
-<p class="st-lede">실전 문제는 지뢰 거르기·밸류에이션·업종별 사례에서, 용어 문제는 용어사전에서 나옵니다. 틀린 문제는 이 기기에 모아 두었다가 다시 풀 수 있습니다.</p>
+<p class="st-lede">실전 문제는 지뢰 거르기·밸류에이션·업종별 사례에서, 실제 종목 문제는 DART·KB증권 숫자로 그 자리에서 만들고, 용어 문제는 용어사전에서 나옵니다. 틀린 문제는 이 기기에 모아 두었다가 다시 풀 수 있습니다.</p>
 <div class="qz-modes" role="group" aria-label="문제 고르기">
  <button class="sb" type="button" data-qm="real">실전 10문제</button>
+ <button class="sb gh" type="button" data-qm="co">실제 종목 10문제</button>
  <button class="sb gh" type="button" data-qm="term">용어 10문제</button>
  <button class="sb gh" type="button" data-qm="mix">섞어서 10문제</button>
  <button class="sb gh" type="button" data-qm="wrong" id="qzWrongBtn">틀린 문제 다시</button>
@@ -536,6 +537,43 @@ function termQ(t){
   var ch2=shuf([t].concat(others));
   return {id:'t:'+t.term,cat:'용어 · '+t.cat,q:'「'+t.term+'」의 뜻으로 맞는 것은?',c:ch2.map(function(x){return x.term===t.term?x.def:x.def.replace(new RegExp(x.term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),'○○')}),a:ch2.indexOf(t),exp:(t.formula?'계산식: '+t.formula+'. ':'')+(t.point||''),ref:t.term,shuffled:1};
 }
+/* 실제 종목 문제: fin/<코드>.json (DART 최근 보고서 + KB PER·PBR) 으로 계산 문제를 만든다 */
+function fmtEok(v){var a=Math.abs(v),s=v<0?'−':'';if(a>=10000){var jo=Math.floor(a/10000),ek=Math.round(a-jo*10000);return s+jo.toLocaleString('ko-KR')+'조'+(ek?' '+ek.toLocaleString('ko-KR')+'억':'')+'원'}return s+(a<100?a.toFixed(1):Math.round(a).toLocaleString('ko-KR'))+'억원'}
+function numChoices(v,fmt,extra){
+  var c=[v].concat(extra||[]).concat([v*0.5,v*2,v*1.5,v*0.7,v*1.3,-v]),out=[],seen={};
+  var zero=fmt(0),zero2=fmt(-0.0001);
+  c.forEach(function(x){if(out.length>=4||!isFinite(x))return;var t=fmt(x);if(seen[t]||(x!==v&&(t===zero||t===zero2)))return;
+    if(out.length&&out.some(function(y){return Math.abs(y-x)<Math.max(Math.abs(v)*0.08,1e-9)}))return;seen[t]=1;out.push(x)});
+  var ch=shuf(out);return {c:ch.map(fmt),a:ch.indexOf(v)};
+}
+function coQ(d){
+  var v=d.v,b=d.basis,px=d.px||{},nm=d.name+'('+b.now+', '+b.fs+')',T=[];
+  if(v.op[0]>=10&&v.int>=1&&v.op[0]/v.int<=200)T.push(function(){var x=v.op[0]/v.int,f=function(y){return y.toFixed(1)+'배'},o=numChoices(x,f,[(v.op[0]-v.int)/v.int]);
+    return {t:'icr',q:nm+'의 영업이익은 '+fmtEok(v.op[0])+', 이자비용은 '+fmtEok(v.int)+(v.int_src&&v.int_src!=='이자비용'?'('+v.int_src+')':'')+'입니다. 이자보상배율은?',c:o.c,a:o.a,
+      exp:'이자보상배율 = 영업이익 ÷ 이자비용 = '+fmtEok(v.op[0])+' ÷ '+fmtEok(v.int)+' = '+f(x)+'. '+(x<1?'1배 미만이라 영업이익으로 이자도 못 냅니다.':x<3?'3배 미만이라 금리가 오르면 부담이 커집니다.':'이자 부담은 낮은 편입니다.')}});
+  if(px.per>0&&px.per<=200&&px.pbr>0)T.push(function(){var x=px.pbr/px.per*100,f=function(y){return y.toFixed(1)+'%'},o=numChoices(x,f,[px.per*px.pbr,px.per/px.pbr]);
+    return {t:'roe',q:d.name+'의 PER은 '+px.per.toFixed(2)+'배, PBR은 '+px.pbr.toFixed(2)+'배입니다(KB증권 '+px.date+' 종가 기준). 시장이 보는 ROE는?',c:o.c,a:o.a,
+      exp:'ROE = PBR ÷ PER = '+px.pbr.toFixed(2)+' ÷ '+px.per.toFixed(2)+' = '+f(x)+'.'+(v.roe!=null?' DART 최근 보고서로 계산한 ROE(연환산)는 '+v.roe.toFixed(1)+'%'+(Math.abs(v.roe-x)>=3?'로 차이가 큽니다. 이익이 '+(v.roe>x?'늘고':'줄고')+' 있다는 신호입니다.':'로 비슷합니다.'):'')}});
+  if(v.op[0]>=10&&v.cf[0]!=null&&Math.abs(v.cf[0]/v.op[0])<=5)T.push(function(){var x=v.cf[0]/v.op[0]*100,f=function(y){return Math.round(y)+'%'},o=numChoices(x,f,[v.op[0]/Math.max(Math.abs(v.cf[0]),1)*100]);
+    return {t:'cash',q:nm+'의 영업이익은 '+fmtEok(v.op[0])+', 영업현금흐름은 '+fmtEok(v.cf[0])+'입니다. 영업현금흐름은 영업이익의 몇 %일까요?',c:o.c,a:o.a,
+      exp:'영업현금흐름 ÷ 영업이익 = '+f(x)+'. '+(x<0?'이익은 흑자인데 현금은 빠져나갔습니다. 매출채권·재고·계약자산 주석을 확인합니다.':x<50?'절반도 현금으로 안 들어왔습니다. 이익의 질을 의심합니다.':x<80?'대부분 현금으로 들어왔습니다. 몇 분기 추세를 같이 봅니다.':'이익이 현금으로 잘 들어오고 있습니다.')}});
+  if(v.rev[0]>=10&&v.rev[1]>=10&&v.rev[0]/v.rev[1]<=4)T.push(function(){var x=(v.rev[0]/v.rev[1]-1)*100,f=function(y){return (y>0?'+':'')+y.toFixed(1)+'%'},o=numChoices(x,f,[(v.rev[1]/v.rev[0]-1)*100,v.rev[0]/v.rev[1]*100]);
+    return {t:'grow',q:nm+'의 매출은 '+fmtEok(v.rev[0])+', 전년 같은 기간('+b.prev+')은 '+fmtEok(v.rev[1])+'입니다. 매출 증가율은?',c:o.c,a:o.a,
+      exp:'매출 증가율 = (올해 ÷ 작년 − 1) = '+f(x)+'. '+(v.ar[0]!=null&&v.ar[1]>0?(function(){var ga=(v.ar[0]/v.ar[1]-1)*100,rel=((1+ga/100)/Math.max(1+x/100,0.01)-1)*100;return '같은 기간 매출채권+계약자산은 '+f(ga)+'. '+(rel>10?'매출보다 빨리 늘었으니 회수 위험을 확인합니다.':'매출과 비슷하거나 느리게 늘어 무리한 매출은 아닌 것으로 보입니다.')})():'')}});
+  if(!T.length)return null;
+  var r=T[Math.floor(Math.random()*T.length)]();
+  if(r.c.length<4||r.a<0)return null;
+  return Object.assign(r,{id:'r:'+d.code+':'+r.t,cat:'실제 종목 · '+d.name,ref:d.name,co:d.name,shuffled:1,
+    exp:r.exp+' (출처: '+b.year+' '+b.reprt+'보고서 DART'+(r.t==='roe'?', KB증권':'')+')'});
+}
+function coQuestions(n){
+  return finIndex().then(function(j){
+    if(!j.list.length)throw 0;
+    var pick=shuf(j.list).slice(0,n*2);
+    return Promise.all(pick.map(function(x){return fetch('fin/'+x[0]+'.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})}))
+  }).then(function(ds){return ds.filter(function(d){return d&&!d.fin}).map(coQ).filter(Boolean).slice(0,n)});
+}
+function realMap(){try{return JSON.parse(localStorage.getItem('st-quiz-real')||'{}')}catch(e){return {}}}
 function prep(x){if(x.shuffled)return x;var o=shuf(x.c.map(function(c,i){return [c,i]}));return Object.assign({},x,{c:o.map(function(p){return p[0]}),a:o.findIndex(function(p){return p[1]===x.a})})}
 function termPool(){return T.filter(function(x){return x.def&&x.def.length>8})}
 function qwrongIds(){return lsGet('st-quiz-wrong')}
@@ -544,20 +582,25 @@ function qstat(){var st={};try{st=JSON.parse(localStorage.getItem('st-quiz-stat'
   $('#qzWrongBtn').disabled=!w;$('#qzWrongBtn').style.opacity=w?1:.5;}
 function qstart(m){
   qmode=m;qi=0;qok=0;qwrong=[];qdone=false;var tp=termPool();
-  if(m==='real')qs=shuf(QB).slice(0,10);
-  else if(m==='term')qs=shuf(tp).slice(0,10).map(termQ);
-  else if(m==='mix')qs=shuf(shuf(QB).slice(0,5).concat(shuf(tp).slice(0,5).map(termQ)));
-  else{var ids=qwrongIds();qs=ids.map(function(id){if(id.indexOf('t:')===0){var t=T.find(function(x){return 't:'+x.term===id});return t?termQ(t):null}return QB.find(function(x){return x.id===id})||null}).filter(Boolean).slice(0,20)}
-  qs=qs.map(prep);
-  document.querySelectorAll('[data-qm]').forEach(function(b){b.classList.toggle('gh',b.dataset.qm!==m)});
-  qdraw();
+  document.querySelectorAll('.qz-modes [data-qm]').forEach(function(b){b.classList.toggle('gh',b.dataset.qm!==m)});
+  function go(list){qs=list.map(prep);qdraw()}
+  if(m==='co'||m==='mix'){
+    $('#qz').innerHTML='<div class="empty">실제 종목 숫자를 불러오는 중…</div>';
+    coQuestions(m==='co'?10:4).then(function(cq){
+      if(m==='co')go(cq);else go(shuf(cq.concat(shuf(QB).slice(0,3),shuf(tp).slice(0,10-cq.length-3).map(termQ))));
+    }).catch(function(){if(m==='co')$('#qz').innerHTML='<div class="empty">종목 자료를 불러오지 못했습니다. 잠시 뒤 다시 눌러 주세요.</div>';else go(shuf(shuf(QB).slice(0,5).concat(shuf(tp).slice(0,5).map(termQ))))});
+    return;
+  }
+  if(m==='real')go(shuf(QB).slice(0,10));
+  else if(m==='term')go(shuf(tp).slice(0,10).map(termQ));
+  else{var ids=qwrongIds(),RM=realMap();go(ids.map(function(id){if(id.indexOf('t:')===0){var t=T.find(function(x){return 't:'+x.term===id});return t?termQ(t):null}if(id.indexOf('r:')===0)return RM[id]||null;return QB.find(function(x){return x.id===id})||null}).filter(Boolean).slice(0,20))}
 }
 function qdraw(){
   var box=$('#qz');
   if(!qs.length){box.innerHTML='<div class="empty">풀 문제가 없습니다. 다른 묶음을 골라 주세요.</div>';return}
   if(qi>=qs.length){
     var pct=Math.round(qok/qs.length*100);
-    box.innerHTML='<div class="end"><div class="pg" style="width:100%"><span>'+({real:'실전',term:'용어',mix:'섞어서',wrong:'틀린 문제 다시'}[qmode])+' 결과</span></div><div class="big">'+qok+' / '+qs.length+'</div><div>'+(pct>=90?'훌륭합니다. 실전에서 바로 쓸 수 있는 수준입니다.':pct>=60?'좋습니다. 틀린 문제의 해설만 다시 읽어 보세요.':'틀린 문제를 다시 풀면서 해설을 읽어 보세요. 용어사전·사례노트와 같이 보면 빨리 늡니다.')+'</div>'
+    box.innerHTML='<div class="end"><div class="pg" style="width:100%"><span>'+({real:'실전',co:'실제 종목',term:'용어',mix:'섞어서',wrong:'틀린 문제 다시'}[qmode])+' 결과</span></div><div class="big">'+qok+' / '+qs.length+'</div><div>'+(pct>=90?'훌륭합니다. 실전에서 바로 쓸 수 있는 수준입니다.':pct>=60?'좋습니다. 틀린 문제의 해설만 다시 읽어 보세요.':'틀린 문제를 다시 풀면서 해설을 읽어 보세요. 용어사전·사례노트와 같이 보면 빨리 늡니다.')+'</div>'
       +(qwrong.length?'<b style="font-size:14px">틀린 문제</b><ol class="wl">'+qwrong.map(function(x){return '<li>'+esc(x.q.split('\n')[0])+'</li>'}).join('')+'</ol>':'')
       +'<div class="row-btn"><button class="sb" type="button" data-qm="'+qmode+'">한 번 더</button>'+(qwrongIds().length?'<button class="sb gh" type="button" data-qm="wrong">틀린 문제 다시</button>':'')+'</div></div>';
     qstat();return;
@@ -572,12 +615,13 @@ function qanswer(i){
   btns.forEach(function(b,k){b.disabled=true;if(k===x.a)b.classList.add('ok');else if(k===i)b.classList.add('no')});
   var W=qwrongIds(),pos=W.indexOf(x.id);
   if(ok){qok++;if(pos>=0)W.splice(pos,1)}else{qwrong.push(x);if(pos<0)W.unshift(x.id)}
+  if(x.id.indexOf('r:')===0){var RM=realMap();if(ok)delete RM[x.id];else RM[x.id]=x;var ks=Object.keys(RM);if(ks.length>40)ks.slice(0,ks.length-40).forEach(function(k){delete RM[k]});try{localStorage.setItem('st-quiz-real',JSON.stringify(RM))}catch(e){}}
   lsSet('st-quiz-wrong',W.slice(0,100));
   var st={};try{st=JSON.parse(localStorage.getItem('st-quiz-stat')||'{}')}catch(e){}st.n=(st.n||0)+1;st.ok=(st.ok||0)+(ok?1:0);try{localStorage.setItem('st-quiz-stat',JSON.stringify(st))}catch(e){}
   var hasT=x.ref&&T.some(function(t){return t.term===x.ref}),hasC=x.ref&&C.some(function(c){return c.company===x.ref});
   $('#qzEx').innerHTML='<div class="ex"><span class="vd '+(ok?'ok':'no')+'">'+(ok?'정답입니다':'아쉽습니다 · 정답은 '+(x.a+1)+'번')+'</span>'+(x.exp?'<span>'+esc(x.exp)+'</span>':'')+'</div>'
     +'<div class="row-btn" style="margin-top:10px"><button class="sb" type="button" id="qzNext">'+(qi+1<qs.length?'다음 문제':'결과 보기')+'</button>'
-    +(hasT?'<button class="sb gh" type="button" data-qref="t">용어사전에서 「'+esc(x.ref)+'」</button>':hasC?'<button class="sb gh" type="button" data-qref="c">사례노트에서 「'+esc(x.ref)+'」</button>':'')+'</div>';
+    +(x.co?'<button class="sb gh" type="button" data-qref="k">5분 체크로 「'+esc(x.co)+'」 보기</button>':hasT?'<button class="sb gh" type="button" data-qref="t">용어사전에서 「'+esc(x.ref)+'」</button>':hasC?'<button class="sb gh" type="button" data-qref="c">사례노트에서 「'+esc(x.ref)+'」</button>':'')+'</div>';
   $('#qzNext').focus();
 }
 $('#p-quiz').addEventListener('click',function(e){
@@ -585,6 +629,7 @@ $('#p-quiz').addEventListener('click',function(e){
   if(b.dataset.qm){qstart(b.dataset.qm);return}
   if(b.dataset.ci!=null){qanswer(+b.dataset.ci);return}
   if(b.id==='qzNext'){qi++;qdraw();$('#qz').scrollIntoView({block:'nearest'});return}
+  if(b.dataset.qref==='k'){$('#c-name').value=qs[qi].co;show('check');scrollTo(0,0);loadCo();return}
   if(b.dataset.qref){var r=qs[qi].ref;if(b.dataset.qref==='t'){cat='전체';$('#q').value=r;chips();terms();show('term')}else{$('#cq').value=r;cases();show('case')}scrollTo(0,0)}
 });
 document.addEventListener('keydown',function(e){if($('#p-quiz').hidden||!sh.hidden)return;if(/^[1-4]$/.test(e.key)&&!qdone&&qi<qs.length&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))qanswer(+e.key-1)});
