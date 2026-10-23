@@ -158,6 +158,10 @@ def with_nav(html, root, active, sub=None, extra=""):
 
 
 # 데일리의 '주요 지표' 12개를 폰에서도 텔레그램처럼 3열 4줄로: 600px 폭 3열로 배치한 뒤 화면 폭에 맞게 축소
+# 데일리 맨 위 '라이트/다크' 버튼은 휴대폰에 선택을 저장해, 홈페이지는 밝은데 데일리(주요 지표)만 어둡게 남았다.
+# 사이트 안에서는 버튼을 숨기고 저장값을 지워, 데일리도 홈페이지 전체처럼 휴대폰 설정(밝게/어둡게)을 따른다.
+DAILY_THEME = ("<style>#bt{display:none!important}</style>"
+               "<script>try{localStorage.removeItem('theme')}catch(e){}delete document.documentElement.dataset.theme</script>")
 GRID3 = """<style>.panel.kr{display:none!important}  /* 사이트에서는 뉴스 칸을 보이지 않는다 (돈이 되는 뉴스는 2026-10-23 사용자 요청으로 없앰) */
 @media (max-width:640px){
 .grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
@@ -178,7 +182,7 @@ addEventListener('DOMContentLoaded',f);addEventListener('resize',f)})()</script>
 
 def daily_grid3(html):
     i = html.lower().rfind("</body>")
-    return html[:i] + GRID3 + html[i:] if i >= 0 else html + GRID3
+    return html[:i] + GRID3 + DAILY_THEME + html[i:] if i >= 0 else html + GRID3 + DAILY_THEME
 
 
 # 비트코인은 24시간 거래라 주말에도 움직인다. 홈 임베드를 열 때마다(그리고 1분마다) 바이낸스 일봉으로 카드를 덮어쓴다.
