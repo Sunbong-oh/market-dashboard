@@ -1159,11 +1159,89 @@ def _calendar():
 
 
 def calendar_events(now):
-    """market_calendar.json({"YYYY-MM-DD": ["이슈", ...]})의 오늘(KST) 항목 + 예상치(발표됐으면 실제치). [(항목, 수치)]"""
+    """market_calendar.json({"YYYY-MM-DD": ["이슈", ...]})의 오늘(KST) 항목 + 예상치(발표됐으면 실제치). [(항목, 수치)]
+    실적을 이미 발표한 회사는 뺀다(캘린더 날짜가 틀린 경우가 많아 '오늘 발표 예정'으로 오해하지 않게)."""
     from econ_values import values
     ev = _calendar().get(f"{now:%Y-%m-%d}") or []
     ev = [ev] if isinstance(ev, str) else [str(x) for x in ev]
+    try:
+        ev = drop_announced(ev, announced(now))
+    except Exception as e:  # 확인에 실패해도 캘린더는 그대로 낸다
+        print("발표 여부 확인 실패:", type(e).__name__, e, file=sys.stderr)
     return [(e, values(now.date(), e)) for e in ev]
+
+
+# ---------- 이미 발표한 실적 (오늘의 증시 캘린더에서 뺀다) ----------
+EARN_FEED = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/earnings-live/earnings.json"
+FLASH_DIR = Path(__file__).with_name("earnings_flash")
+ANNOUNCED_DAYS = 30  # 이 기간 안에 발표했으면 '이미 발표'로 본다 (다음 분기 발표는 석 달 뒤라 겹치지 않는다)
+CAL_ALIAS = {"MS": "마이크로소프트", "LG엔솔": "LG에너지솔루션", "현대차": "현대자동차", "포스코홀딩스": "POSCO홀딩스"}
+CAL_EARN = re.compile(r"^(★?)([^()]+?) 실적$")  # '기아·현대모비스 실적' 꼴만 (확정실적·잠정실적·괄호 설명이 붙은 항목은 건드리지 않는다)
+
+
+def cal_norm(name):
+    name = CAL_ALIAS.get(name.strip(), name.strip())
+    return re.sub(r"[\s()㈜]|주식회사", "", name).lower()
+
+
+def announced(now, feed=None, sec=True):
+    """최근 ANNOUNCED_DAYS 일 안에 실적을 이미 발표한 회사 {정규화 이름: 발표 시각(ISO, KST)}.
+    출처: earnings_flash 카드(해외 빅테크·반도체), SEC 8-K 2.02(관심 미국 종목), kb earnings-live 의 국내 잠정실적 공시 이름.
+    뉴스로 짐작한 해외 감지(earnings-live 의 해외 항목)는 오탐이 있어(10/23 인텔) 쓰지 않는다."""
+    lo, out = now - timedelta(days=ANNOUNCED_DAYS), {}
+
+    def add(name, when):
+        if name and lo <= when <= now:
+            k = cal_norm(name)
+            out[k] = max(out.get(k, ""), when.isoformat(timespec="minutes"))
+
+    for f in sorted(FLASH_DIR.glob("*.json")) if FLASH_DIR.is_dir() else []:
+        try:
+            c = json.loads(f.read_text(encoding="utf-8"))
+            add(c.get("company"), datetime.fromisoformat(f"{c['day']}T{c.get('time') or '00:00'}").replace(tzinfo=KST))
+        except (OSError, ValueError, KeyError):
+            continue
+    if sec:
+        try:
+            import earnings_sec
+            for r in earnings_sec.recent(hours=24 * ANNOUNCED_DAYS):
+                add(r["name"], r["acc"].astimezone(KST))
+        except Exception as e:
+            print("SEC 실적 공시 확인 실패:", type(e).__name__, e, file=sys.stderr)
+    if feed is None:
+        try:
+            with urllib.request.urlopen(urllib.request.Request(EARN_FEED, headers={"User-Agent": UA}), timeout=15) as r:
+                feed = json.loads(r.read())
+        except Exception as e:
+            print("earnings-live 읽기 실패:", type(e).__name__, e, file=sys.stderr)
+            feed = {}
+    for it in feed.get("items") or []:
+        if str(it.get("kr")) == "True" or it.get("kr") is True:
+            try:
+                add(it.get("name"), datetime.fromisoformat(it["first_iso"]))
+            except (KeyError, ValueError):
+                pass
+    for day, names in (feed.get("kr_done") or {}).items():
+        for n in names:
+            add(n, datetime.fromisoformat(day).replace(tzinfo=KST))
+    return out
+
+
+def drop_announced(events, ann):
+    """'기아·현대모비스 실적'에서 이미 발표한 회사를 빼고, 다 빠지면 항목을 없앤다."""
+    out = []
+    for e in events:
+        m = CAL_EARN.match(e.strip())
+        if not m:
+            out.append(e)
+            continue
+        names = m.group(2).split("·")
+        left = [n for n in names if cal_norm(n) not in ann]
+        if len(left) == len(names):
+            out.append(e)
+        elif left:
+            out.append(f'{m.group(1)}{"·".join(left)} 실적')
+    return out
 
 
 def calendar_done(now):

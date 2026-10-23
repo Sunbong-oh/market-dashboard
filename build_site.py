@@ -307,7 +307,7 @@ def build_daily():
                 if nh and f.name == "index.html":
                     html = with_newhighs(html, "newhighs.html", newhighs_count(p))
                 if p == days[0] and f.name == "index.html":
-                    html = with_us_live(html, f"{p.name} 06:30")
+                    html = with_cal_hide(with_us_live(html, f"{p.name} 06:30"), p.name)
                 dest.joinpath(f.name).write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
             elif f.is_file():
                 shutil.copy(f, dest / f.name)
@@ -329,10 +329,69 @@ def build_daily():
         eh = daily_grid3(html)
         if (p / "newhighs.html").exists():
             eh = with_newhighs(eh, "newhighs.html", newhighs_count(p))
-        (out / p.name / "embed.html").write_text(embed_html(with_us_live(eh, f"{p.name} 06:30"), btc_live=True), encoding="utf-8")
+        (out / p.name / "embed.html").write_text(embed_html(with_cal_hide(with_us_live(eh, f"{p.name} 06:30"), p.name), btc_live=True), encoding="utf-8")
     return dict(day=p.name, headline=unescape(m.group(1)) if m else "", kr=[unescape(t) for t in kr_titles],
                 embed=f"daily/{p.name}/embed.html" if html else "",
                 newhighs=(p / "newhighs.html").exists())
+
+
+# '오늘의 증시 캘린더'에서 이미 실적을 발표한 회사를 뺀다 (보는 사람이 '오늘 발표 예정'으로 오해하지 않게).
+# 사이트를 만들 때 확인한 목록(실적 카드·SEC 8-K·국내 잠정실적 공시)에, 보는 순간 kb earnings-live 의 국내 공시 이름을 더한다.
+_ANN = None
+CAL_HIDE_JS = r"""function nm(s){s=s.trim();s=AL[s]||s;return s.replace(/[\s()㈜]|주식회사/g,'').toLowerCase()}
+function run(){document.querySelectorAll('.panel.cal:not(.done):not(.wk) ol.items>li').forEach(function(li){
+ var tn=null;li.childNodes.forEach(function(n){if(n.nodeType===3&&n.textContent.trim())tn=n});if(!tn)return;
+ var m=tn.textContent.trim().match(/^([^()]+?) 실적$/);if(!m)return;
+ var ns=m[1].split('·'),left=ns.filter(function(n){return !A[nm(n)]});if(left.length===ns.length)return;
+ if(!left.length){li.parentNode.removeChild(li);return}
+ tn.textContent=(/^\s/.test(tn.textContent)?' ':'')+left.join('·')+' 실적'});
+ document.querySelectorAll('.panel.cal:not(.done):not(.wk)').forEach(function(p){var o=p.querySelector('ol.items');if(o&&!o.children.length)p.parentNode.removeChild(p)})}
+run();
+try{fetch(SRC+'?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){var now=Date.now();
+ (j.items||[]).forEach(function(i){if(String(i.kr)==='True'||i.kr===true){var t=Date.parse(i.first_iso);if(t>=LO&&t<=now)A[nm(i.name||'')]=1}});
+ var kd=j.kr_done||{};Object.keys(kd).forEach(function(k){if(Date.parse(k+'T00:00:00+09:00')>=LO)kd[k].forEach(function(n){A[nm(n)]=1})});run()}).catch(function(){})}catch(e){}"""
+
+
+def refresh_cal(html, day):
+    """아침에 만든 데일리의 '오늘의 증시 캘린더'를 지금의 market_calendar.json(날짜를 바로잡은 것)으로 다시 채운다.
+    이미 있던 항목은 그 줄(예상치·실제치 포함)을 그대로 쓰고, 이미 실적을 발표한 회사는 뺀다."""
+    m = re.search(r'<section class="panel cal"><div class="tag">오늘의 증시 캘린더</div><ol class="items">(.*?)</ol></section>', html, re.S)
+    if not m:
+        return html
+    old = {}
+    for li in re.findall(r"<li>.*?</li>", m.group(1), re.S):
+        head = li.split('<div class="cv">')[0]
+        key = ("★" if "class=hot" in head else "") + unescape(re.sub(r"<[^>]+>", "", head.replace("<b class=hot>★</b>", ""))).strip()
+        old[key] = li
+    ev = d._calendar().get(day) or []
+    ev = [ev] if isinstance(ev, str) else [str(x) for x in ev]
+    ev = d.drop_announced(ev, _ann())
+    lis = "".join(old.get(e) or d._cal_li(e) for e in ev)
+    new = (f'<section class="panel cal"><div class="tag">오늘의 증시 캘린더</div><ol class="items">{lis}</ol></section>' if lis else "")
+    return html[:m.start()] + new + html[m.end():]
+
+
+def _ann():
+    global _ANN
+    if _ANN is None:
+        try:
+            _ANN = d.announced(datetime.now(d.KST))
+        except Exception as e:
+            print("발표 여부 확인 실패:", type(e).__name__, e, file=sys.stderr)
+            _ANN = {}
+    return _ANN
+
+
+def with_cal_hide(html, day=None):
+    """최신 오전 데일리의 '오늘의 증시 캘린더'를 바로잡고(day 가 있으면), 보는 순간에도 이미 발표한 회사를 빼는 스크립트를 붙인다."""
+    if day:
+        html = refresh_cal(html, day)
+    _ann()
+    js = (f"<script>(function(){{var A={json.dumps({k: 1 for k in _ANN}, ensure_ascii=False)},"
+          f"AL={json.dumps(d.CAL_ALIAS, ensure_ascii=False)},LO=Date.now()-{d.ANNOUNCED_DAYS}*864e5,"
+          f"SRC={json.dumps(EARN_LIVE_SRC[0][1])};\n{CAL_HIDE_JS}\n}})();</script>")
+    i = html.lower().rfind("</body>")
+    return html[:i] + js + html[i:] if i >= 0 else html + js
 
 
 # ---------- 실시간 시세 (밤 22:00~02:00 KST, 10분마다) ----------
@@ -355,7 +414,7 @@ def build_live(now):
         return None
     dest = OUT / "daily" / "live"
     dest.mkdir(parents=True, exist_ok=True)
-    html = daily_grid3(html)
+    html = with_cal_hide(daily_grid3(html))
     nhd = next((p for p in dated_dirs(DAILY) if (p / "newhighs.html").exists()), None)
     if nhd:
         html = with_newhighs(html, f"../{nhd.name}/newhighs.html", newhighs_count(nhd))
