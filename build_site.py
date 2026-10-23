@@ -1290,6 +1290,13 @@ a.st:hover{border-color:#F2A900}
 .st .tg{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}.st .tg span{font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:5px;
   background:#FBE7B0;color:#3D3A35}
 .st-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
+.st .go{display:flex;align-items:center;gap:8px;margin-top:10px}
+.st .go b{display:inline-block;padding:7px 13px;border-radius:10px;background:#F2A900;color:#3D3A35;font-size:14px;font-weight:800}
+.st .go i{font-style:normal;color:#E5484D;font-weight:800;font-size:14px;white-space:nowrap;display:inline-block;animation:rpt-tap .9s ease-in-out infinite}
+@keyframes rpt-tap{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
+@media (prefers-reduced-motion:reduce){.st .go i{animation:none}}
+.st-mk{font-size:13.5px;font-weight:700;color:var(--muted);white-space:nowrap}.st-mk b{margin-left:3px}.st-mk .up{color:var(--up)}.st-mk .down{color:var(--down)}
+.sec-h.st-h{flex-wrap:wrap;justify-content:flex-start;column-gap:12px}.sec-h.st-h>a{margin-left:auto}
 /* 홈: 광고·핵심 이슈·실적속보(order:-2)와 장중 수급(order:-1)보다 위. 17시 뒤 #strong-low 안으로 옮겨지면 이 값은 상관없다 */
 .home>#strong{order:-3;margin-top:0;margin-bottom:12px}
 """
@@ -1313,7 +1320,19 @@ def strong_card(it, href):
             f'<small>{escape(it["ticker"])} · {escape(it.get("exchange", ""))} · {escape(it.get("sector", ""))}</small></div>'
             f'<div class="hl">{escape(it.get("headline", ""))}</div>'
             + (f'<div class="pn">{escape(it["priceNote"])}</div>' if it.get("priceNote") else "")
-            + (f'<div class="tg">{tags}</div>' if tags else "") + "</a>")
+            + (f'<div class="tg">{tags}</div>' if tags else "")
+            + '<div class="go"><b>📑 실시간 작성된 리포트</b><i>&lt;-- 터치!!</i></div></a>')
+
+
+def strong_market(it):
+    """제목 옆 전일 나스닥·S&P500 등락 (index.json 의 market: day, nasdaq, sp500, source)."""
+    m = it.get("market") or {}
+    parts = [f'{n}<b class="{"up" if m[k] > 0 else "down"}">{m[k]:+.2f}%</b>'
+             for k, n in (("nasdaq", "나스닥"), ("sp500", "S&amp;P500")) if m.get(k) is not None]
+    if not parts:
+        return ""
+    day = escape(m.get("day", "")[5:].replace("-", "/"))
+    return f'<span class="st-mk" title="{escape(m.get("source", ""))}">{day} {" · ".join(parts)}</span>'
 
 
 def build_strong():
@@ -1350,8 +1369,10 @@ def strong_home(items):
     # 전일 미국장 강세종목이라 등록일 17:00(KST)까지는 홈 맨 위에 두고, 그 뒤로는 해외주식 리포트 아래(#strong-low)로 내린다.
     # 사이트를 다시 빌드하지 않아도 되게 보는 사람 브라우저 시각으로 옮긴다.
     return (f'<section class="sec" id="strong" data-until="{day}T17:00:00+09:00"><style>{STRONG_CSS}</style>'
-            f'<div class="sec-h"><h2>🚀 전일 미국시장 강세종목</h2>'
-            f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}</section>')
+            f'<div class="sec-h st-h"><h2>🚀 전일 미국시장 강세종목</h2>{strong_market(items[0])}'
+            f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}'
+            + ('<div class="st-note" style="margin-top:6px">나스닥·S&amp;P500: 전일 종가 기준 등락(Yahoo Finance)</div>'
+               if strong_market(items[0]) else "") + '</section>')
 
 
 STRONG_LOW_JS = """<div id="strong-low"></div><script>(function(){var s=document.getElementById('strong'),l=document.getElementById('strong-low');
