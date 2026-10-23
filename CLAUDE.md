@@ -38,3 +38,11 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 텔레그램은 실적 카드를 새로 만들거나 고쳤을 때, 시간외 급등락 알림(afterhours.py)만 보낸다. 지난 소식은 보내지 않는다.
 - 자동 점검 작업에서 할 일이 없으면 '·' 한 글자만 남긴다(상태 보고 금지).
 - 빅테크 실적은 나오는 즉시 홈페이지에 올린다.
+
+## 재무제표 공부 (/study/)
+- 내용은 `study/terms.json`(용어) · `study/industries.json`(업종별 체크리스트) · `study/cases.json`(사례노트), 페이지 코드는 `study_page.py`.
+- 사용자가 "[재무제표 공부] 용어 추가해줘" / "사례 추가해줘" 글을 붙여 넣거나 그렇게 말하면 해당 JSON 끝에 항목을 넣고 merge 한다.
+  - 용어: {term, en, cat, def, formula, point}. cat 은 기존 분류 이름(재무상태표·밸류에이션·금융-은행·수주 등)을 쓴다. 같은 용어가 있으면 새로 넣지 말고 고친다.
+  - 사례: {added(오늘 KST), company, industry, period, cell, what, lesson, sources[[제목, URL]]}. 숫자는 출처로 확인해서 넣고, 확인 못 한 숫자는 빼거나 "확인 필요"라고 적는다.
+- 페이지에서 직접 추가한 것은 그 기기에만 저장된다(localStorage). 다른 기기와 함께 보려면 위 방식으로 JSON 에 올린다.
+- 확인: `python -c "import build_site as b, study_page; from pathlib import Path; print(study_page.build(Path('_site'), b.page))"`

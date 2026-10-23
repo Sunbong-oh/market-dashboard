@@ -1,0 +1,1610 @@
+[
+ {
+  "term": "재무상태표",
+  "en": "Statement of Financial Position (Balance Sheet)",
+  "cat": "재무제표 구조",
+  "def": "특정 시점의 자산·부채·자본 잔액을 보여주는 표",
+  "formula": "자산 = 부채 + 자본",
+  "point": "무엇을 가졌고 누구 돈으로 샀는지 보여주는 스냅샷. 금융업은 유동성 순서로 배열"
+ },
+ {
+  "term": "손익계산서",
+  "en": "Income Statement (Statement of Profit or Loss)",
+  "cat": "재무제표 구조",
+  "def": "일정 기간의 수익·비용과 이익을 보여주는 표",
+  "formula": "수익 − 비용 = 이익",
+  "point": "2027년부터 K-IFRS 1118에 따라 영업·투자·재무 범주로 재편"
+ },
+ {
+  "term": "현금흐름표",
+  "en": "Statement of Cash Flows",
+  "cat": "재무제표 구조",
+  "def": "일정 기간 현금의 유입·유출을 영업·투자·재무로 나눈 표",
+  "formula": "영업CF + 투자CF + 재무CF = 현금 증감",
+  "point": "기말 현금은 재무상태표의 현금및현금성자산과 일치. 간접법이 일반적"
+ },
+ {
+  "term": "자본변동표",
+  "en": "Statement of Changes in Equity",
+  "cat": "재무제표 구조",
+  "def": "자본 구성항목의 기간 중 변동을 보여주는 표",
+  "formula": "",
+  "point": "배당, 자사주, 기타포괄손익 변동을 확인하는 곳"
+ },
+ {
+  "term": "주석",
+  "en": "Notes to the Financial Statements",
+  "cat": "재무제표 구조",
+  "def": "재무제표 본문을 보충하는 회계정책·추정·세부내역 공시",
+  "formula": "",
+  "point": "부문정보, 수익 분해, 우발부채, 손상검사 가정 등 실제 리스크 지도. 건설·바이오는 본문보다 중요"
+ },
+ {
+  "term": "연결재무제표",
+  "en": "Consolidated Financial Statements",
+  "cat": "재무제표 구조",
+  "def": "지배기업과 종속기업을 하나의 경제실체로 합산한 재무제표",
+  "formula": "",
+  "point": "상장사 주재무제표. 가치평가는 연결 지배주주 기준"
+ },
+ {
+  "term": "별도재무제표",
+  "en": "Separate Financial Statements",
+  "cat": "재무제표 구조",
+  "def": "종속·관계기업 투자를 원가·공정가치·지분법으로 표시한 지배기업 단독 재무제표",
+  "formula": "",
+  "point": "상법상 배당가능이익 산정 기준. 지주사 분석에 필수"
+ },
+ {
+  "term": "유동자산",
+  "en": "Current Assets",
+  "cat": "재무상태표",
+  "def": "1년 또는 정상영업주기 내 현금화될 자산",
+  "formula": "",
+  "point": "업종별로 비중 차이가 크므로 동종 업종끼리만 비교"
+ },
+ {
+  "term": "현금및현금성자산",
+  "en": "Cash and Cash Equivalents",
+  "cat": "재무상태표",
+  "def": "현금과 3개월 내 만기가 도래하는 고유동성 투자자산",
+  "formula": "",
+  "point": "단기금융상품·FVPL 금융자산을 더해야 실질 현금. 사용제한 예금은 주석 확인"
+ },
+ {
+  "term": "매출채권",
+  "en": "Trade Receivables",
+  "cat": "재무상태표",
+  "def": "외상으로 판매하고 아직 받지 못한 대금(기대신용손실 차감 후)",
+  "formula": "",
+  "point": "매출보다 빨리 늘면 밀어내기나 회수 지연을 의심"
+ },
+ {
+  "term": "재고자산",
+  "en": "Inventories",
+  "cat": "재무상태표",
+  "def": "판매 목적으로 보유한 상품·제품·재공품·원재료",
+  "formula": "",
+  "point": "저가법 평가충당금 주석 확인. 금감원 감리 지적이 잦은 계정"
+ },
+ {
+  "term": "재고평가손실·환입",
+  "en": "Inventory Write-down and Reversal",
+  "cat": "재무상태표",
+  "def": "순실현가능가치가 장부가보다 낮을 때 차액을 비용 처리하고, 회복 시 되돌리는 것",
+  "formula": "평가손실 = 장부가 − 순실현가능가치",
+  "point": "다운사이클 이익을 과도하게 깎고 업턴 초기 이익을 부풀림. 일회성으로 분리해서 볼 것"
+ },
+ {
+  "term": "유형자산",
+  "en": "Property, Plant and Equipment (PP&E)",
+  "cat": "재무상태표",
+  "def": "영업에 사용하는 토지·건물·기계 등",
+  "formula": "",
+  "point": "재평가모형을 쓰면 자본이 늘어 PBR이 왜곡. 건설중인자산 증가는 향후 감가상각비 증가 예고"
+ },
+ {
+  "term": "무형자산",
+  "en": "Intangible Assets",
+  "cat": "재무상태표",
+  "def": "물리적 실체가 없는 식별 가능한 자산(개발비, 특허, 소프트웨어, 주파수 이용권 등)",
+  "formula": "",
+  "point": "개발비 자산화는 이익 부풀리기의 단골 수단"
+ },
+ {
+  "term": "영업권",
+  "en": "Goodwill",
+  "cat": "재무상태표",
+  "def": "인수대가가 피인수기업 순자산 공정가치를 초과하는 금액",
+  "formula": "인수대가 − 순자산 공정가치",
+  "point": "상각하지 않고 매년 손상검사. 손상 시 일시에 대규모 손실"
+ },
+ {
+  "term": "사용권자산",
+  "en": "Right-of-Use Asset",
+  "cat": "재무상태표",
+  "def": "리스 기간 동안 기초자산을 사용할 권리(K-IFRS 1116)",
+  "formula": "",
+  "point": "리스부채와 쌍으로 계상. 유통·항공·해운에서 규모가 큼"
+ },
+ {
+  "term": "관계기업투자",
+  "en": "Investments in Associates",
+  "cat": "재무상태표",
+  "def": "유의적 영향력(통상 지분 20% 이상)을 행사하는 투자로 지분법을 적용",
+  "formula": "",
+  "point": "장부가가 시가보다 크게 낮으면 숨은 가치(지주사)"
+ },
+ {
+  "term": "투자부동산",
+  "en": "Investment Property",
+  "cat": "재무상태표",
+  "def": "임대수익이나 시세차익을 목적으로 보유한 부동산",
+  "formula": "",
+  "point": "원가모형이면 주석의 공정가치로 숨은 가치 확인. 1118에서는 투자 범주 손익"
+ },
+ {
+  "term": "계약자산",
+  "en": "Contract Asset",
+  "cat": "재무상태표",
+  "def": "수익은 인식했으나 아직 청구하지 않은 대가에 대한 권리(옛 미청구공사)",
+  "formula": "누적인식수익 − 누적청구액 (양수일 때)",
+  "point": "매출보다 빨리 늘면 원가 과소추정이나 발주처 분쟁을 의심"
+ },
+ {
+  "term": "계약부채",
+  "en": "Contract Liability",
+  "cat": "재무상태표",
+  "def": "대가를 먼저 받고 아직 이행하지 않은 의무(선수금·초과청구공사·선수수익)",
+  "formula": "누적청구액 − 누적인식수익 (양수일 때)",
+  "point": "수주산업·구독·게임에서 증가하면 향후 매출의 선행지표"
+ },
+ {
+  "term": "유동부채",
+  "en": "Current Liabilities",
+  "cat": "재무상태표",
+  "def": "1년 내 상환할 부채",
+  "formula": "",
+  "point": "유동성장기부채가 급증하면 차환 리스크"
+ },
+ {
+  "term": "매입채무",
+  "en": "Trade Payables",
+  "cat": "재무상태표",
+  "def": "외상으로 매입하고 아직 지급하지 않은 대금",
+  "formula": "",
+  "point": "늘면 영업CF가 일시적으로 개선. 줄면 영업CF 악화"
+ },
+ {
+  "term": "차입금·사채",
+  "en": "Borrowings and Bonds",
+  "cat": "재무상태표",
+  "def": "이자를 부담하는 부채",
+  "formula": "",
+  "point": "순차입금 계산의 핵심. 만기 구조와 고정·변동금리 비중은 주석에서 확인"
+ },
+ {
+  "term": "전환사채",
+  "en": "Convertible Bond (CB)",
+  "cat": "재무상태표",
+  "def": "일정 조건으로 주식 전환권이 붙은 사채",
+  "formula": "",
+  "point": "희석 요인. 주가가 오르면 전환권 평가손실이 생김(비현금)"
+ },
+ {
+  "term": "상환전환우선주",
+  "en": "Redeemable Convertible Preference Shares (RCPS)",
+  "cat": "재무상태표",
+  "def": "상환권과 전환권이 붙은 우선주",
+  "formula": "",
+  "point": "상환권이 투자자에게 있으면 금융부채로 분류돼 자본잠식처럼 보일 수 있음"
+ },
+ {
+  "term": "리스부채",
+  "en": "Lease Liability",
+  "cat": "재무상태표",
+  "def": "미래 리스료의 현재가치(K-IFRS 1116)",
+  "formula": "리스료의 현재가치 합계",
+  "point": "사실상 차입금. 부채비율·순차입금 비교 시 포함 여부를 통일"
+ },
+ {
+  "term": "충당부채",
+  "en": "Provisions",
+  "cat": "재무상태표",
+  "def": "시기나 금액은 불확실하지만 지출 가능성이 높은 현재의무",
+  "formula": "",
+  "point": "충당부채 환입으로 이익이 났는지 확인"
+ },
+ {
+  "term": "우발부채",
+  "en": "Contingent Liabilities",
+  "cat": "재무상태표",
+  "def": "발생 여부가 불확실해 본문에 부채로 잡지 않고 주석에만 공시하는 의무",
+  "formula": "",
+  "point": "건설사 PF보증·책임준공 약정은 본문이 아니라 여기에 있음"
+ },
+ {
+  "term": "판매보증충당부채",
+  "en": "Warranty Provision",
+  "cat": "자동차",
+  "def": "판매한 제품의 품질보증 비용을 추정해 미리 잡는 부채",
+  "formula": "판매대수 × 클레임률 × 단가 (추정)",
+  "point": "외화로 표시되면 환율 상승 시 비용 증가. 리콜 시 일회성 대규모 설정"
+ },
+ {
+  "term": "이연법인세자산",
+  "en": "Deferred Tax Asset",
+  "cat": "재무상태표",
+  "def": "회계와 세무의 차이로 미래에 덜 낼 세금",
+  "formula": "",
+  "point": "적자기업의 큰 이연법인세자산은 미래 이익 가정. 실현 가능성이 부정되면 대규모 법인세비용"
+ },
+ {
+  "term": "순확정급여부채",
+  "en": "Net Defined Benefit Liability",
+  "cat": "재무상태표",
+  "def": "확정급여형 퇴직급여 의무에서 사외적립자산을 뺀 금액",
+  "formula": "확정급여채무 − 사외적립자산",
+  "point": "금리가 내리면 기타포괄손실로 자본 감소. 1118에서 순이자는 재무 범주"
+ },
+ {
+  "term": "자본금",
+  "en": "Share Capital",
+  "cat": "재무상태표",
+  "def": "발행주식수에 액면가를 곱한 금액",
+  "formula": "발행주식수 × 액면가",
+  "point": "자본총계가 자본금보다 작으면 부분 자본잠식. 관리종목 요건과 연결"
+ },
+ {
+  "term": "이익잉여금",
+  "en": "Retained Earnings",
+  "cat": "재무상태표",
+  "def": "누적 순이익에서 누적 배당을 뺀 금액",
+  "formula": "누적 순이익 − 누적 배당",
+  "point": "장기 이익창출력. 결손금이면 배당 불가"
+ },
+ {
+  "term": "자기주식",
+  "en": "Treasury Shares",
+  "cat": "재무상태표",
+  "def": "회사가 보유한 자사주(자본 차감)",
+  "formula": "",
+  "point": "소각해야 주당가치가 실질적으로 증가. 보유만 하면 재처분 가능성"
+ },
+ {
+  "term": "기타포괄손익누계액",
+  "en": "Accumulated Other Comprehensive Income (AOCI)",
+  "cat": "재무상태표",
+  "def": "손익계산서를 거치지 않고 자본에 직접 반영된 평가손익 누계",
+  "formula": "",
+  "point": "해외사업환산·FVOCI 평가·재평가잉여금. ROE의 분모만 바꿈"
+ },
+ {
+  "term": "비지배지분",
+  "en": "Non-controlling Interests (NCI)",
+  "cat": "재무상태표",
+  "def": "연결 자회사 자본 중 모회사 외 주주의 몫",
+  "formula": "",
+  "point": "크면 연결순이익과 지배주주순이익의 괴리가 큼"
+ },
+ {
+  "term": "지배기업 소유주지분",
+  "en": "Equity Attributable to Owners of the Parent",
+  "cat": "재무상태표",
+  "def": "자본총계에서 비지배지분을 뺀 금액",
+  "formula": "자본총계 − 비지배지분",
+  "point": "BPS·PBR·ROE 계산의 분모"
+ },
+ {
+  "term": "매출(수익)",
+  "en": "Revenue",
+  "cat": "손익계산서",
+  "def": "고객과의 계약에서 생기는 수익(K-IFRS 1115, 5단계 모형)",
+  "formula": "",
+  "point": "총액·순액 인식에 따라 규모가 크게 달라짐. 수주산업은 진행률 추정에 좌우"
+ },
+ {
+  "term": "총액·순액 인식",
+  "en": "Principal vs Agent (Gross vs Net)",
+  "cat": "손익계산서",
+  "def": "거래의 본인이면 총액, 대리인이면 수수료만 매출로 인식",
+  "formula": "",
+  "point": "카카오모빌리티 사례처럼 매출이 수 배 달라짐. PSR 비교 전에 반드시 확인"
+ },
+ {
+  "term": "매출원가",
+  "en": "Cost of Sales (COGS)",
+  "cat": "손익계산서",
+  "def": "판매한 제품·상품의 원가",
+  "formula": "",
+  "point": "재고가 과대계상되면 매출원가가 과소계상돼 이익이 부풀려짐"
+ },
+ {
+  "term": "매출총이익",
+  "en": "Gross Profit",
+  "cat": "손익계산서",
+  "def": "매출에서 매출원가를 뺀 이익",
+  "formula": "매출 − 매출원가",
+  "point": "가격결정력과 원가경쟁력을 보여주는 지표"
+ },
+ {
+  "term": "판매비와관리비",
+  "en": "Selling, General and Administrative Expenses (SG&A)",
+  "cat": "손익계산서",
+  "def": "판매·관리 활동에 드는 비용",
+  "formula": "",
+  "point": "판관비 증가율이 매출 증가율보다 낮으면 영업레버리지"
+ },
+ {
+  "term": "영업이익",
+  "en": "Operating Profit",
+  "cat": "손익계산서",
+  "def": "현행: 매출총이익 − 판관비. 1118: 다른 범주에 속하지 않는 잔여 범주의 손익",
+  "formula": "매출총이익 − 판관비 (현행)",
+  "point": "2027~2029년 구기준·신기준 병행 공시. 시계열 비교 시 기준 확인 필수"
+ },
+ {
+  "term": "영업외손익",
+  "en": "Non-operating Income and Expenses",
+  "cat": "손익계산서",
+  "def": "이자, 외환차손익, 파생상품, 자산처분손익 등",
+  "formula": "",
+  "point": "1118 이후 투자·재무 범주로 재배치됨"
+ },
+ {
+  "term": "지분법손익",
+  "en": "Share of Profit of Associates (Equity-method Income)",
+  "cat": "손익계산서",
+  "def": "관계기업 순이익 중 지분율만큼의 몫",
+  "formula": "관계기업 순이익 × 지분율",
+  "point": "현금 유입이 아님(배당을 받을 때만 현금). 1118 범주 분류는 원문 확인 필요"
+ },
+ {
+  "term": "법인세비용",
+  "en": "Income Tax Expense",
+  "cat": "손익계산서",
+  "def": "당기법인세와 이연법인세 변동의 합",
+  "formula": "당기법인세 + 이연법인세 변동",
+  "point": "유효세율이 법정세율과 크게 다르면 주석에서 원인 확인"
+ },
+ {
+  "term": "당기순이익",
+  "en": "Net Income (Profit for the Period)",
+  "cat": "손익계산서",
+  "def": "세전이익에서 법인세비용을 뺀 이익",
+  "formula": "세전이익 − 법인세비용",
+  "point": "연결 기준이면 비지배지분 몫이 포함됨"
+ },
+ {
+  "term": "지배주주순이익",
+  "en": "Net Income Attributable to Owners of the Parent",
+  "cat": "손익계산서",
+  "def": "연결순이익 중 지배기업 주주의 몫",
+  "formula": "연결순이익 − 비지배지분순이익",
+  "point": "EPS·PER·ROE의 분자. 국내 컨센서스 PER의 기준"
+ },
+ {
+  "term": "총포괄이익",
+  "en": "Total Comprehensive Income",
+  "cat": "손익계산서",
+  "def": "당기순이익에 기타포괄손익을 더한 것",
+  "formula": "당기순이익 + 기타포괄손익",
+  "point": "금리·환율·보유주식 평가의 영향을 반영"
+ },
+ {
+  "term": "EBITDA",
+  "en": "Earnings Before Interest, Taxes, Depreciation and Amortization",
+  "cat": "손익계산서",
+  "def": "이자·세금·감가상각 전 이익(비회계기준 지표)",
+  "formula": "영업이익 + 감가상각비 + 무형자산상각비",
+  "point": "IFRS16 이후 리스비용이 빠져 부풀려짐. 1118에서 외부 공시 시 MPM 주석 대상"
+ },
+ {
+  "term": "일회성 손익",
+  "en": "Non-recurring Items",
+  "cat": "손익계산서",
+  "def": "자산처분손익, 손상차손, 소송, 구조조정비 등 반복되지 않는 손익",
+  "formula": "",
+  "point": "4분기 빅배스 관행. 연환산 전에 반드시 제거"
+ },
+ {
+  "term": "빅배스",
+  "en": "Big Bath",
+  "cat": "이익의 질",
+  "def": "손상·충당금을 한 기간에 몰아 인식해 이후 이익을 개선해 보이게 하는 것",
+  "formula": "",
+  "point": "경영진 교체나 4분기에 빈번. 직후 분기의 환입 이익은 착시일 수 있음"
+ },
+ {
+  "term": "영업활동현금흐름",
+  "en": "Cash Flow from Operating Activities (CFO)",
+  "cat": "현금흐름표",
+  "def": "영업에서 실제로 들어오고 나간 현금",
+  "formula": "순이익 ± 비현금손익 ± 운전자본 변동 − 법인세 납부",
+  "point": "영업CF ÷ 순이익이 지속적으로 1보다 크면 건전. 이자·배당의 분류는 회사가 선택 가능"
+ },
+ {
+  "term": "투자활동현금흐름",
+  "en": "Cash Flow from Investing Activities (CFI)",
+  "cat": "현금흐름표",
+  "def": "유·무형자산, 지분, 금융상품의 취득·처분 현금",
+  "formula": "",
+  "point": "단기금융상품 매매가 섞여 있으므로 CAPEX 항목을 따로 확인"
+ },
+ {
+  "term": "재무활동현금흐름",
+  "en": "Cash Flow from Financing Activities (CFF)",
+  "cat": "현금흐름표",
+  "def": "차입·상환, 증자, 배당, 자사주, 리스부채 원금 상환 현금",
+  "formula": "",
+  "point": "IFRS16 이후 리스료가 여기로 이동해 영업CF가 좋아 보임"
+ },
+ {
+  "term": "자본적지출",
+  "en": "Capital Expenditure (CAPEX)",
+  "cat": "현금흐름표",
+  "def": "유형·무형자산 취득에 쓴 현금",
+  "formula": "유형자산 취득 + 무형자산 취득",
+  "point": "감가상각비보다 크면 성장 투자, 작은 상태가 지속되면 노후화나 성숙기"
+ },
+ {
+  "term": "잉여현금흐름",
+  "en": "Free Cash Flow (FCF)",
+  "cat": "현금흐름표",
+  "def": "영업현금에서 투자를 빼고 남는 현금",
+  "formula": "영업CF − CAPEX (간이)",
+  "point": "리스가 많은 업종은 리스 상환액까지 뺀 \"FCF after leases\"로 비교"
+ },
+ {
+  "term": "기업잉여현금흐름",
+  "en": "Free Cash Flow to Firm (FCFF)",
+  "cat": "현금흐름표",
+  "def": "채권자와 주주 모두에게 돌아갈 수 있는 현금",
+  "formula": "EBIT × (1 − t) + 감가상각비 − CAPEX − 순운전자본 증가",
+  "point": "DCF에서 WACC로 할인하는 현금흐름"
+ },
+ {
+  "term": "운전자본 변동",
+  "en": "Change in Working Capital",
+  "cat": "현금흐름표",
+  "def": "매출채권·재고·매입채무 등 영업 관련 자산·부채의 증감",
+  "formula": "Δ(매출채권 + 재고 − 매입채무)",
+  "point": "증가하면 현금 유출. 고성장기에는 정상이지만 정체기에 늘면 위험"
+ },
+ {
+  "term": "현금흐름 부호 패턴",
+  "en": "Cash Flow Sign Pattern",
+  "cat": "현금흐름표",
+  "def": "영업·투자·재무 현금흐름의 부호 조합으로 기업 단계를 진단하는 틀",
+  "formula": "(영업, 투자, 재무)의 부호",
+  "point": "(+,−,−) 우량 성숙, (+,−,+) 성장, (−,+,+) 위험, (−,−,+) 바이오·초기기업"
+ },
+ {
+  "term": "부채비율",
+  "en": "Debt-to-Equity Ratio (Liabilities-to-Equity)",
+  "cat": "재무비율-안정성",
+  "def": "자본 대비 총부채의 크기",
+  "formula": "부채총계 ÷ 자본총계 × 100",
+  "point": "한국식은 총부채 기준. 금융·건설·항공은 구조적으로 높고, 선수금이 많으면 높아도 건전"
+ },
+ {
+  "term": "순차입금비율",
+  "en": "Net Debt-to-Equity",
+  "cat": "재무비율-안정성",
+  "def": "자본 대비 순차입금의 크기",
+  "formula": "(총차입금 − 현금성자산 − 단기금융상품) ÷ 자본총계",
+  "point": "음수면 순현금. 리스부채 포함 여부를 명시"
+ },
+ {
+  "term": "순차입금/EBITDA",
+  "en": "Net Debt to EBITDA",
+  "cat": "재무비율-안정성",
+  "def": "순차입금을 몇 년치 EBITDA로 갚을 수 있는지",
+  "formula": "순차입금 ÷ EBITDA",
+  "point": "3~4배 이상이면 부담. 신용평가에서 많이 씀"
+ },
+ {
+  "term": "유동비율",
+  "en": "Current Ratio",
+  "cat": "재무비율-안정성",
+  "def": "단기 지급능력",
+  "formula": "유동자산 ÷ 유동부채 × 100",
+  "point": "100% 미만이면 점검. 금융업에는 쓰지 않음"
+ },
+ {
+  "term": "당좌비율",
+  "en": "Quick Ratio",
+  "cat": "재무비율-안정성",
+  "def": "재고를 뺀 보수적인 단기 지급능력",
+  "formula": "(유동자산 − 재고자산) ÷ 유동부채 × 100",
+  "point": "재고가 많은 업종에서 유동비율을 보완"
+ },
+ {
+  "term": "이자보상배율",
+  "en": "Interest Coverage Ratio",
+  "cat": "재무비율-안정성",
+  "def": "영업이익으로 이자를 몇 번 갚을 수 있는지",
+  "formula": "영업이익 ÷ 이자비용",
+  "point": "1 미만이면 영업으로 이자도 못 냄. 3년 연속이면 통상 한계기업으로 분류"
+ },
+ {
+  "term": "ROE",
+  "en": "Return on Equity",
+  "cat": "재무비율-수익성",
+  "def": "자기자본 대비 이익",
+  "formula": "지배주주순이익 ÷ 평균 지배주주지분",
+  "point": "레버리지로 만든 ROE는 질이 낮음. 자사주 매입이나 손상으로 분모가 줄어도 상승"
+ },
+ {
+  "term": "듀퐁분해",
+  "en": "DuPont Analysis",
+  "cat": "재무비율-수익성",
+  "def": "ROE를 마진·회전율·레버리지로 나누는 분석",
+  "formula": "ROE = 순이익률 × 총자산회전율 × (자산 ÷ 자본)",
+  "point": "ROE 상승이 마진 덕인지 부채 덕인지 구분"
+ },
+ {
+  "term": "ROA",
+  "en": "Return on Assets",
+  "cat": "재무비율-수익성",
+  "def": "총자산 대비 이익",
+  "formula": "순이익 ÷ 평균 총자산",
+  "point": "은행 등 레버리지 업종의 핵심 지표. 영상도 ROE와 함께 보라고 언급"
+ },
+ {
+  "term": "ROIC",
+  "en": "Return on Invested Capital",
+  "cat": "재무비율-수익성",
+  "def": "영업에 투하한 자본 대비 세후 영업이익",
+  "formula": "NOPAT ÷ 평균 투하자본, NOPAT = EBIT × (1 − 세율)",
+  "point": "ROIC가 WACC보다 크면 가치 창출, 작으면 성장이 오히려 가치를 파괴"
+ },
+ {
+  "term": "매출총이익률",
+  "en": "Gross Margin",
+  "cat": "재무비율-수익성",
+  "def": "매출 대비 매출총이익",
+  "formula": "매출총이익 ÷ 매출",
+  "point": "원재료 지수와 시차를 두고 비교하면 원가 전가력이 보임"
+ },
+ {
+  "term": "영업이익률",
+  "en": "Operating Margin",
+  "cat": "재무비율-수익성",
+  "def": "매출 대비 영업이익",
+  "formula": "영업이익 ÷ 매출",
+  "point": "수준보다 방향이 중요. 사이클 산업의 극단적 마진은 정상화해서 볼 것"
+ },
+ {
+  "term": "순이익률",
+  "en": "Net Margin",
+  "cat": "재무비율-수익성",
+  "def": "매출 대비 순이익",
+  "formula": "당기순이익 ÷ 매출",
+  "point": "영업외손익(환율·파생) 영향이 큰 업종은 영업이익률과 괴리"
+ },
+ {
+  "term": "영업레버리지",
+  "en": "Degree of Operating Leverage (DOL)",
+  "cat": "재무비율-수익성",
+  "def": "매출 변화에 대한 영업이익의 민감도",
+  "formula": "영업이익 증가율 ÷ 매출 증가율",
+  "point": "고정비 비중이 큰 플랫폼·해운·반도체에서 크게 나타남"
+ },
+ {
+  "term": "총자산회전율",
+  "en": "Asset Turnover",
+  "cat": "재무비율-활동성",
+  "def": "자산이 매출을 얼마나 만들어내는지",
+  "formula": "매출 ÷ 평균 총자산",
+  "point": "듀퐁분해의 중간 축"
+ },
+ {
+  "term": "매출채권회수기간",
+  "en": "Days Sales Outstanding (DSO)",
+  "cat": "재무비율-활동성",
+  "def": "외상매출을 회수하는 데 걸리는 평균 일수",
+  "formula": "평균 매출채권 ÷ 매출 × 365",
+  "point": "늘면 회수 지연이나 밀어내기를 의심"
+ },
+ {
+  "term": "재고자산회전일수",
+  "en": "Days Inventory Outstanding (DIO)",
+  "cat": "재무비율-활동성",
+  "def": "재고가 팔리기까지 걸리는 평균 일수",
+  "formula": "평균 재고자산 ÷ 매출원가 × 365",
+  "point": "늘면 재고 진부화 위험. 반도체 다운사이클의 선행 신호"
+ },
+ {
+  "term": "매입채무지급기간",
+  "en": "Days Payables Outstanding (DPO)",
+  "cat": "재무비율-활동성",
+  "def": "외상매입 대금을 지급하기까지 걸리는 평균 일수",
+  "formula": "평균 매입채무 ÷ 매출원가 × 365",
+  "point": "길면 협상력이 강하거나 지급이 곤란한 상태"
+ },
+ {
+  "term": "현금전환주기",
+  "en": "Cash Conversion Cycle (CCC)",
+  "cat": "재무비율-활동성",
+  "def": "현금이 영업에 묶여 있는 기간",
+  "formula": "DIO + DSO − DPO",
+  "point": "음수면 협력사 돈으로 운영(유통·플랫폼 강자). 성장이 둔화하면 역회전 위험"
+ },
+ {
+  "term": "EPS",
+  "en": "Earnings per Share",
+  "cat": "밸류에이션",
+  "def": "주당 순이익",
+  "formula": "지배주주순이익 ÷ 가중평균 유통주식수",
+  "point": "CB·BW가 많은 중소형주는 희석EPS로 확인"
+ },
+ {
+  "term": "BPS",
+  "en": "Book Value per Share",
+  "cat": "밸류에이션",
+  "def": "주당 순자산",
+  "formula": "지배주주지분 ÷ 유통주식수(자사주 제외)",
+  "point": "PBR의 분모"
+ },
+ {
+  "term": "PER",
+  "en": "Price-to-Earnings Ratio",
+  "cat": "밸류에이션",
+  "def": "주가가 주당이익의 몇 배인지",
+  "formula": "주가 ÷ EPS",
+  "point": "성장률과 함께 볼 것(영상 핵심). 경기민감주는 이익 정점에서 PER이 최저"
+ },
+ {
+  "term": "PBR",
+  "en": "Price-to-Book Ratio",
+  "cat": "밸류에이션",
+  "def": "주가가 주당순자산의 몇 배인지",
+  "formula": "주가 ÷ BPS",
+  "point": "장부가는 실제 가치와 다를 수 있음. 저PBR이어도 ROE가 자본비용보다 낮으면 밸류트랩"
+ },
+ {
+  "term": "PBR-ROE-PER 항등식",
+  "en": "PBR = ROE × PER Identity",
+  "cat": "밸류에이션",
+  "def": "세 지표가 수학적으로 연결된다는 관계식",
+  "formula": "PBR = ROE × PER",
+  "point": "영상의 출발점. \"PER은 낮은데 PBR은 높음\"은 사이클 고점 신호"
+ },
+ {
+  "term": "적정 PBR",
+  "en": "Justified P/B",
+  "cat": "밸류에이션",
+  "def": "ROE와 자본비용·성장률로 구하는 이론적 PBR",
+  "formula": "(ROE − g) ÷ (COE − g)",
+  "point": "은행지주가 PBR 1배 미만인 이유를 설명하는 틀"
+ },
+ {
+  "term": "PEG",
+  "en": "Price/Earnings-to-Growth Ratio",
+  "cat": "밸류에이션",
+  "def": "PER을 이익 성장률로 나눈 값",
+  "formula": "PER ÷ EPS 성장률(%)",
+  "point": "1 미만이면 저평가라는 통념이 있음. 저성장 기업에서는 왜곡(영상 언급)"
+ },
+ {
+  "term": "PSR",
+  "en": "Price-to-Sales Ratio",
+  "cat": "밸류에이션",
+  "def": "시가총액이 매출의 몇 배인지",
+  "formula": "시가총액 ÷ 매출",
+  "point": "적자 성장주에 사용. 총액·순액 인식 차이에 취약"
+ },
+ {
+  "term": "EV/EBITDA",
+  "en": "Enterprise Value to EBITDA",
+  "cat": "밸류에이션",
+  "def": "기업가치가 EBITDA의 몇 배인지",
+  "formula": "(시가총액 + 순차입금 + 비지배지분) ÷ EBITDA",
+  "point": "리스부채를 EV에 넣었다면 EBITDA도 IFRS16 기준으로 일관되게"
+ },
+ {
+  "term": "배당성향",
+  "en": "Dividend Payout Ratio",
+  "cat": "밸류에이션",
+  "def": "순이익 중 배당으로 지급한 비율",
+  "formula": "배당금총액 ÷ 지배주주순이익",
+  "point": "배당가능이익은 별도 기준이라 연결과 다를 수 있음"
+ },
+ {
+  "term": "배당수익률",
+  "en": "Dividend Yield",
+  "cat": "밸류에이션",
+  "def": "주가 대비 연간 배당금",
+  "formula": "주당배당금 ÷ 주가",
+  "point": "리츠는 감가상각 범위 초과배당·매각차익으로 부풀 수 있음"
+ },
+ {
+  "term": "주주환원율",
+  "en": "Total Shareholder Return Ratio",
+  "cat": "밸류에이션",
+  "def": "순이익 중 배당과 자사주 매입·소각으로 돌려준 비율",
+  "formula": "(배당금 + 자사주 매입·소각액) ÷ 지배주주순이익",
+  "point": "밸류업 공시의 핵심. 매입 후 소각하지 않은 자사주는 환원으로 보기 어려움"
+ },
+ {
+  "term": "컨센서스",
+  "en": "Consensus Estimate",
+  "cat": "밸류에이션",
+  "def": "증권사 애널리스트 실적 추정치의 평균",
+  "formula": "",
+  "point": "주가보다 느리게 움직임. 추정치 하향 전환이 사이클 고점 신호(영상 언급)"
+ },
+ {
+  "term": "Sloan 비율",
+  "en": "Sloan Ratio",
+  "cat": "이익의 질",
+  "def": "이익 중 현금으로 뒷받침되지 않는 발생액의 크기",
+  "formula": "(순이익 − 영업CF − 투자CF) ÷ 총자산",
+  "point": "±10% 이내 안전, ±25% 초과 고위험. 여러 기간 지속되면 경고"
+ },
+ {
+  "term": "발생액",
+  "en": "Accruals",
+  "cat": "이익의 질",
+  "def": "발생주의 이익과 현금흐름의 차이",
+  "formula": "당기순이익 − 영업CF (간이)",
+  "point": "양(+)이 지속되면 이익이 현금으로 뒷받침되지 않는다는 뜻"
+ },
+ {
+  "term": "감사의견",
+  "en": "Audit Opinion",
+  "cat": "공시",
+  "def": "외부감사인이 재무제표의 적정성에 대해 표명하는 의견(적정·한정·부적정·의견거절)",
+  "formula": "",
+  "point": "코스닥은 최근 사업연도 비적정이면 상장폐지 사유. 적정이어도 계속기업 불확실성 문단은 중대한 경고"
+ },
+ {
+  "term": "핵심감사사항",
+  "en": "Key Audit Matters (KAM)",
+  "cat": "공시",
+  "def": "감사인이 가장 중요하다고 판단한 감사 사항",
+  "formula": "",
+  "point": "수익인식·영업권 손상·재고·개발비가 단골. 금감원 지적 계정과 겹치면 우선 점검"
+ },
+ {
+  "term": "계속기업 불확실성",
+  "en": "Going Concern Uncertainty",
+  "cat": "공시",
+  "def": "기업이 계속 존속할 수 있을지에 중대한 의문이 있다는 감사보고서 문단",
+  "formula": "",
+  "point": "감사의견이 적정이어도 매우 강한 경고 신호"
+ },
+ {
+  "term": "법차손",
+  "en": "Loss Before Income Tax from Continuing Operations",
+  "cat": "공시",
+  "def": "법인세비용차감전계속사업손실. 코스닥 관리종목 판단에 쓰임",
+  "formula": "법차손 ÷ 자기자본",
+  "point": "최근 3년 중 2회 이상 50% 초과 시 관리종목. 기술특례는 상장 후 3년 유예"
+ },
+ {
+  "term": "자본잠식",
+  "en": "Capital Impairment",
+  "cat": "공시",
+  "def": "자본총계가 자본금보다 작아진 상태",
+  "formula": "(자본금 − 자본총계) ÷ 자본금",
+  "point": "관리종목·상장폐지 요건과 연결. 항공 LCC는 환율이 급등하면 반복됨"
+ },
+ {
+  "term": "K-IFRS 1118",
+  "en": "K-IFRS 1118 (IFRS 18) Presentation and Disclosure",
+  "cat": "회계기준",
+  "def": "1001호를 대체하는 재무제표 표시 기준. 2027년 1월 1일 이후 시작 회계연도부터 적용",
+  "formula": "",
+  "point": "2026년 비교재무제표 재작성. 손익을 영업·투자·재무·법인세·중단영업 5개 범주로 재편"
+ },
+ {
+  "term": "영업 범주",
+  "en": "Operating Category",
+  "cat": "회계기준",
+  "def": "1118에서 다른 범주에 속하지 않는 모든 수익·비용",
+  "formula": "",
+  "point": "잔여 범주라 기존 영업이익과 숫자가 달라질 수 있음"
+ },
+ {
+  "term": "투자 범주",
+  "en": "Investing Category",
+  "cat": "회계기준",
+  "def": "1118에서 독립적으로 수익을 내는 자산의 손익(처분·평가손익, 투자부동산, 현금성자산 이자 등)",
+  "formula": "",
+  "point": "자산처분이익으로 영업이익을 꾸미던 여지가 줄어듦"
+ },
+ {
+  "term": "재무 범주",
+  "en": "Financing Category",
+  "cat": "회계기준",
+  "def": "1118에서 자금조달 부채 관련 손익(회사채·리스부채 이자, 확정급여부채 순이자 등)",
+  "formula": "",
+  "point": "금융회사는 주된 사업이 고객금융이면 이자손익을 영업으로 분류 가능"
+ },
+ {
+  "term": "재무 및 법인세비용 차감 전 손익",
+  "en": "Profit Before Financing and Income Taxes",
+  "cat": "회계기준",
+  "def": "1118의 필수 소계",
+  "formula": "영업손익 + 투자 범주 손익",
+  "point": "자본구조와 무관하게 비교할 수 있는 이익"
+ },
+ {
+  "term": "경영진정의성과측정치",
+  "en": "Management-defined Performance Measures (MPM)",
+  "cat": "회계기준",
+  "def": "회사가 외부 커뮤니케이션에 쓰는 비회계기준 성과지표(조정EBITDA 등)",
+  "formula": "",
+  "point": "정의·목적·K-IFRS 수치와의 조정내역을 주석에 공시해야 함"
+ },
+ {
+  "term": "구기준 영업손익 병행 공시",
+  "en": "Legacy Operating Profit Reconciliation",
+  "cat": "회계기준",
+  "def": "2027~2029년 현행 기준 영업손익을 별도로 산출해 주석에 적고 차이를 조정하는 제도",
+  "formula": "1118 영업손익 − 구기준 영업손익 = 조정 차이",
+  "point": "컨센서스·HTS 숫자의 기준을 확인할 때 사용"
+ },
+ {
+  "term": "IFRS16 리스",
+  "en": "IFRS 16 Leases (K-IFRS 1116)",
+  "cat": "회계기준",
+  "def": "운용리스까지 사용권자산과 리스부채로 인식하는 기준(2019년~)",
+  "formula": "",
+  "point": "EBITDA와 영업CF가 구조적으로 부풀었으므로 업종 간·도입 전후 비교 시 조정"
+ },
+ {
+  "term": "진행기준 수익인식",
+  "en": "Percentage-of-Completion (Over-time Revenue Recognition)",
+  "cat": "수주",
+  "def": "수행의무를 기간에 걸쳐 이행할 때 진행률만큼 수익을 인식",
+  "formula": "진행률 = 누적발생원가 ÷ 총예정원가",
+  "point": "분모(총예정원가)가 추정치라 정정 위험이 큼"
+ },
+ {
+  "term": "총예정원가",
+  "en": "Estimated Total Contract Cost",
+  "cat": "수주",
+  "def": "계약 완료까지 들어갈 것으로 추정한 총원가",
+  "formula": "",
+  "point": "분기마다 재추정. 주석의 예정원가 변동 공시를 확인"
+ },
+ {
+  "term": "수주잔고",
+  "en": "Order Backlog",
+  "cat": "수주",
+  "def": "계약했지만 아직 매출로 인식하지 않은 금액",
+  "formula": "기초잔고 + 신규수주 − 매출인식분 ± 환율·계약변경",
+  "point": "수주잔고 ÷ 연매출 = 일감 보유 연수. 저가 잔고는 손실의 원천"
+ },
+ {
+  "term": "신규수주",
+  "en": "New Orders",
+  "cat": "수주",
+  "def": "기간 중 새로 체결한 계약 금액",
+  "formula": "",
+  "point": "분기 변동이 크므로 연간·4개 분기 합계로 볼 것"
+ },
+ {
+  "term": "Book-to-Bill",
+  "en": "Book-to-Bill Ratio",
+  "cat": "수주",
+  "def": "신규수주와 매출의 비율",
+  "formula": "신규수주 ÷ 매출",
+  "point": "1보다 크면 잔고 증가, 작으면 잔고 소진"
+ },
+ {
+  "term": "공사손실충당부채",
+  "en": "Provision for Construction Losses",
+  "cat": "수주",
+  "def": "총예정원가가 계약수익을 넘을 때 예상손실을 즉시 인식한 부채",
+  "formula": "예상 총원가 − 계약수익 (잔여분)",
+  "point": "먼저 반영하고 나중에 환입하는 구조. 대규모 설정 직후가 실적 개선의 출발점이 되기도 함"
+ },
+ {
+  "term": "헤비테일",
+  "en": "Heavy-tail Payment Structure",
+  "cat": "수주",
+  "def": "인도 시점에 대금 대부분을 받는 결제 구조(조선 약 60%)",
+  "formula": "",
+  "point": "이익과 현금의 시차가 큼. 인도가 몰리는 시기에 현금이 급증"
+ },
+ {
+  "term": "PF 우발채무",
+  "en": "Project Financing Contingent Liabilities",
+  "cat": "수주",
+  "def": "시행사 PF 대출에 대한 지급보증·책임준공·자금보충 약정",
+  "formula": "PF보증 ÷ 자기자본",
+  "point": "본문에 없고 주석에만 있음. 시행사 부도 시 채무인수로 한꺼번에 부채화"
+ },
+ {
+  "term": "지체상금",
+  "en": "Liquidated Damages",
+  "cat": "수주",
+  "def": "계약 납기를 지키지 못했을 때 지급하는 손해배상금",
+  "formula": "",
+  "point": "방산·조선의 충당부채 항목. 인도가 지연되면 확인"
+ },
+ {
+  "term": "가동률",
+  "en": "Utilization Rate",
+  "cat": "제조",
+  "def": "생산능력 대비 실제 생산량",
+  "formula": "실제 생산량 ÷ 생산능력",
+  "point": "사업보고서의 생산능력 및 생산실적 항목. 하락하면 단위당 고정비가 올라 마진 급락"
+ },
+ {
+  "term": "CAPEX/감가상각비",
+  "en": "Capex-to-Depreciation",
+  "cat": "제조",
+  "def": "투자 규모가 감가상각 대비 얼마나 큰지",
+  "formula": "유형자산 취득액 ÷ 감가상각비",
+  "point": "1.5~2배 이상이 지속되면 업계 증설 경쟁으로 2~3년 뒤 공급과잉 위험"
+ },
+ {
+  "term": "스프레드",
+  "en": "Product Spread",
+  "cat": "제조",
+  "def": "제품 가격에서 원재료 가격을 뺀 차이",
+  "formula": "제품가 − 원재료가",
+  "point": "화학·철강 이익의 핵심. 손익계산서보다 먼저 움직임"
+ },
+ {
+  "term": "장기공급계약",
+  "en": "Long-Term Agreement (LTA)",
+  "cat": "제조",
+  "def": "공급사와 고객사가 수년 단위로 물량·가격을 정하는 계약",
+  "formula": "",
+  "point": "안정 성장의 근거가 되지만 계약 가격이 낮으면 하락 요인(영상의 반도체 사례)"
+ },
+ {
+  "term": "정상화 이익",
+  "en": "Normalized Earnings",
+  "cat": "제조",
+  "def": "사이클의 고점·저점을 평균한 이익",
+  "formula": "사이클 평균 마진 × 현재 매출 (예시)",
+  "point": "사이클 고점의 저PER 함정을 피하는 기준"
+ },
+ {
+  "term": "ASP",
+  "en": "Average Selling Price",
+  "cat": "자동차",
+  "def": "평균 판매단가",
+  "formula": "완성차 매출 ÷ 판매대수",
+  "point": "SUV·고급 브랜드 믹스가 결정"
+ },
+ {
+  "term": "대당 인센티브",
+  "en": "Incentive per Unit",
+  "cat": "자동차",
+  "def": "판매 촉진을 위해 대당 지급한 할인·지원금",
+  "formula": "인센티브 총액 ÷ 판매대수",
+  "point": "미국 인센티브는 매출 차감. 늘면 수요 약화 신호"
+ },
+ {
+  "term": "NIM",
+  "en": "Net Interest Margin",
+  "cat": "금융-은행",
+  "def": "이자수익자산 대비 순이자이익",
+  "formula": "순이자이익 ÷ 이자수익자산 평잔 (연환산)",
+  "point": "2025년 그룹 기준 약 1.9%. 금리 인하기에 하락 압력. 1bp도 대형지주 이익에 수백억원 영향"
+ },
+ {
+  "term": "NIS",
+  "en": "Net Interest Spread",
+  "cat": "금융-은행",
+  "def": "운용수익률과 조달비용률의 차이",
+  "formula": "이자수익자산 수익률 − 이자부채 조달비용률",
+  "point": "저원가성 예금 비중이 높을수록 NIM이 NIS보다 커짐"
+ },
+ {
+  "term": "예대율",
+  "en": "Loan-to-Deposit Ratio",
+  "cat": "금융-은행",
+  "def": "원화예수금 대비 원화대출금(가중치 적용)",
+  "formula": "원화대출금 ÷ 원화예수금",
+  "point": "규제 기준 100%. 근접하면 대출 성장이 제약되고 예금 경쟁으로 조달비용 상승"
+ },
+ {
+  "term": "CET1비율",
+  "en": "Common Equity Tier 1 Ratio",
+  "cat": "금융-은행",
+  "def": "위험가중자산 대비 보통주자본",
+  "formula": "보통주자본 ÷ 위험가중자산",
+  "point": "지주 목표 13~13.5%. 초과분이 주주환원 재원. 환율 상승 시 하락"
+ },
+ {
+  "term": "BIS 총자본비율",
+  "en": "BIS Total Capital Ratio",
+  "cat": "금융-은행",
+  "def": "위험가중자산 대비 총자본",
+  "formula": "(CET1 + 기타기본자본 + 보완자본) ÷ 위험가중자산",
+  "point": "신종자본증권·후순위채가 포함되므로 CET1보다 높음"
+ },
+ {
+  "term": "위험가중자산",
+  "en": "Risk-Weighted Assets (RWA)",
+  "cat": "금융-은행",
+  "def": "자산별 위험도를 가중해 합산한 자산",
+  "formula": "Σ(자산 × 위험가중치)",
+  "point": "대출 성장, 환율 상승, 규제 가중치 상향 시 증가해 자본비율을 깎음"
+ },
+ {
+  "term": "대손비용률",
+  "en": "Credit Cost Ratio (CCR)",
+  "cat": "금융-은행",
+  "def": "평균 대출 대비 충당금전입액",
+  "formula": "충당금전입액(연환산) ÷ 평균 대출채권",
+  "point": "그룹 0.3~0.5%, 은행 0.1~0.2%대. 가이던스를 넘으면 경고"
+ },
+ {
+  "term": "고정이하여신비율",
+  "en": "NPL Ratio",
+  "cat": "금융-은행",
+  "def": "총여신 중 고정·회수의문·추정손실 여신의 비중",
+  "formula": "고정이하여신 ÷ 총여신",
+  "point": "국내은행 2026년 3월 0.60%로 5년 만에 최고"
+ },
+ {
+  "term": "NPL 커버리지",
+  "en": "NPL Coverage Ratio",
+  "cat": "금융-은행",
+  "def": "부실여신 대비 쌓아둔 충당금",
+  "formula": "대손충당금 잔액 ÷ 고정이하여신",
+  "point": "하락 추세면 향후 추가 적립이 필요하다는 신호"
+ },
+ {
+  "term": "연체율",
+  "en": "Delinquency Ratio",
+  "cat": "금융-은행",
+  "def": "1개월 이상 연체된 채권의 비중",
+  "formula": "1개월 이상 연체채권 ÷ 총채권",
+  "point": "대환대출 포함 여부에 따라 실질 연체율이 다름"
+ },
+ {
+  "term": "CIR",
+  "en": "Cost-Income Ratio",
+  "cat": "금융-은행",
+  "def": "총영업이익 대비 판관비",
+  "formula": "판매관리비 ÷ (순이자이익 + 비이자이익)",
+  "point": "낮을수록 효율적. 국내 대형지주 39~42%"
+ },
+ {
+  "term": "충전이익",
+  "en": "Pre-Provision Operating Profit (PPOP)",
+  "cat": "금융-은행",
+  "def": "충당금을 쌓기 전의 영업이익",
+  "formula": "총영업이익 − 판관비",
+  "point": "경기와 무관한 기초 체력. 충당금 변동의 영향을 걸러냄"
+ },
+ {
+  "term": "비이자이익",
+  "en": "Non-interest Income",
+  "cat": "금융-은행",
+  "def": "수수료·유가증권·외환 등 이자 이외의 이익",
+  "formula": "",
+  "point": "유가증권 평가·매매익 비중이 과도하면 시장 의존도가 높음"
+ },
+ {
+  "term": "CSM",
+  "en": "Contractual Service Margin",
+  "cat": "금융-보험",
+  "def": "보유계약에서 미래에 인식할 이익의 현재가치",
+  "formula": "기말 CSM = 기초 + 신계약 CSM + 이자부리 ± 가정변경 − 상각",
+  "point": "보험사의 수주잔고. 순이익보다 잔액 증감이 핵심"
+ },
+ {
+  "term": "신계약 CSM",
+  "en": "New Business CSM",
+  "cat": "금융-보험",
+  "def": "당기 판매한 신계약에서 발생한 CSM",
+  "formula": "",
+  "point": "상각과 부정적 가정변경보다 커야 CSM이 성장"
+ },
+ {
+  "term": "CSM 상각률",
+  "en": "CSM Amortization Rate",
+  "cat": "금융-보험",
+  "def": "기간 중 이익으로 풀려나온 CSM의 비율",
+  "formula": "CSM 상각액 ÷ 상각 전 CSM",
+  "point": "대체로 연 8~11% 수준"
+ },
+ {
+  "term": "보험수익",
+  "en": "Insurance Revenue",
+  "cat": "금융-보험",
+  "def": "IFRS17상 보험서비스 제공 대가(보험료 수입이 아님)",
+  "formula": "CSM 상각 + RA 해제 + 예상 보험금·사업비 + 취득현금흐름 상각",
+  "point": "보험료 성장률을 매출 성장으로 보면 안 됨"
+ },
+ {
+  "term": "보험손익",
+  "en": "Insurance Service Result",
+  "cat": "금융-보험",
+  "def": "보험서비스에서 생긴 손익",
+  "formula": "보험수익 − 보험서비스비용",
+  "point": "본업이 약한데 투자손익으로 메우는 구조는 경고 신호"
+ },
+ {
+  "term": "투자손익",
+  "en": "Net Investment Result",
+  "cat": "금융-보험",
+  "def": "투자수익에서 보험금융비용을 뺀 손익",
+  "formula": "투자수익 − 보험금융비용",
+  "point": "금리와 자산시장에 민감"
+ },
+ {
+  "term": "위험조정",
+  "en": "Risk Adjustment (RA)",
+  "cat": "금융-보험",
+  "def": "비금융위험을 부담하는 데 대한 보상",
+  "formula": "",
+  "point": "시간이 지나며 해제돼 이익이 됨"
+ },
+ {
+  "term": "예실차",
+  "en": "Experience Variance",
+  "cat": "금융-보험",
+  "def": "예상한 보험금·사업비와 실제 발생액의 차이",
+  "formula": "예상 발생액 − 실제 발생액",
+  "point": "반복적으로 마이너스면 가정이 낙관적이라는 뜻"
+ },
+ {
+  "term": "손실부담계약",
+  "en": "Onerous Contract",
+  "cat": "금융-보험",
+  "def": "CSM이 음수인 계약군",
+  "formula": "",
+  "point": "손실을 즉시 비용으로 인식. 증가하면 상품 수익성 악화"
+ },
+ {
+  "term": "K-ICS 비율",
+  "en": "Korean Insurance Capital Standard Ratio",
+  "cat": "금융-보험",
+  "def": "요구자본 대비 가용자본",
+  "formula": "가용자본 ÷ 요구자본",
+  "point": "법정 최소 100%. 경과조치 전·후를 모두 확인"
+ },
+ {
+  "term": "기본자본 K-ICS",
+  "en": "Core Capital K-ICS Ratio",
+  "cat": "금융-보험",
+  "def": "후순위채·신종자본증권을 제외한 기본자본 기준 K-ICS",
+  "formula": "기본자본 ÷ 요구자본",
+  "point": "업계 생보 106%·손보 83%. 기준치와 시행 시점은 미확정"
+ },
+ {
+  "term": "해약환급금준비금",
+  "en": "Surrender Value Reserve",
+  "cat": "금융-보험",
+  "def": "이익잉여금 안에 쌓는 배당 불가 적립금",
+  "formula": "",
+  "point": "생보사의 배당가능이익을 제약"
+ },
+ {
+  "term": "손해율",
+  "en": "Loss Ratio",
+  "cat": "금융-보험",
+  "def": "경과보험료 대비 발생손해액",
+  "formula": "발생손해액 ÷ 경과보험료",
+  "point": "IFRS17에서는 회사별로 보험수익 기준으로 재정의하기도 함"
+ },
+ {
+  "term": "사업비율",
+  "en": "Expense Ratio",
+  "cat": "금융-보험",
+  "def": "경과보험료 대비 사업비",
+  "formula": "사업비 ÷ 경과보험료",
+  "point": "손해율과 합쳐 합산비율을 구성"
+ },
+ {
+  "term": "합산비율",
+  "en": "Combined Ratio",
+  "cat": "금융-보험",
+  "def": "손해율과 사업비율의 합",
+  "formula": "손해율 + 사업비율",
+  "point": "100% 미만이면 보험영업 흑자. 2025년 상반기 자동차보험 99.7%"
+ },
+ {
+  "term": "순영업수익",
+  "en": "Net Operating Revenue",
+  "cat": "금융-증권",
+  "def": "증권사의 매출 개념",
+  "formula": "순수수료손익 + 순이자손익 + 트레이딩손익 + 기타",
+  "point": "브로커리지 비중이 높으면 거래대금에 민감"
+ },
+ {
+  "term": "수탁수수료",
+  "en": "Brokerage Commission",
+  "cat": "금융-증권",
+  "def": "위탁매매에서 받는 수수료",
+  "formula": "거래대금 × 수수료율",
+  "point": "2025년 8.6조원(+37%). 시장 활황 의존적"
+ },
+ {
+  "term": "NCR",
+  "en": "Net Capital Ratio",
+  "cat": "금융-증권",
+  "def": "증권사의 자본 적정성 규제 비율",
+  "formula": "(영업용순자본 − 총위험액) ÷ 필요유지자기자본 × 100",
+  "point": "규제 최소 100%. 업계 평균 900%대는 착시일 수 있음"
+ },
+ {
+  "term": "레버리지비율",
+  "en": "Leverage Ratio (Securities)",
+  "cat": "금융-증권",
+  "def": "자기자본 대비 총자산",
+  "formula": "총자산 ÷ 자기자본 × 100",
+  "point": "규제 한도 1,100%"
+ },
+ {
+  "term": "부동산 PF 익스포저",
+  "en": "Real Estate PF Exposure",
+  "cat": "금융-증권",
+  "def": "채무보증, PF대출, 브릿지론, 부동산 펀드·지분 투자의 합계",
+  "formula": "PF 익스포저 ÷ 자기자본",
+  "point": "증권사 실질 리스크 지표. 총익스포저 한도 규제 도입 추진 중"
+ },
+ {
+  "term": "조정자기자본비율",
+  "en": "Adjusted Equity Capital Ratio",
+  "cat": "금융-여전",
+  "def": "여신전문금융회사의 자본 적정성 비율",
+  "formula": "조정자기자본 ÷ 조정총자산",
+  "point": "2025년 전업카드사 평균 21.1%"
+ },
+ {
+  "term": "조달비용률",
+  "en": "Funding Cost Ratio",
+  "cat": "금융-여전",
+  "def": "차입부채 대비 이자비용",
+  "formula": "이자비용 ÷ 평균 차입부채",
+  "point": "여전채 금리에 연동. 금리 효과는 만기 시차를 두고 반영"
+ },
+ {
+  "term": "대손충당금적립률",
+  "en": "Allowance-to-NPL Ratio",
+  "cat": "금융-여전",
+  "def": "고정이하채권 대비 충당금",
+  "formula": "대손충당금 ÷ 고정이하채권",
+  "point": "카드사 106%로 100%에 근접. 하락하면 추가 비용 위험"
+ },
+ {
+  "term": "개발비 자산화",
+  "en": "R&D Capitalization",
+  "cat": "바이오",
+  "def": "개발 단계 지출을 무형자산으로 계상하는 것",
+  "formula": "자산화 비율 = 자산화 개발비 ÷ 총 R&D 지출",
+  "point": "신약 임상3상, 바이오시밀러 임상1상 개시 승인 이후가 기준. 동종사보다 높으면 이익 과대 가능성"
+ },
+ {
+  "term": "현금 런웨이",
+  "en": "Cash Runway",
+  "cat": "바이오",
+  "def": "현재 현금으로 버틸 수 있는 기간",
+  "formula": "(현금 + 단기금융상품) ÷ 월평균 순현금유출",
+  "point": "18개월 미만이면 증자·CB 발행으로 희석될 가능성이 높음"
+ },
+ {
+  "term": "현금 소진율",
+  "en": "Cash Burn Rate",
+  "cat": "바이오",
+  "def": "기간당 순현금유출",
+  "formula": "영업CF(마이너스) + 필수 CAPEX",
+  "point": "런웨이의 분모"
+ },
+ {
+  "term": "파생상품평가손익",
+  "en": "Gain or Loss on Derivative Valuation",
+  "cat": "바이오",
+  "def": "CB·BW 전환권 등을 공정가치로 평가해 생기는 손익",
+  "formula": "",
+  "point": "주가가 오르면 손실이 생기는 역설. 현금 유출은 없지만 순이익과 법차손에 영향"
+ },
+ {
+  "term": "기술이전 수익",
+  "en": "License Revenue (Upfront and Milestone)",
+  "cat": "바이오",
+  "def": "기술이전 계약금·마일스톤에서 생기는 수익",
+  "formula": "",
+  "point": "추가 의무가 있으면 기간에 나눠 인식. 헤드라인 계약 규모와 인식 매출이 크게 다름"
+ },
+ {
+  "term": "GMV",
+  "en": "Gross Merchandise Value",
+  "cat": "플랫폼",
+  "def": "플랫폼을 거친 총거래액",
+  "formula": "Σ 플랫폼 경유 거래금액",
+  "point": "매출이 아님. 테이크레이트와 함께 볼 것"
+ },
+ {
+  "term": "테이크레이트",
+  "en": "Take Rate",
+  "cat": "플랫폼",
+  "def": "거래액 중 플랫폼이 수익으로 가져가는 비율",
+  "formula": "순액 매출 ÷ GMV",
+  "point": "수수료 인상 여력과 경쟁 강도를 보여줌"
+ },
+ {
+  "term": "MAU",
+  "en": "Monthly Active Users",
+  "cat": "플랫폼",
+  "def": "월간 활성 이용자 수",
+  "formula": "",
+  "point": "DAU ÷ MAU로 고착도를 확인"
+ },
+ {
+  "term": "ARPU",
+  "en": "Average Revenue per User",
+  "cat": "플랫폼",
+  "def": "이용자 1인당 평균 매출",
+  "formula": "매출 ÷ 평균 이용자수",
+  "point": "통신은 무선 서비스매출 기준. 회사별로 산정 범위가 달라 직접 비교에 주의"
+ },
+ {
+  "term": "ARPPU",
+  "en": "Average Revenue per Paying User",
+  "cat": "플랫폼",
+  "def": "결제 이용자 1인당 평균 매출",
+  "formula": "매출 ÷ 결제 이용자수",
+  "point": "게임 수익성의 핵심. 결제율(결제자 ÷ MAU)과 함께 볼 것"
+ },
+ {
+  "term": "ARR",
+  "en": "Annual Recurring Revenue",
+  "cat": "플랫폼",
+  "def": "연간 반복 구독 매출",
+  "formula": "MRR × 12",
+  "point": "일회성·사용량 과금은 제외해야 함"
+ },
+ {
+  "term": "NRR",
+  "en": "Net Revenue Retention",
+  "cat": "플랫폼",
+  "def": "기존 고객의 매출 유지·확대 비율",
+  "formula": "(기초 ARR + 업셀 − 다운셀 − 이탈) ÷ 기초 ARR",
+  "point": "100%를 넘으면 신규 고객 없이도 성장"
+ },
+ {
+  "term": "Rule of 40",
+  "en": "Rule of 40",
+  "cat": "플랫폼",
+  "def": "SaaS의 성장과 수익성 균형을 보는 기준",
+  "formula": "매출성장률 + 이익률 ≥ 40%",
+  "point": "이익률을 EBITDA·FCF 중 무엇으로 쓰느냐에 따라 점수가 크게 달라짐"
+ },
+ {
+  "term": "CAC 회수기간",
+  "en": "CAC Payback Period",
+  "cat": "플랫폼",
+  "def": "고객 획득 비용을 회수하는 데 걸리는 기간",
+  "formula": "S&M 비용 ÷ (신규 ARR × 매출총이익률)",
+  "point": "길어지면 성장의 질이 저하"
+ },
+ {
+  "term": "주식보상비용",
+  "en": "Stock-Based Compensation (SBC)",
+  "cat": "플랫폼",
+  "def": "임직원에게 주식으로 지급하는 보상 비용",
+  "formula": "SBC ÷ 매출",
+  "point": "조정이익에서 더해주는 관행이 있지만 실질적으로는 희석 비용"
+ },
+ {
+  "term": "이연매출(게임)",
+  "en": "Deferred Revenue (Durable Virtual Items)",
+  "cat": "플랫폼",
+  "def": "영구성 아이템 매출을 기대 사용기간에 걸쳐 나눠 인식하는 것",
+  "formula": "",
+  "point": "출시 직후 현금이 매출보다 먼저 들어옴. 기간 추정 변경은 주석으로 확인"
+ },
+ {
+  "term": "동일점포성장률",
+  "en": "Same-Store Sales Growth (SSSG)",
+  "cat": "유통",
+  "def": "신규 출점 효과를 제거한 기존 점포의 매출 성장률",
+  "formula": "기존 점포 당기 매출 ÷ 같은 점포 전년 매출 − 1",
+  "point": "편의점·마트·외식 프랜차이즈의 핵심 지표"
+ },
+ {
+  "term": "원가 전가력",
+  "en": "Pricing Power",
+  "cat": "유통",
+  "def": "원가 상승분을 판가에 반영하는 능력",
+  "formula": "",
+  "point": "매출총이익률을 원재료 지수와 2~3분기 시차를 두고 비교"
+ },
+ {
+  "term": "마이너스 운전자본",
+  "en": "Negative Working Capital",
+  "cat": "유통",
+  "def": "매입채무가 재고와 매출채권보다 커서 협력사 자금으로 운영되는 구조",
+  "formula": "CCC < 0",
+  "point": "성장이 둔화하거나 지급 규제가 생기면 영업CF가 급감할 위험"
+ },
+ {
+  "term": "FFO",
+  "en": "Funds From Operations",
+  "cat": "리츠",
+  "def": "리츠의 영업 현금이익(Nareit 정의)",
+  "formula": "순이익 + 부동산 감가상각 − 부동산 처분이익 + 부동산 손상차손",
+  "point": "리츠의 순이익 대용. P/FFO가 PER을 대신함"
+ },
+ {
+  "term": "AFFO",
+  "en": "Adjusted Funds From Operations",
+  "cat": "리츠",
+  "def": "FFO에서 유지보수 CAPEX 등을 뺀 실질 배당 재원",
+  "formula": "FFO − 유지보수 CAPEX − 임차인 개선비 ± 비현금 조정",
+  "point": "공식 정의가 없어 회사마다 다름. AFFO 배당성향이 100%를 넘으면 차입으로 배당하는 것"
+ },
+ {
+  "term": "LTV",
+  "en": "Loan-to-Value",
+  "cat": "리츠",
+  "def": "부동산 가치 대비 차입금",
+  "formula": "차입금 ÷ 부동산 감정가",
+  "point": "금리 상승기 리파이낸싱 위험. 만기 구조와 함께 볼 것"
+ },
+ {
+  "term": "Cap rate",
+  "en": "Capitalization Rate",
+  "cat": "리츠",
+  "def": "부동산 가치 대비 순영업소득",
+  "formula": "NOI ÷ 부동산 가치",
+  "point": "Cap rate에서 차입금리를 뺀 값이 음수면 차입이 배당을 깎음"
+ },
+ {
+  "term": "NOI",
+  "en": "Net Operating Income",
+  "cat": "리츠",
+  "def": "임대수익에서 운영비용을 뺀 순영업소득",
+  "formula": "임대수익 − 운영비용 (감가상각·이자 제외)",
+  "point": "Cap rate의 분자"
+ },
+ {
+  "term": "공실률",
+  "en": "Vacancy Rate",
+  "cat": "리츠",
+  "def": "임대 가능 면적 중 비어 있는 면적의 비율",
+  "formula": "공실 면적 ÷ 임대가능 면적",
+  "point": "마스터리스 여부와 WALE을 함께 확인"
+ },
+ {
+  "term": "WALE",
+  "en": "Weighted Average Lease Expiry",
+  "cat": "리츠",
+  "def": "임대료 가중 평균 잔여 임대기간",
+  "formula": "Σ(임대료 × 잔여기간) ÷ 총임대료",
+  "point": "짧으면 재계약 리스크"
+ },
+ {
+  "term": "NAV 할인율",
+  "en": "Discount to NAV",
+  "cat": "리츠",
+  "def": "주가가 주당 순자산가치보다 얼마나 낮은지",
+  "formula": "1 − 주가 ÷ 주당 NAV",
+  "point": "공정가치 기반 NAV로 계산"
+ },
+ {
+  "term": "SMP",
+  "en": "System Marginal Price",
+  "cat": "유틸리티",
+  "def": "전력시장에서 결정되는 계통한계가격",
+  "formula": "",
+  "point": "LNG 가격에 연동되는 경향. 한전의 구입전력비를 결정"
+ },
+ {
+  "term": "연료비조정요금",
+  "en": "Fuel Cost Adjustment Charge",
+  "cat": "유틸리티",
+  "def": "연료비 변동을 전기요금에 분기별로 반영하는 요금",
+  "formula": "",
+  "point": "상한이 있고 정부가 유보할 수 있어 원가가 즉시 전가되지 않음"
+ },
+ {
+  "term": "원료비 미수금",
+  "en": "Unrecovered Gas Cost Receivable",
+  "cat": "유틸리티",
+  "def": "가스공사가 원가 미만 요금의 차액을 손실 대신 자산으로 계상한 금액",
+  "formula": "",
+  "point": "2025년 말 약 14조원. 영업이익이 현금보다 좋아 보이는 원인"
+ },
+ {
+  "term": "해지율",
+  "en": "Churn Rate",
+  "cat": "통신",
+  "def": "월초 가입자 중 해지한 가입자의 비율",
+  "formula": "월 해지자 ÷ 월초 가입자",
+  "point": "마케팅 경쟁 강도와 ARPU 방어력을 보여줌"
+ },
+ {
+  "term": "주파수 이용권",
+  "en": "Spectrum License",
+  "cat": "통신",
+  "def": "경매로 확보한 주파수 사용 권리(무형자산)",
+  "formula": "낙찰가 ÷ 이용기간 = 연간 상각비",
+  "point": "재할당·경매 연도에 무형자산과 부채가 급증하고 이후 상각비가 늘어남"
+ },
+ {
+  "term": "계약획득원가",
+  "en": "Costs to Obtain a Contract",
+  "cat": "통신",
+  "def": "계약을 따내기 위해 들인 증분원가(판매장려금 등)를 자산화한 것(IFRS15)",
+  "formula": "",
+  "point": "약정기간에 걸쳐 상각해 손익상 마케팅비가 평탄화. 현금 지출과 괴리"
+ },
+ {
+  "term": "자본집약도",
+  "en": "Capital Intensity",
+  "cat": "통신",
+  "def": "매출 대비 투자 규모",
+  "formula": "CAPEX ÷ 매출",
+  "point": "5G 투자 피크 이후 하향이 통상적"
+ },
+ {
+  "term": "ASK",
+  "en": "Available Seat Kilometers",
+  "cat": "항공해운",
+  "def": "공급 좌석에 운항거리를 곱한 공급량",
+  "formula": "좌석수 × 운항거리",
+  "point": "항공 공급 지표"
+ },
+ {
+  "term": "RPK",
+  "en": "Revenue Passenger Kilometers",
+  "cat": "항공해운",
+  "def": "유상 승객에 운항거리를 곱한 수송량",
+  "formula": "유상승객 × 운항거리",
+  "point": "항공 수요 지표"
+ },
+ {
+  "term": "탑승률",
+  "en": "Load Factor (L/F)",
+  "cat": "항공해운",
+  "def": "공급 대비 실제 수송 비율",
+  "formula": "RPK ÷ ASK",
+  "point": "수요와 공급의 균형"
+ },
+ {
+  "term": "RASK·CASK",
+  "en": "Revenue/Cost per Available Seat Kilometer",
+  "cat": "항공해운",
+  "def": "공급 좌석 1km당 매출과 비용",
+  "formula": "RASK = 매출 ÷ ASK, CASK = 영업비용 ÷ ASK",
+  "point": "RASK가 CASK보다 크면 흑자"
+ },
+ {
+  "term": "유가 민감도",
+  "en": "Fuel Price Sensitivity",
+  "cat": "항공해운",
+  "def": "유가 변동에 따른 연료비 변화",
+  "formula": "연료 소비량 × Δ유가 × 환율 × (1 − 헤지비율)",
+  "point": "대한항공은 배럴당 1달러에 약 420억원"
+ },
+ {
+  "term": "순외화부채",
+  "en": "Net Foreign Currency Liabilities",
+  "cat": "항공해운",
+  "def": "외화부채에서 외화자산을 뺀 금액",
+  "formula": "외화부채 − 외화자산",
+  "point": "원화 약세 시 외화환산손실로 순이익과 자본이 감소"
+ },
+ {
+  "term": "SCFI",
+  "en": "Shanghai Containerized Freight Index",
+  "cat": "항공해운",
+  "def": "상하이발 컨테이너 스팟 운임 지수",
+  "formula": "",
+  "point": "컨테이너선사 이익을 사실상 결정. 계약 운임은 시차를 두고 반영"
+ },
+ {
+  "term": "BDI",
+  "en": "Baltic Dry Index",
+  "cat": "항공해운",
+  "def": "건화물(벌크선) 운임 지수",
+  "formula": "",
+  "point": "벌크선사 이익의 선행지표"
+ }
+]

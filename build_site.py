@@ -9,6 +9,7 @@
   /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 08:40·21:00) — kb-market-report 저장소의 consensus/*.json
   /us/          해외주식 리포트 (국내 증권사 미국주식 리포트 요약) — us_reports/*.json (us_reports.py)
   /strong/      전일 미국장 강세종목 리포트 (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
+  /study/       재무제표 공부 (활용법·5분 체크·업종별·용어사전·사례노트) — study/*.json (study_page.py)
 """
 import json
 import os
@@ -21,6 +22,7 @@ from html import escape, unescape
 from pathlib import Path
 
 import dashboard as d
+import study_page
 from company_ko import describe, sector_ko
 
 ROOT = Path(__file__).resolve().parent
@@ -91,7 +93,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
-        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"),
+        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
@@ -1595,7 +1597,8 @@ TOOLS_CSS = """.tools-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tool em{display:block;font-size:12px;color:var(--accent);font-style:normal;font-weight:700;margin-top:8px}"""
 # 아티팩트로 만든 계산기 두 가지 (주소는 MENU 와 같은 것을 쓴다)
 TOOLS = (("연금 계산기", "💰", "퇴직연금·개인연금을 연금으로 받을 때 내는 세금과 해마다의 수령한도를 계산합니다."),
-         ("라이프 플랜", "🗓️", "소득·지출·교육비·주택을 넣어 평생 현금흐름과 자산 흐름을 그려 봅니다."))
+         ("라이프 플랜", "🗓️", "소득·지출·교육비·주택을 넣어 평생 현금흐름과 자산 흐름을 그려 봅니다."),
+         ("재무제표 공부", "📒", "재무제표로 지뢰 종목 거르기, 업종별 체크리스트, 용어사전, 사례노트."))
 
 
 # 홈 왼쪽 날개 광고 (제주 만보농장). 본문(1080px) 왼쪽 빈 공간에만 작게 띄우고, 공간이 없는 화면(휴대폰·좁은 창)에서는 숨긴다.
@@ -1661,11 +1664,12 @@ def ad_strip():
 def tools_home():
     """퇴직연금 계산기·라이프 플랜(아티팩트)로 가는 카드. 눌러서 새 탭으로 연다."""
     url = dict((label, href) for href, label in MENU)
-    cards = "".join(f'<a class="tool" href="{url[name]}" target="_blank" rel="noopener">'
+    ext = ' target="_blank" rel="noopener"'
+    cards = "".join(f'<a class="tool" href="{url[name]}"{ext if url[name].startswith("http") else ""}>'
                     f'<b>{icon} {name}</b><span>{desc}</span><em>눌러서 열기 ›</em></a>'
                     for name, icon, desc in TOOLS if name in url)
     return (f'<section class="sec" id="tools"><style>{TOOLS_CSS}</style>'
-            f'<div class="sec-h"><h2>🧮 계산기</h2></div><div class="tools-g">{cards}</div></section>')
+            f'<div class="sec-h"><h2>🧮 계산기·공부</h2></div><div class="tools-g">{cards}</div></section>')
 
 
 def target_home(target):
@@ -1972,9 +1976,10 @@ def main():
     build_visits(now)
     build_map()
     build_reports()
+    study = study_page.build(OUT, page)
     build_home(now, daily, close, live, target, us, strong)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
-                      "us": us and us["day"],
+                      "us": us and us["day"], "study": study,
                       "live": bool(live)}, ensure_ascii=False))
 
 
