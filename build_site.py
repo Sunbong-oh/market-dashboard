@@ -23,7 +23,7 @@ from pathlib import Path
 
 import dashboard as d
 import study_page
-from company_ko import describe, sector_ko
+from company_ko import KR_COMPANY, describe, sector_ko
 
 ROOT = Path(__file__).resolve().parent
 # 빌드마다 바뀌는 값: iframe 주소 뒤에 붙여 폰이 예전 내용을 캐시에서 다시 쓰지 않게 한다 (GitHub Pages는 10분 캐시)
@@ -1464,12 +1464,14 @@ REPORT_CSS = """
 .rp{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;background:var(--card);border:1px solid var(--line);border-left:5px solid #F2A900;
   border-radius:12px;padding:12px 14px;margin-top:8px}
 .rp .nm{font-size:16.5px;font-weight:800;flex:1 1 100%;min-width:0}.rp .op{flex:1 1 auto}.rp .nm small{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:6px}
+.rp .ds{flex:1 1 100%;font-size:13.5px;line-height:1.45;color:var(--text);margin-top:-2px;word-break:keep-all}
+.rp .ds:empty{display:none}
 .rp .op{font-size:14px;font-weight:700}.rp .op b.up{color:var(--up)}.rp .op span{font-size:12px;color:var(--muted);font-weight:600}
 .rp a.go{padding:7px 12px;border-radius:9px;background:#F2A900;color:#3D3A35;font-weight:800;text-decoration:none;font-size:14px;white-space:nowrap}
 .rp-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
 """
 REPORT_JS = r"""<script>
-(function(){var SRC=%s,box=document.getElementById('rp');
+(function(){var SRC=%s,DESC=%s,box=document.getElementById('rp');
  function rp(u){var m=/\/surge-reports\/reports\/(\d{4}-\d{2}-\d{2}\/\w+)\.pdf/.exec(u||'');return m?'view.html?f='+m[1]:u}
  function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function eok(v){return v==null?'-':(Math.abs(v)>=1e4?(v/1e4).toFixed(2)+'조':Math.round(v).toLocaleString()+'억')}
@@ -1477,14 +1479,22 @@ REPORT_JS = r"""<script>
   var last='',h='';rows.forEach(function(r){if(r.day!==last){last=r.day;h+='<div class="rp-day">'+e(r.day)+'</div>'}
    var chg=r.turn?'<b class="up">흑자전환</b>':(r.chg!=null?'<b class="up">'+(r.chg>0?'+':'')+r.chg.toFixed(1)+'%%</b>':'');
    h+='<div class="rp"><div class="nm">'+e(r.name)+'<small>'+e(r.code)+(r.period?' · '+e(r.period)+' 잠정':'')+'</small></div>'+
+    '<div class="ds" data-day="'+e(r.day)+'" data-code="'+e(r.code)+'">'+e(DESC[r.code]||'')+'</div>'+
     (r.op!=null?'<div class="op">영업이익 '+eok(r.op)+' '+chg+(r.basis?' <span>'+e(r.basis)+'</span>':'')+'</div>':'')+
-    '<a class="go" href="'+e(rp(r.pdf))+'" target="_blank" rel="noopener">📑 보고서 열기</a></div>'});box.innerHTML=h}
+    '<a class="go" href="'+e(rp(r.pdf))+'" target="_blank" rel="noopener">📑 보고서 열기</a></div>'});box.innerHTML=h;
+  box.querySelectorAll('.ds:empty').forEach(biz)}
+ /* 한 줄 설명이 없는 종목: 보고서(HTML)의 '주요 사업' 첫 문장을 가져온다 */
+ function biz(el){if(!/^\d{4}-\d{2}-\d{2}$/.test(el.dataset.day)||!/^\w{6}$/.test(el.dataset.code))return;
+  fetch('https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/surge-reports/reports/'+el.dataset.day+'/'+el.dataset.code+'.html')
+  .then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){var m=/<b>주요 사업<\/b>([^<]*)/.exec(t);if(!m)return;
+   var d=document.createElement('textarea');d.innerHTML=m[1];var s=d.value.replace(/\s+/g,' ').replace(/^당사는\s*/,'').split(/(?<=다\.)/)[0].replace(/매출 구성.*$/,'').trim();
+   if(s.length>70)s=s.slice(0,68)+'…';el.textContent=s}).catch(function(){})}
  function get(i){if(i>=SRC.length)return draw(null);
   fetch(i?SRC[i]+'?t='+Date.now():SRC[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
   .then(function(r){if(!r.ok)throw 0;return r.json()}).then(draw).catch(function(){get(i+1)})}
  get(0);
 })();
-</script>""" % json.dumps(REPORT_SRC)
+</script>""" % (json.dumps(REPORT_SRC), json.dumps(KR_COMPANY, ensure_ascii=False))
 
 
 # 보고서 PDF 바로 열기: surge-reports 브랜치의 PDF를 raw 주소에서 받아 브라우저 PDF 화면으로 연다

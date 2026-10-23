@@ -46,3 +46,7 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
   - 사례: {added(오늘 KST), company, industry, period, cell, what, lesson, sources[[제목, URL]]}. 숫자는 출처로 확인해서 넣고, 확인 못 한 숫자는 빼거나 "확인 필요"라고 적는다.
 - 페이지에서 직접 추가한 것은 그 기기에만 저장된다(localStorage). 다른 기기와 함께 보려면 위 방식으로 JSON 에 올린다.
 - 확인: `python -c "import build_site as b, study_page; from pathlib import Path; print(study_page.build(Path('_site'), b.page))"`
+
+## 실적발표 종목 (/reports/) 한 줄 설명
+- 종목명 아래 설명은 `company_ko.py` 의 `KR_COMPANY`(종목코드 → 한 줄, 약 40자)에서 온다. 새 보고서 종목이 생기면 한 줄 추가하고 merge 한다.
+- 없는 종목은 화면이 보고서 HTML 의 '주요 사업' 첫 문장을 대신 보여 준다(길면 잘림).
