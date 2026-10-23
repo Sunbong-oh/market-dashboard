@@ -6,10 +6,12 @@ name: 재무제표 공부 자료 (DART)
 # 필요: 저장소 Secret DART_API_KEY (opendart.fss.or.kr 인증키).
 # PER·PBR: 이어서 KB증권 Open API 현재가(IVU10140)로 그날 종가 기준 값을 넣는다. Secret KB_OPENAPI_APP_KEY·KB_OPENAPI_APP_SECRET (없으면 건너뜀).
 # DART 하루 한도(2만 회)를 다른 작업과 나눠 쓰도록 한 번에 6,000회까지만, 시간은 DART 55분·KB 25분까지만 쓰고 저장한다
-# (100곳마다 중간 저장). 처음 전체 채우기는 며칠 걸린다.
+# (100곳마다 중간 저장). 처음 전체 채우기는 하루 반쯤 걸린다.
+# 대상: 최근 180일 안에 정기보고서를 낸 코스피·코스닥 상장사(스팩 제외). 실행 결과는 study-fin 브랜치 log.json.
 on:
   schedule:
     - cron: "40 12 * * *"   # 매일 21:40 KST (정기보고서는 낮에 주로 올라온다)
+    - cron: "40 21 * * *"   # 매일 06:40 KST (처음 전체 채우기를 빨리 끝내고, 아침 장 전에 전날 종가 PER 반영)
   workflow_dispatch:
     inputs:
       budget:

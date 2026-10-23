@@ -5,7 +5,8 @@
   - site.yml 이 그 브랜치를 사이트의 /study/fin/ 에 붙인다 → 5분 체크에서 종목명을 넣으면 불러온다.
 
 만드는 파일
-  index.json        [[종목코드, 회사명, 시장]]  상장사 전체 (시장은 한 번 조회한 회사만)
+  index.json        [[종목코드, 회사명, 시장]]  최근 180일 안에 정기보고서를 낸 코스피·코스닥 상장사 중 받은 곳
+  log.json          마지막 실행 결과 (DART 호출 수, KB PER·PBR 성공·실패, 첫 오류)
   fin/<종목코드>.json 가장 최근 정기보고서(분기·반기·사업)의 누적 실적과 전년 같은 기간, 감사의견, 최근 2년 자금조달
   state.json        진행 상황 (다음 실행에서 이어서)
 
@@ -14,7 +15,6 @@ DART 하루 호출 한도(키 하나당 2만 회)를 다른 작업과 나눠 쓰
 """
 import argparse
 import glob
-import io
 import json
 import os
 import re
@@ -22,8 +22,6 @@ import sys
 import time
 import urllib.parse
 import urllib.request
-import zipfile
-import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 
 API = "https://opendart.fss.or.kr/api/"
@@ -194,15 +192,51 @@ def extract(rows, prev_rows, months):
 
 
 # ---------- 보고서 고르기 ----------
-def candidates(today):
-    """오늘 기준으로 나와 있을 가능성이 큰 정기보고서부터 (12월 결산 기준 제출기한)."""
-    y = today.year
-    seq = []
-    for yy in (y, y - 1):
-        seq += [(yy, "11014", datetime(yy, 11, 14)), (yy, "11012", datetime(yy, 8, 14)),
-                (yy, "11013", datetime(yy, 5, 15)), (yy - 1, "11011", datetime(yy, 3, 31))]
-    naive = today.replace(tzinfo=None)
-    return [(yy, rc) for yy, rc, due in seq if due - timedelta(days=45) <= naive][:4]  # 기한 전에 내는 회사가 많다
+KIND_RE = re.compile(r"(분기|반기|사업)보고서\s*\((\d{4})\.(\d{2})\)")
+
+
+def periodic(dart, today, days=180):
+    """최근 days일 사이 정기보고서(최종본)를 낸 코스피·코스닥 회사 → 회사별 가장 최근 보고서.
+    상장 폐지된 회사는 자연히 빠지고, 어떤 보고서가 최신인지 추측할 필요가 없다. (목록 조회는 90일 단위)"""
+    out = {}
+    end = today
+    while (today - end).days < days:
+        bgn = max(end - timedelta(days=89), today - timedelta(days=days))
+        for cls in ("Y", "K"):
+            page = 1
+            while True:
+                j = dart.get("list.json", bgn_de=bgn.strftime("%Y%m%d"), end_de=end.strftime("%Y%m%d"), corp_cls=cls,
+                             pblntf_ty="A", last_reprt_at="Y", page_no=page, page_count=100)
+                if not j or j.get("status") != "000":
+                    break
+                for r in j.get("list", []):
+                    m = KIND_RE.search(r.get("report_nm", ""))
+                    sc = (r.get("stock_code") or "").strip()
+                    if not m or not sc or "스팩" in r.get("corp_name", ""):
+                        continue
+                    c = r["corp_code"]
+                    if c not in out or r.get("rcept_no", "") > out[c]["rcept_no"]:
+                        out[c] = {"code": sc, "name": r.get("corp_name", "").strip(), "cls": cls, "kind": m.group(1),
+                                  "y": int(m.group(2)), "m": int(m.group(3)), "rcept_no": r.get("rcept_no", "")}
+                if page >= int(j.get("total_page", 1)):
+                    break
+                page += 1
+        end = bgn - timedelta(days=1)
+    return out
+
+
+def report_keys(f):
+    """보고서 이름(분기·반기·사업 + 기말 연월) → DART 재무 API 의 (사업연도, 보고서코드) 후보."""
+    y, m, k = f["y"], f["m"], f["kind"]
+    if k == "사업":
+        return [(y, "11011")]
+    if k == "반기":
+        return [(y, "11012"), (y - 1, "11012"), (y + 1, "11012")] if m != 6 else [(y, "11012")]
+    if m == 3:
+        return [(y, "11013")]
+    if m == 9:
+        return [(y, "11014")]
+    return [(y, "11013"), (y, "11014"), (y - 1, "11014"), (y + 1, "11013")]  # 12월 결산이 아닌 회사
 
 
 def fin_rows(dart, corp, year, rc):
@@ -248,12 +282,18 @@ def company(dart, corp):
     j = dart.get("company.json", corp_code=corp)
     if not j or j.get("status") != "000":
         return {}
-    return {"cls": j.get("corp_cls", ""), "induty": j.get("induty_code", ""), "name": j.get("stock_name") or j.get("corp_name")}
+    return {"induty": j.get("induty_code", "")}
 
 
-def build_one(dart, corp, info, today):
-    rows = None
-    for year, rc in candidates(today):
+def is_fin(ind):
+    """은행·보험·증권·카드 같은 금융업 (표준산업분류). 지주회사(64992)는 빼고 본다."""
+    ind = ind or ""
+    return ind.startswith(("641", "6491", "65", "6612", "6611"))
+
+
+def build_one(dart, corp, f, info, state, today):
+    rows = year = rc = None
+    for year, rc in report_keys(f):
         rows, fs = fin_rows(dart, corp, year, rc)
         if rows:
             break
@@ -262,56 +302,24 @@ def build_one(dart, corp, info, today):
     label, months = REPRT[rc]
     prev_rows, _ = fin_rows(dart, corp, year - 1, rc)
     v = extract(rows, prev_rows, months)
-    rcept = rows[0].get("rcept_no", "")
-    ay = year if rc == "11011" else year - 1
-    op = audit(dart, corp, ay)
+    ay = f["y"] if rc == "11011" else f["y"] - 1   # 감사의견은 가장 최근 사업보고서
+    au = state.setdefault("audit", {})
+    if (au.get(corp) or [None])[0] != ay:
+        au[corp] = [ay, audit(dart, corp, ay)]
     rs = raises(dart, corp, today)
-    ind = info.get("induty", "")
-    period = f"{year} {label}" + ("" if rc == "11011" else " 누적")
-    prev_period = f"{year - 1} {label}" + ("" if rc == "11011" else " 누적")
-    bs_now = {"11013": "03-31", "11012": "06-30", "11014": "09-30", "11011": "12-31"}[rc]
+    ym, pym = f"{f['y']}.{f['m']:02d}", f"{f['y'] - 1}.{f['m']:02d}"
+    span = "" if rc == "11011" else " 누적"
     return {
-        "code": info["code"], "name": info["name"], "market": MKT.get(info.get("cls"), ""),
-        "fin": ind[:2] in ("64", "65", "66"),  # 금융·보험업 (표준산업분류)
-        "basis": {"year": year, "reprt": label, "months": months, "fs": fs, "rcept_no": rcept,
-                  "filed": rcept[:8], "now": period, "prev": prev_period,
-                  "bs_now": f"{year}-{bs_now}", "bs_prev": f"{year - 1}-{bs_now}" if prev_rows else None},
+        "code": f["code"], "name": f["name"], "market": MKT.get(f["cls"], ""),
+        "fin": is_fin(info.get("induty")),
+        "basis": {"year": year, "reprt": label, "months": months, "fs": fs, "rcept_no": f["rcept_no"],
+                  "filed": f["rcept_no"][:8], "now": f"{ym}까지 {label}{span}", "prev": f"{pym}까지 {label}{span}",
+                  "bs_now": f"{ym}말", "bs_prev": f"{pym}말" if prev_rows else None},
         "v": v,
-        "audit": {"year": ay, "opinion": op},
+        "audit": {"year": ay, "opinion": au[corp][1]},
         "raises": rs,
         "updated": today.strftime("%Y-%m-%d"),
     }
-
-
-# ---------- 전체 흐름 ----------
-def listed(dart):
-    raw = dart.get("corpCode.xml")
-    z = zipfile.ZipFile(io.BytesIO(raw))
-    root = ET.fromstring(z.read(z.namelist()[0]))
-    out = {}
-    for e in root.iter("list"):
-        sc = (e.findtext("stock_code") or "").strip()
-        if sc:
-            out[e.findtext("corp_code").strip()] = {"code": sc, "name": (e.findtext("corp_name") or "").strip()}
-    return out
-
-
-def new_filers(dart, today, days):
-    """최근 며칠 사이 정기보고서를 낸 상장사 corp_code."""
-    got, page = set(), 1
-    bgn = (today - timedelta(days=days)).strftime("%Y%m%d")
-    while True:
-        j = dart.get("list.json", bgn_de=bgn, end_de=today.strftime("%Y%m%d"), pblntf_ty="A",
-                     page_no=page, page_count=100)
-        if not j or j.get("status") != "000":
-            break
-        for r in j.get("list", []):
-            if r.get("corp_cls") in ("Y", "K", "N") and re.search(r"분기보고서|반기보고서|사업보고서", r.get("report_nm", "")):
-                got.add(r["corp_code"])
-        if page >= int(j.get("total_page", 1)):
-            break
-        page += 1
-    return got
 
 
 # ---------- KB증권 Open API: PER·PBR (kb-market-report 의 app/kb_client.py 와 같은 방식) ----------
@@ -377,7 +385,7 @@ def kb_prices(data, today, minutes=25):
     key, sec = os.environ.get("KB_OPENAPI_APP_KEY", "").strip(), os.environ.get("KB_OPENAPI_APP_SECRET", "").strip()
     if not (key and sec):
         print("KB_OPENAPI_APP_KEY/SECRET 이 없어 PER·PBR 은 건너뜀")
-        return
+        return {"error": "KB 키 없음"}
     hdr = _kb_header()
     try:
         t = _kb_post("/oauth2/token", {"dataHeader": hdr, "dataBody": {"appKey": key, "appSecret": sec, "grantType": "client_credentials"}}, {})
@@ -385,12 +393,13 @@ def kb_prices(data, today, minutes=25):
         token = tb.get("access_token") or tb.get("accessToken")
     except Exception as e:
         print(f"KB 토큰 발급 실패: {e}")
-        return
+        return {"error": f"토큰 발급 실패: {str(e)[:200]}"}
     if not token:
         print(f"KB 토큰 응답에 access_token 없음: {str(t)[:200]}")
-        return
+        return {"error": f"토큰 응답 이상: {str(t)[:200]}"}
     files = sorted(glob.glob(os.path.join(data, "fin", "*.json")))
     ok = fail = streak = 0
+    first_err, sample = None, None
     day = today.strftime("%Y-%m-%d")
     t0 = time.monotonic()
     for i, fp in enumerate(files):
@@ -409,6 +418,8 @@ def kb_prices(data, today, minutes=25):
                 raise ValueError(str((p.get("dataHeader") or {}).get("processMessage") or p)[:120])
             per, pbr, price = _kb_num(r, "per_p2"), _kb_num(r, "pbr_p2"), _kb_num(r, "now_prc")
             rec["px"] = {"per": per, "pbr": pbr, "price": price, "date": day, "src": "KB증권"}
+            if sample is None or rec["code"] == "005930":
+                sample = [rec["code"], rec["name"], price, per, pbr]
             if i < 3 or rec["code"] == "005930":
                 print(f"  KB {rec['code']} {rec['name']}: 주가 {price} PER {per} PBR {pbr}")
             with open(fp, "w", encoding="utf-8") as f:
@@ -418,6 +429,7 @@ def kb_prices(data, today, minutes=25):
         except Exception as e:
             fail += 1
             streak += 1
+            first_err = first_err or str(e)[:200]
             if streak <= 3:
                 print(f"  KB {rec.get('code')} 실패: {str(e)[:160]}")
             if streak >= 20:
@@ -425,13 +437,14 @@ def kb_prices(data, today, minutes=25):
                 break
         time.sleep(0.12)
     print(f"KB PER·PBR 저장 {ok}곳, 실패 {fail}곳")
+    return {"ok": ok, "fail": fail, "first_error": first_err, "sample": sample}
+
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--budget", type=int, default=6000)
-    ap.add_argument("--days", type=int, default=4, help="최근 며칠 안에 정기보고서를 낸 회사는 다시 받는다")
     ap.add_argument("--kb", action="store_true", help="DART 다음에 KB증권 PER·PBR 도 받는다")
     ap.add_argument("--minutes", type=float, default=55, help="DART 받기 시간 상한(분) — 워크플로 제한 전에 저장하고 끝낸다")
     ap.add_argument("--kb-minutes", type=float, default=25, help="KB PER·PBR 받기 시간 상한(분)")
@@ -444,36 +457,38 @@ def main():
     os.makedirs(os.path.join(data, "fin"), exist_ok=True)
     sp = os.path.join(data, "state.json")
     state = json.load(open(sp, encoding="utf-8")) if os.path.exists(sp) else {}
-    comp = state.setdefault("company", {})   # corp_code -> {cls, induty}
+    if state.get("v") != 2:   # 첫 버전 진행 기록(상장폐지 회사까지 돌던 것)은 버린다
+        state = {"v": 2}
+    comp = state.setdefault("company", {})   # corp_code -> {induty}
     done = state.setdefault("done", {})      # corp_code -> {rcept, updated}
     today = datetime.now(KST)
     dart = Dart(key, a.budget)
+    log = {"start": today.strftime("%Y-%m-%d %H:%M")}
     try:
-        corps = listed(dart)
+        filings = periodic(dart, today)
     except Budget:
-        corps = {}
-    print(f"상장사 {len(corps)}곳 · 완료 {len(done)}곳")
+        filings = {}
+    log["listed"] = len(filings)
+    print(f"최근 정기보고서를 낸 상장사 {len(filings)}곳 · 완료 {len(done)}곳 (목록 조회 {dart.calls}회)")
 
-    try:
-        fresh = new_filers(dart, today, a.days) if done else set()
-    except Budget:
-        fresh = set()
-    todo = [c for c in corps if c in fresh]                       # 1) 새 정기보고서
-    todo += [c for c in corps if c not in done and c not in fresh]  # 2) 아직 없는 회사
-    old = sorted((c for c in corps if c in done and c not in fresh), key=lambda c: done[c].get("updated", ""))
+    # 1) 더 새 보고서가 나온 회사 2) 아직 없는 회사 3) 오래된 회사(자금조달 갱신)
+    newer = [c for c, f in filings.items() if c in done and done[c].get("rcept") != f["rcept_no"]]
+    missing = [c for c in filings if c not in done]
     cut = (today - timedelta(days=a.stale)).strftime("%Y-%m-%d")
-    todo += [c for c in old if done[c].get("updated", "") < cut]   # 3) 오래된 회사
-    print(f"이번에 받을 후보 {len(todo)}곳 (새 공시 {len(fresh)}곳)")
+    old = sorted((c for c in filings if c in done and c not in newer and done[c].get("updated", "") < cut),
+                 key=lambda c: done[c].get("updated", ""))
+    todo = newer + missing + old
+    print(f"이번에 받을 후보 {len(todo)}곳 (새 보고서 {len(newer)} · 처음 {len(missing)} · 오래됨 {len(old)})")
 
     def save():
-        idx = sorted(([v["code"], v["name"], MKT.get(comp.get(c, {}).get("cls"), "")]
-                      for c, v in corps.items() if os.path.exists(os.path.join(data, "fin", v["code"] + ".json"))),
+        names = {f["code"]: (f["name"], MKT.get(f["cls"], "")) for f in filings.values()}
+        idx = sorted(([code, *names[code]] for code in names if os.path.exists(os.path.join(data, "fin", code + ".json"))),
                      key=lambda x: x[1])
-        with open(os.path.join(data, "index.json"), "w", encoding="utf-8") as f:
-            json.dump({"updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M"), "total": len(corps), "list": idx}, f,
+        with open(os.path.join(data, "index.json"), "w", encoding="utf-8") as fp:
+            json.dump({"updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M"), "total": len(filings), "list": idx}, fp,
                       ensure_ascii=False, separators=(",", ":"))
-        with open(sp, "w", encoding="utf-8") as f:
-            json.dump(state, f, ensure_ascii=False, separators=(",", ":"))
+        with open(sp, "w", encoding="utf-8") as fp:
+            json.dump(state, fp, ensure_ascii=False, separators=(",", ":"))
         return len(idx)
 
     n_ok = n_none = 0
@@ -481,32 +496,35 @@ def main():
     try:
         for k, c in enumerate(todo, 1):
             if time.monotonic() - t0 > a.minutes * 60:
-                print(f"{a.minutes}분이 지나 여기서 멈춤. 다음 실행에서 이어 받는다.")
+                print(f"{a.minutes:.0f}분이 지나 여기서 멈춤. 다음 실행에서 이어 받는다.")
                 break
             if k % 100 == 0:
                 el = time.monotonic() - t0
                 print(f"  {k}/{len(todo)}곳 · {el / 60:.0f}분 · DART {dart.calls}회 ({dart.calls / max(el, 1):.1f}회/초)", flush=True)
                 save()
-            info = dict(corps[c])
+            f = filings[c]
             if c not in comp:
                 comp[c] = company(dart, c)
-            info.update({k: comp[c].get(k) for k in ("cls", "induty")})
-            rec = build_one(dart, c, info, today)
+            rec = build_one(dart, c, f, comp[c], state, today)
             if rec:
-                with open(os.path.join(data, "fin", info["code"] + ".json"), "w", encoding="utf-8") as f:
-                    json.dump(rec, f, ensure_ascii=False, separators=(",", ":"))
-                done[c] = {"rcept": rec["basis"]["rcept_no"], "updated": rec["updated"]}
+                with open(os.path.join(data, "fin", f["code"] + ".json"), "w", encoding="utf-8") as fp:
+                    json.dump(rec, fp, ensure_ascii=False, separators=(",", ":"))
                 n_ok += 1
             else:
-                done[c] = {"rcept": "", "updated": today.strftime("%Y-%m-%d")}  # 정기보고서 없음(스팩·신규 등)
                 n_none += 1
+                log.setdefault("no_fin", []).append(f["name"])
+            done[c] = {"rcept": f["rcept_no"], "updated": today.strftime("%Y-%m-%d")}
     except Budget:
         print("호출 한도에 닿아 여기서 멈춤. 다음 실행에서 이어 받는다.")
-
     n_idx = save()
-    print(f"저장 {n_ok}곳, 정기보고서 없음 {n_none}곳, 목록 {n_idx}곳, DART 호출 {dart.calls}회, {(time.monotonic() - t0) / 60:.0f}분")
+    log.update({"saved": n_ok, "no_fin_n": n_none, "index": n_idx, "dart_calls": dart.calls,
+                "dart_min": round((time.monotonic() - t0) / 60, 1)})
+    log["no_fin"] = log.get("no_fin", [])[:30]
+    print(f"저장 {n_ok}곳, 재무 없음 {n_none}곳, 목록 {n_idx}곳, DART 호출 {dart.calls}회, {(time.monotonic() - t0) / 60:.0f}분")
     if a.kb:
-        kb_prices(data, today, a.kb_minutes)
+        log["kb"] = kb_prices(data, today, a.kb_minutes)
+    with open(os.path.join(data, "log.json"), "w", encoding="utf-8") as fp:   # 실행 결과 (저장소에서 바로 확인용)
+        json.dump(log, fp, ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":
