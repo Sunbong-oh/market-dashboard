@@ -1290,6 +1290,8 @@ a.st:hover{border-color:#F2A900}
 .st .tg{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}.st .tg span{font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:5px;
   background:#FBE7B0;color:#3D3A35}
 .st-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
+/* 홈: 광고·핵심 이슈·실적속보(order:-2)와 장중 수급(order:-1)보다 위. 17시 뒤 #strong-low 안으로 옮겨지면 이 값은 상관없다 */
+.home>#strong{order:-3;margin-top:0;margin-bottom:12px}
 """
 
 
