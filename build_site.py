@@ -1283,15 +1283,15 @@ STRONG_CSS = """
 .st{display:block;background:var(--card);border:1px solid var(--line);border-left:5px solid #F2A900;border-radius:12px;
   padding:12px 14px;margin-top:8px;text-decoration:none}
 a.st:hover{border-color:#F2A900}
-.st .nm{font-size:17px;font-weight:800}.st .nm small{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:6px}
+.st .nm{font-size:17px;font-weight:800;display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;row-gap:6px}.st .nm small{font-size:12.5px;color:var(--muted);font-weight:600}
 .st .px{float:right;text-align:right;font-variant-numeric:tabular-nums;font-weight:800;margin-left:10px}
 .st .px b{display:block;font-size:16px}.st .px .up{color:var(--up)}.st .px .down{color:var(--down)}
 .st .hl{font-size:14px;margin-top:4px;line-height:1.55}.st .pn{font-size:12.5px;color:var(--muted);margin-top:3px}
 .st .tg{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}.st .tg span{font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:5px;
   background:#FBE7B0;color:#3D3A35}
 .st-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
-.st .go{display:flex;align-items:center;gap:8px;margin-top:10px}
-.st .go b{display:inline-block;padding:7px 13px;border-radius:10px;background:#F2A900;color:#3D3A35;font-size:14px;font-weight:800}
+.st .go{display:inline-flex;align-items:center;gap:8px}
+.st .go b{display:inline-block;white-space:nowrap;padding:5px 12px;border-radius:10px;background:#F2A900;color:#3D3A35;font-size:14px;font-weight:800}
 .st .go i{font-style:normal;color:#E5484D;font-weight:800;font-size:14px;white-space:nowrap;display:inline-block;animation:rpt-tap .9s ease-in-out infinite}
 @keyframes rpt-tap{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
 @media (prefers-reduced-motion:reduce){.st .go i{animation:none}}
@@ -1317,11 +1317,13 @@ def strong_card(it, href):
     px = f'<div class="px"><b>${it["price"]:,.2f}</b>{pct}</div>' if it.get("price") else ""
     tags = "".join(f"<span>{escape(t)}</span>" for t in it.get("tags", []))
     return (f'<a class="st" href="{escape(href)}">{px}<div class="nm">{escape(it.get("name", ""))}'
-            f'<small>{escape(it["ticker"])} · {escape(it.get("exchange", ""))} · {escape(it.get("sector", ""))}</small></div>'
+            f'<small>{escape(it["ticker"])} · {escape(it.get("exchange", ""))} · {escape(it.get("sector", ""))}</small>'
+            # 리포트 버튼은 종목명 줄 바로 옆 (좁으면 다음 줄로)
+            '<span class="go"><b>📑 실시간 작성된 리포트</b><i>&lt;-- 터치!!</i></span></div>'
             f'<div class="hl">{escape(it.get("headline", ""))}</div>'
             + (f'<div class="pn">{escape(it["priceNote"])}</div>' if it.get("priceNote") else "")
             + (f'<div class="tg">{tags}</div>' if tags else "")
-            + '<div class="go"><b>📑 실시간 작성된 리포트</b><i>&lt;-- 터치!!</i></div></a>')
+            + '</a>')
 
 
 def strong_market(it):
