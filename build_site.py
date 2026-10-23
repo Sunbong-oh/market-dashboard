@@ -1669,7 +1669,8 @@ AD_CSS = """.wing{display:none;word-break:keep-all}
 .wing .wg b{color:#2f7d32}}
 .wing-m{display:none}
 @media (max-width:1319px){
-.home .wing-m{order:-2;display:flex;align-items:center;gap:2px;margin:0 0 12px;background:var(--card);border:1px solid var(--line);
+/* 휴대폰 광고 띠는 항상 홈 맨 위: 다른 칸(방문자 띠 -3, 미국 강세 -3, 실적속보 -2, 장중 수급 -1)보다 작은 order */
+.home .wing-m{order:-9;display:flex;align-items:center;gap:2px;margin:0 0 12px;background:var(--card);border:1px solid var(--line);
  border-left:4px solid #2f7d32;border-radius:12px;padding:6px 10px 6px 6px;word-break:keep-all}
 .wing-m a{flex:1;display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;min-width:0}
 .wing-m img{width:36px;height:auto;border-radius:4px;flex:none;background:#fff}
