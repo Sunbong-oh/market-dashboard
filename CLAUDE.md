@@ -59,6 +59,6 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
   - 홈페이지 내용: 강세종목(어떤 회사?), 실적 속보 카드(컨센서스 대비·발표 뒤 주가), 국내 '영업이익 급증' 공시, 목표주가 최대 상향·하향
   - 시장 자료: 상한가 종목(kb flow-live map.json, ETF·스팩 제외), 영업이익률 20% 넘는 종목·이자보상비율 1 미만 종목(상승 테마·목표주가 종목을
     study-fin 의 DART 숫자로), 앞으로 7일 실적 발표 예정(증시 캘린더, 이미 발표한 회사 제외), 이번 주 미국 52주 신고가가 아닌 종목(아침 데일리 신고가)
-  - 거래대금 자료는 아직 모으지 않아 '거래대금 상위' 문제는 없다.
+  - 거래대금 상위 10위 밖 종목(kb 장마감 리포트·flow-live snapshot.json 의 `/api/top-value`, 2026-10-26 장부터 쌓임)
 - 사용자가 "퀴즈 추가해줘"라고 하면 `quiz/questions.json` 끝에 {cat, q, choices[보기 4개], answer(정답 번호 0~3), explain} 를 넣고 merge 한다. 사실은 출처로 확인하고, 정답이 하나만 맞도록 보기를 쓴다(보기 순서는 화면에서 섞인다).
 - 참여 수는 방문자 현황(/visits/)의 '오늘의 주식 퀴즈' 칸(c-quiz)에서 본다. 코드: build_site.py 의 `quiz_home()`·`QUIZ_JS`.

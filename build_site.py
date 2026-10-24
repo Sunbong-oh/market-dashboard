@@ -2017,6 +2017,19 @@ def market_quiz(now, target=None):
                        names[a], [names[w] for w in wrong],
                        " · ".join(f(c) for c in [a] + wrong) + f". 1 미만이면 영업으로 번 돈으로 이자도 못 낸다는 뜻 ({fin[a][2]}, DART)",
                        "study/#check", sday))
+    # 거래대금 상위 10위 안에 들지 않은 종목 (kb 장마감 리포트의 거래대금 상위, 네이버 증권)
+    tv = (snap.get("data") or {}).get("/api/top-value") or {}
+    top = [x["name"] for x in tv.get("kospi") or [] if x.get("name")]
+    if len(top) >= 10 and m and _nq_fresh(sday, now):
+        caps = sorted(((st.get("v") or 0, st["n"]) for sec in m["data"].get("kospi", []) for st in sec["st"]
+                       if st["n"] not in top and not st["n"].endswith("우")), reverse=True)[:15]  # 시가총액 큰 종목 중 상위 10위 밖
+        if caps:
+            rnd = random.Random(f"tv{sday}")
+            a, ins = rnd.choice(caps)[1], rnd.sample(tv["kospi"][:10], 3)
+            won = lambda v: f"{v / 10000:.2f}조" if v >= 10000 else f"{v:,}억"
+            out.append(_nq(f"tv:{sday}:{a}", "거래대금", f"{md(sday)} 코스피 거래대금 상위 10위 안에 들지 않은 종목은?", a, [x["name"] for x in ins],
+                           f"{a}은(는) 10위 밖이었습니다. " + " · ".join(f"{x['name']} {top.index(x['name']) + 1}위 {won(x['value_eok'] or 0)}" for x in ins)
+                           + f" (1위 {top[0]}, ETF 제외, 네이버 증권)", "close/", sday))
     # 4) 앞으로 7일 안에 실적 발표가 예정된 회사 (증시 캘린더, 이미 발표한 회사는 뺀다)
     cal = d._calendar()
     try:
@@ -2057,7 +2070,7 @@ def market_quiz(now, target=None):
             rnd = random.Random(f"nh{today}")
             a, ins = rnd.choice(miss), rnd.sample(big, 3)
             out.append(_nq(f"nh:{today}:{a}", "미국 신고가", f"이번 주({md(week[0].parent.name)}~{md(week[-1].parent.name)} 아침 데일리) 미국 52주 신고가 종목이 아닌 것은?",
-                           a, ins, f"{a}는 이번 주 신고가 목록에 없었습니다. " + " · ".join(f"{n} {md(seen[n])}" for n in ins)
+                           a, ins, f"{a}은(는) 이번 주 신고가 목록에 없었습니다. " + " · ".join(f"{n} {md(seen[n])}" for n in ins)
                            + f" 신고가 (시총 상위 종목, 이번 주 신고가 {len(seen)}종목)", f"daily/{week[-1].parent.name}/newhighs.html", f"{today}"))
     return [q for q in out if q]
 
