@@ -88,5 +88,30 @@
    ],
    "source": "Yahoo Finance 종가(000001.SS 3,690.48 · 000688.SS 1,345.52 · ^HSI 23,093.37)"
   }
+ },
+ {
+  "date": "2026-10-24",
+  "ticker": "PANW",
+  "exchange": "NASDAQ",
+  "name": "팔로알토 네트웍스",
+  "nameEn": "Palo Alto Networks",
+  "sector": "사이버보안 플랫폼",
+  "price": 380.55,
+  "changePct": 7.22,
+  "priceNote": "10/23 종가 · 나스닥 −0.2% 속 보안주 동반 강세(CRWD +8.3%, OKTA +5.8%) · 52주 고점 $432.33 대비 −12%",
+  "headline": "Evercore 채널 조사(연말 보안 예산 강세)와 AI가 찾은 PHP 취약점 공개에 보안주 동반 급등. NGS ARR +63%는 CyberArk 인수 효과가 크고(유기적 매출 약 +14%), FY27 EPS 가이던스 +9%에 Non-GAAP PER 91배 — 11/19 1Q 실적이 확인 지점.",
+  "tags": [
+   "고성장 기술주",
+   "Non-GAAP PER 91x",
+   "PEG 6.6(후행)",
+   "보안주 동반 강세"
+  ],
+  "file": "2026-10-24_PANW.html",
+  "market": {
+   "day": "2026-10-23",
+   "nasdaq": -0.21,
+   "sp500": -0.52,
+   "source": "Yahoo Finance 일봉 종가(^IXIC 25,955.34 · ^GSPC 7,623.68)"
+  }
  }
 ]
