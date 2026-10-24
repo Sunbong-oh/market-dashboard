@@ -62,3 +62,8 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
   - 거래대금 상위 10위 밖 종목(kb 장마감 리포트·flow-live snapshot.json 의 `/api/top-value`, 2026-10-26 장부터 쌓임)
 - 사용자가 "퀴즈 추가해줘"라고 하면 `quiz/questions.json` 끝에 {cat, q, choices[보기 4개], answer(정답 번호 0~3), explain} 를 넣고 merge 한다. 사실은 출처로 확인하고, 정답이 하나만 맞도록 보기를 쓴다(보기 순서는 화면에서 섞인다).
 - 참여 수는 방문자 현황(/visits/)의 '오늘의 주식 퀴즈' 칸(c-quiz)에서 본다. 코드: build_site.py 의 `quiz_home()`·`QUIZ_JS`.
+
+## 놀이터 (/play/) · 코스피 오를까 내릴까? (홈, 퀴즈 바로 위)
+- 코드 `play_page.py`. 홈 투표: 다음 거래일 코스피가 직전 종가보다 오를지 내릴지(그날 09:00 마감). 채점은 야후 ^KS11 일봉(사이트 만들 때 넣음)으로 보는 사람 브라우저가 한다.
+  다른 사람 투표 수는 Abacus `vote-YYYYMMDD-u/d`, 내 기록은 그 기기(localStorage `pd-votes`).
+- 게임: 시가총액 대결 · 오늘 더 오른 종목 맞히기. 자료는 kb flow-live `map.json`(시가총액 상위 500, ETF·우선주 제외)을 사이트 만들 때 넣는다. 최고 기록은 그 기기에만, 플레이 수는 방문자 현황 '놀이터 게임'(c-game).
