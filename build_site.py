@@ -10,6 +10,7 @@
   /us/          해외주식 리포트 (국내 증권사 미국주식 리포트 요약) — us_reports/*.json (us_reports.py)
   /strong/      전일 미국장 강세종목 리포트 (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
   홈 '오늘의 주식 퀴즈' — quiz/questions.json(주식 상식) + study/terms.json(용어) 에서 날마다 3문제
+  /play/        놀이터 (시가총액 대결·오늘 더 오른 종목) + 홈 '코스피 오를까 내릴까?' 투표 — play_page.py
   /study/       재무제표 공부 (활용법·5분 체크·업종별·용어사전·사례노트) — study/*.json (study_page.py)
 """
 import json
@@ -26,6 +27,7 @@ from pathlib import Path
 
 import dashboard as d
 import study_page
+import play_page
 from company_ko import KR_COMPANY, describe, sector_ko
 
 ROOT = Path(__file__).resolve().parent
@@ -96,7 +98,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
-        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"),
+        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
@@ -509,7 +511,8 @@ VISITS_JS = """<script>
             {k:'pen',t:'연금 계산기',u:'https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX'},
             {k:'life',t:'라이프 플랜',u:'https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt'},
             {k:'ad-manbo',t:'광고 · 제주 만보농장',u:'https://www.band.us/@manbofarm',ad:1},
-            {k:'quiz',t:'오늘의 주식 퀴즈',u:'../#quiz',ad:1,lab:'참여',note:'퀴즈를 푼 사람 수 (기기당 하루 한 번)'}];
+            {k:'quiz',t:'오늘의 주식 퀴즈',u:'../#quiz',ad:1,lab:'참여',note:'퀴즈를 푼 사람 수 (기기당 하루 한 번)'},
+            {k:'game',t:'놀이터 게임',u:'../play/',ad:1,lab:'플레이',note:'놀이터를 열고 게임을 시작한 횟수'}];
  function kst(off){var d=new Date(Date.now()+9*36e5-(off||0)*864e5);return d.toISOString().slice(0,10)}
  function n(v){return (v||0).toLocaleString('ko-KR')}
  function get(k){return fetch(API+'/get/'+NS+'/'+k,{cache:'no-store'}).then(function(r){return r.json()})
@@ -1708,7 +1711,8 @@ TOOLS_CSS = """.home>#tools{order:99}  /* 계산기·공부는 시간대(장중 
 # 아티팩트로 만든 계산기 두 가지 (주소는 MENU 와 같은 것을 쓴다)
 TOOLS = (("연금 계산기", "💰", "퇴직연금·개인연금을 연금으로 받을 때 내는 세금과 해마다의 수령한도를 계산합니다."),
          ("라이프 플랜", "🗓️", "소득·지출·교육비·주택을 넣어 평생 현금흐름과 자산 흐름을 그려 봅니다."),
-         ("재무제표 공부", "📒", "재무제표로 지뢰 종목 거르기, 업종별 체크리스트, 용어사전, 사례노트."))
+         ("재무제표 공부", "📒", "재무제표로 지뢰 종목 거르기, 업종별 체크리스트, 용어사전, 사례노트."),
+         ("놀이터", "🎮", "시가총액 대결 · 오늘 더 오른 종목 맞히기. 틀릴 때까지 이어지는 게임, 최고 기록에 도전!"))
 
 
 # 홈 왼쪽 날개 광고 (제주 만보농장). 본문(1080px) 왼쪽 빈 공간에만 작게 띄우고, 공간이 없는 화면(휴대폰·좁은 창)에서는 숨긴다.
@@ -2370,7 +2374,7 @@ def podcast_home():
             f'구독해 두면 새 회차가 자동으로 내려받아져 안드로이드 오토·카플레이에서 바로 재생됩니다.</div></section>{POD_JS}')
 
 
-def build_home(now, daily, close, live=None, target=None, us=None, strong=None):
+def build_home(now, daily, close, live=None, target=None, us=None, strong=None, kospi_hist=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
@@ -2392,7 +2396,7 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None):
             f'<section class="sec" id="daily">{s1}</section>'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
-            f'{quiz_home(news_quiz(now, target, strong))}{tools_home()}</div>'
+            f'{play_page.home_section(kospi_hist or [], VISIT_API, VISIT_NS)}{quiz_home(news_quiz(now, target, strong))}{tools_home()}</div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
@@ -2415,7 +2419,8 @@ def main():
     build_map()
     build_reports()
     study = study_page.build(OUT, page)
-    build_home(now, daily, close, live, target, us, strong)
+    play_page.build(OUT, page, now, VISIT_API, VISIT_NS)
+    build_home(now, daily, close, live, target, us, strong, play_page.kospi_history())
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "us": us and us["day"], "study": study,
                       "live": bool(live)}, ensure_ascii=False))
