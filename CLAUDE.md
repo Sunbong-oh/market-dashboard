@@ -54,6 +54,8 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 없는 종목은 화면이 보고서 HTML 의 '주요 사업' 첫 문장을 대신 보여 준다(길면 잘림).
 
 ## 오늘의 주식 퀴즈 (홈, 계산기·공부 바로 위)
-- 날마다 3문제: `quiz/questions.json`(주식 상식) 2개 + `study/terms.json`(용어사전)으로 자동으로 만드는 용어 문제 1개. 보는 사람 브라우저가 한국 날짜로 골라 자정에 바뀐다.
+- 날마다 3문제: **오늘의 소식** 2개 + 주식 상식(`quiz/questions.json`) 또는 용어(`study/terms.json`) 1개. 보는 사람 브라우저가 한국 날짜로 골라 자정에 바뀐다.
+- 오늘의 소식 문제는 사이트를 만들 때(`news_quiz()`) 최근 3일 자료로 자동 생성: 강세종목(업종), 실적 속보 카드(컨센서스 대비·발표 뒤 주가),
+  국내 '영업이익 급증' 공시(kb earnings-live), 목표주가 최대 상향·하향. 가장 최근 소식부터, 같은 종류는 하루 한 문제. 소식이 모자라면 상식 문제로 채운다.
 - 사용자가 "퀴즈 추가해줘"라고 하면 `quiz/questions.json` 끝에 {cat, q, choices[보기 4개], answer(정답 번호 0~3), explain} 를 넣고 merge 한다. 사실은 출처로 확인하고, 정답이 하나만 맞도록 보기를 쓴다(보기 순서는 화면에서 섞인다).
 - 참여 수는 방문자 현황(/visits/)의 '오늘의 주식 퀴즈' 칸(c-quiz)에서 본다. 코드: build_site.py 의 `quiz_home()`·`QUIZ_JS`.
