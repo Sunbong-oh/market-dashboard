@@ -20,7 +20,7 @@ import shutil
 import subprocess
 import sys
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from html import escape, unescape
 from pathlib import Path
 
@@ -1807,9 +1807,9 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;
 var qs=[];
 function mk(b,id,cat){return{id:id,cat:cat||b.cat,q:b.q,o:shuf(b.choices.map(function(c,i){return{t:c,ok:i===b.answer}})),x:b.explain,link:b.link}}
 var grp=function(id){var g=id.split(':')[0];return g==='px'?'ef':g},used={};
-shuf(NEWS).sort(function(a,b){return (b.day||'').localeCompare(a.day||'')}).forEach(function(n){if(qs.length<2&&!used[grp(n.id)]){used[grp(n.id)]=1;qs.push(mk(n,n.id,'오늘의 소식 · '+n.cat))}});
-var bank=shuf(QB.map(function(b,i){return[b,i]})),useTerm=TERMS.length>=4&&(qs.length<2||(seed&1)),bi=0;
-while(qs.length<(useTerm?2:3)&&bi<bank.length){qs.push(mk(bank[bi][0],'b'+bank[bi][1]));bi++}
+shuf(NEWS).sort(function(a,b){return (b.day||'').localeCompare(a.day||'')}).forEach(function(n){if(qs.length<3&&!used[grp(n.id)]){used[grp(n.id)]=1;qs.push(mk(n,n.id,'오늘의 소식 · '+n.cat))}});
+var bank=shuf(QB.map(function(b,i){return[b,i]})),useTerm=TERMS.length>=4&&(qs.length<3||(seed&1)),bi=0;
+while(qs.length<(useTerm?3:4)&&bi<bank.length){qs.push(mk(bank[bi][0],'b'+bank[bi][1]));bi++}
 if(useTerm){var t=pick(TERMS),same=TERMS.filter(function(x){return x.cat===t.cat&&x.term!==t.term}),
  rest=TERMS.filter(function(x){return x.term!==t.term}),pool=same.length>=3?same:rest,dis=shuf(pool).slice(0,3);
  var core=t.term.split(/[\s(]/)[0],d=t.def;[t.term,core].forEach(function(w){if(w&&w.length>1)d=d.split(w).join('○○')});
@@ -1929,6 +1929,136 @@ def news_quiz(now, target=None, strong=None):
                                t0["company"], wrong,
                                f"{t0['company']}: {t0['broker']} {t0.get('prev_target') or 0:,}원 → {t0.get('target') or 0:,}원 ({t0['pct']:+.1f}%) · '{t0.get('title', '')}'",
                                "target/", target["day"]))
+    try:
+        out += market_quiz(now, target)
+    except Exception as e:  # 시장 자료 문제가 실패해도 퀴즈는 나머지로 만든다
+        print("퀴즈: 시장 자료 문제 실패:", type(e).__name__, e, file=sys.stderr)
+    return [q for q in out if q]
+
+
+# ---- 시장 자료로 만드는 문제 (상한가 · 영업이익률 · 이자보상비율 · 실적 발표 예정 · 미국 신고가) ----
+KB_LIVE_RAW = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/"
+STUDY_FIN_RAW = "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/study-fin/fin/"
+US_BIG = ["애플", "마이크로소프트", "엔비디아", "아마존", "알파벳", "메타", "테슬라", "브로드컴", "넷플릭스", "오라클",
+          "코스트코", "월마트", "JP모건", "비자", "일라이릴리", "AMD", "팔란티어", "마이크론"]
+
+
+def _get_json(url, timeout=15):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": d.UA}), timeout=timeout) as r:
+            return json.loads(r.read())
+    except Exception:
+        return None
+
+
+def _fin(codes):
+    """study-fin 의 종목별 재무 숫자 {코드: (영업이익률 %, 이자보상배율, 기준 설명)} (금융업·숫자 없는 종목은 뺀다)."""
+    from concurrent.futures import ThreadPoolExecutor
+    def one(code):
+        j = _get_json(STUDY_FIN_RAW + f"{code}.json", timeout=10)
+        if not j or j.get("fin"):
+            return code, None
+        v, b = j.get("v") or {}, j.get("basis") or {}
+        rev, op, it = (v.get("rev") or [None])[0], (v.get("op") or [None])[0], v.get("int")
+        if not rev or op is None:
+            return code, None
+        icr = op / it if it and it > 0 else None
+        return code, (op / rev * 100, icr, f"{b.get('now', '')} {b.get('fs', '')}".strip(), op, it)
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        return {c: r for c, r in ex.map(one, dict.fromkeys(codes)) if r}
+
+
+def market_quiz(now, target=None):
+    out = []
+    md = lambda day: f"{int(day[5:7])}/{int(day[8:10])}"
+    # 1) 상한가: 장마감 업종 지도(map.json, 네이버 증권 종목 등락률)
+    m = _get_json(KB_LIVE_RAW + "map.json")
+    if m and m.get("date") and _nq_fresh(f"{m['date'][:4]}-{m['date'][4:6]}-{m['date'][6:8]}", now):
+        day = f"{m['date'][:4]}-{m['date'][4:6]}-{m['date'][6:8]}"
+        etf = re.compile(r"^(KODEX|TIGER|RISE|ACE|SOL|KIWOOM|HANARO|ARIRANG|PLUS|KOSEF|TIMEFOLIO|KBSTAR|WON|BNK|1Q|마이티|에셋플러스|TRUSTON|UNICORN|파워)\b|ETN|레버리지|인버스|스팩")
+        rows = [(st["n"], st["p"], sec["s"]) for mk in m["data"] for sec in m["data"][mk] for st in sec["st"]
+                if st.get("p") is not None and not etf.search(st["n"])]  # ETF·ETN·스팩은 뺀다
+        lim = [r for r in rows if 29.5 <= r[1] <= 30.0]
+        near = [r for r in rows if 8 <= r[1] < 25]
+        if lim and len(near) >= 3:
+            rnd = random.Random(day)
+            a, wrong = rnd.choice(lim), rnd.sample(near, 3)
+            out.append(_nq(f"lim:{day}", "상한가", f"{md(day)} 상한가(+30%)로 마감한 종목은?", a[0], [w[0] for w in wrong],
+                           f"{a[0]} +{a[1]:.2f}% ({a[2]}). 다른 보기는 크게 올랐지만 상한가는 아니었습니다: "
+                           + ", ".join(f"{w[0]} +{w[1]:.1f}%" for w in wrong) + f" · 이날 상한가 {len(lim)}종목", "map/", day))
+    # 2·3) 영업이익률 20% 넘는 종목 / 이자보상비율 1 미만 (study-fin 의 DART 정기보고서 숫자)
+    snap = _get_json(KB_LIVE_RAW + "snapshot.json") or {}
+    themes = (((snap.get("data") or {}).get("/api/themes") or {}).get("themes") or [])
+    sday = str(snap.get("date") or "")
+    sday = f"{sday[:4]}-{sday[4:6]}-{sday[6:8]}" if len(sday) == 8 else ""
+    theme_st = {l["code"]: (l["name"], l.get("change_pct"), t["name"]) for t in themes[:12] for l in t.get("leaders") or []
+                if l.get("code") and (l.get("change_pct") or 0) > 0}
+    tgt = {x["code"]: x["company"] for x in (target or {}).get("up", []) + (target or {}).get("down", []) if x.get("code")} \
+        if target and _nq_fresh(target.get("day", ""), now) else {}
+    fin = _fin(list(theme_st) + list(tgt)) if (theme_st or tgt) else {}
+    names = {**{c: v[0] for c, v in theme_st.items()}, **tgt}
+    hi = [c for c, f in fin.items() if f[0] >= 20]
+    lo = [c for c, f in fin.items() if 0 < f[0] < 12]
+    if hi and len(lo) >= 3:
+        rnd = random.Random(f"opm{now:%Y%m%d}")
+        a, wrong = rnd.choice(hi), rnd.sample(lo, 3)
+        out.append(_nq(f"opm:{now:%Y-%m-%d}:{a}", "재무 숫자", "오늘 홈페이지(상승 테마·목표주가 리포트)에 나온 종목 중 영업이익률이 20%를 넘는 종목은?",
+                       names[a], [names[w] for w in wrong],
+                       " · ".join(f"{names[c]} {fin[c][0]:.1f}%" for c in [a] + wrong) + f" (영업이익 ÷ 매출, {fin[a][2]}, DART 정기보고서)",
+                       "study/#check", f"{now:%Y-%m-%d}"))
+    tc = [c for c in theme_st if c in fin]
+    bad = [c for c in tc if fin[c][1] is not None and fin[c][1] < 1]
+    good = [c for c in tc if fin[c][1] is not None and fin[c][1] >= 3]
+    if bad and len(good) >= 3 and _nq_fresh(sday, now):
+        rnd = random.Random(f"icr{sday}")
+        a, wrong = rnd.choice(bad), rnd.sample(good, 3)
+        f = lambda c: (f"{names[c]} {fin[c][1]:.1f}배" if fin[c][3] >= 0 else f"{names[c]} 영업적자")
+        out.append(_nq(f"icr:{sday}:{a}", "재무 숫자", f"{md(sday)} 상승 테마 종목 중 이자보상비율(영업이익 ÷ 이자비용)이 1이 안 되는 종목은?",
+                       names[a], [names[w] for w in wrong],
+                       " · ".join(f(c) for c in [a] + wrong) + f". 1 미만이면 영업으로 번 돈으로 이자도 못 낸다는 뜻 ({fin[a][2]}, DART)",
+                       "study/#check", sday))
+    # 4) 앞으로 7일 안에 실적 발표가 예정된 회사 (증시 캘린더, 이미 발표한 회사는 뺀다)
+    cal = d._calendar()
+    try:
+        ann = d.announced(now, sec=False)
+    except Exception:
+        ann = {}
+    per = {}
+    for k, items in cal.items():
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", k):
+            continue
+        for e in ([items] if isinstance(items, str) else items):
+            mm = d.CAL_EARN.match(str(e).strip())
+            for n in (mm.group(2).split("·") if mm else []):
+                per.setdefault(n.strip(), []).append(k)
+    today = now.date()
+    dd = lambda k: (datetime.strptime(k, "%Y-%m-%d").date() - today).days
+    soon = [(n, min(k for k in ks if 0 <= dd(k) <= 7)) for n, ks in per.items()
+            if any(0 <= dd(k) <= 7 for k in ks) and d.cal_norm(n) not in ann]
+    far = [n for n, ks in per.items() if all(abs(dd(k)) >= 12 for k in ks)]
+    if soon and len(far) >= 3:
+        rnd = random.Random(f"cal{today}")
+        (a, ak), wrong = rnd.choice(soon), rnd.sample(far, 3)
+        out.append(_nq(f"cal:{today}:{a}", "실적 일정", "앞으로 7일 안에 실적 발표가 예정된 회사는? (증시 캘린더 기준)", a, wrong,
+                       f"{a}: {md(ak)} 실적 예정. " + " · ".join(f"{w} {md(min(per[w], key=lambda k: abs(dd(k))))}" for w in wrong)
+                       + " — 다른 보기는 발표가 이미 지났거나 한참 뒤입니다. 미국 회사 날짜는 현지 기준", "#daily", f"{today}"))
+    # 5) 이번 주 미국 52주 신고가에 오르지 않은 종목 (아침 데일리의 신고가 화면)
+    monday = today - timedelta(days=today.weekday())
+    week = [p for p in sorted((ROOT / "archive" / "daily").glob("*/newhighs.html"))
+            if DATE_RE.match(p.parent.name) and monday <= datetime.strptime(p.parent.name, "%Y-%m-%d").date() <= today]
+    seen = {}
+    for p in week:
+        for nm in re.findall(r'<div class="nm"><a [^>]*>([^<]+)</a></div>', p.read_text(encoding="utf-8")):
+            seen.setdefault(unescape(nm).strip(), p.parent.name)
+    if len(week) >= 2 and len(seen) >= 3:
+        big = [n for n in US_BIG if n in seen][:8] or list(seen)[:8]
+        miss = [n for n in US_BIG if n not in seen]
+        if len(big) >= 3 and miss:
+            rnd = random.Random(f"nh{today}")
+            a, ins = rnd.choice(miss), rnd.sample(big, 3)
+            out.append(_nq(f"nh:{today}:{a}", "미국 신고가", f"이번 주({md(week[0].parent.name)}~{md(week[-1].parent.name)} 아침 데일리) 미국 52주 신고가 종목이 아닌 것은?",
+                           a, ins, f"{a}는 이번 주 신고가 목록에 없었습니다. " + " · ".join(f"{n} {md(seen[n])}" for n in ins)
+                           + f" 신고가 (시총 상위 종목, 이번 주 신고가 {len(seen)}종목)", f"daily/{week[-1].parent.name}/newhighs.html", f"{today}"))
     return [q for q in out if q]
 
 
