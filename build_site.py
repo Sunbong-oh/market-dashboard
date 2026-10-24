@@ -9,6 +9,7 @@
   /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 08:40·21:00) — kb-market-report 저장소의 consensus/*.json
   /us/          해외주식 리포트 (국내 증권사 미국주식 리포트 요약) — us_reports/*.json (us_reports.py)
   /strong/      전일 미국장 강세종목 리포트 (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
+  홈 '오늘의 주식 퀴즈' — quiz/questions.json(주식 상식) + study/terms.json(용어) 에서 날마다 3문제
   /study/       재무제표 공부 (활용법·5분 체크·업종별·용어사전·사례노트) — study/*.json (study_page.py)
 """
 import json
@@ -505,7 +506,8 @@ VISITS_JS = """<script>
  var PAGES=[{k:'',t:'투자노트 홈페이지',u:'../'},
             {k:'pen',t:'연금 계산기',u:'https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX'},
             {k:'life',t:'라이프 플랜',u:'https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt'},
-            {k:'ad-manbo',t:'광고 · 제주 만보농장',u:'https://www.band.us/@manbofarm',ad:1}];
+            {k:'ad-manbo',t:'광고 · 제주 만보농장',u:'https://www.band.us/@manbofarm',ad:1},
+            {k:'quiz',t:'오늘의 주식 퀴즈',u:'../#quiz',ad:1,lab:'참여',note:'퀴즈를 푼 사람 수 (기기당 하루 한 번)'}];
  function kst(off){var d=new Date(Date.now()+9*36e5-(off||0)*864e5);return d.toISOString().slice(0,10)}
  function n(v){return (v||0).toLocaleString('ko-KR')}
  function get(k){return fetch(API+'/get/'+NS+'/'+k,{cache:'no-store'}).then(function(r){return r.json()})
@@ -536,10 +538,10 @@ VISITS_JS = """<script>
       '<td style="width:55%"><i class="bar" style="width:'+Math.round(V[i]/mx*100)+'%"></i></td></tr>'}).join('');
    return '<h2 class="vzh"><a href="'+pg.u+'" target="_blank" rel="noopener">'+pg.t+'</a></h2>'+
     '<div class="tiles">'+
-    '<div class="tile"><div class="k">오늘 배너 클릭</div><div class="v">'+n(V[0])+'</div><div class="s">'+days[0]+'</div></div>'+
-    '<div class="tile"><div class="k">최근 7일 클릭</div><div class="v">'+n(wk)+'</div><div class="s">어제 '+n(V[1])+'회</div></div>'+
-    '<div class="tile"><div class="k">누적 클릭</div><div class="v">'+n(TV)+'</div><div class="s">홈페이지 배너를 누른 횟수</div></div></div>'+
-    '<section class="panel"><table><thead><tr><th>날짜</th><th>클릭</th><th></th></tr></thead><tbody>'+rws+'</tbody></table></section>'}
+    '<div class="tile"><div class="k">오늘 '+(pg.lab||'배너 클릭')+'</div><div class="v">'+n(V[0])+'</div><div class="s">'+days[0]+'</div></div>'+
+    '<div class="tile"><div class="k">최근 7일 '+(pg.lab||'클릭')+'</div><div class="v">'+n(wk)+'</div><div class="s">어제 '+n(V[1])+'회</div></div>'+
+    '<div class="tile"><div class="k">누적 '+(pg.lab||'클릭')+'</div><div class="v">'+n(TV)+'</div><div class="s">'+(pg.note||'홈페이지 배너를 누른 횟수')+'</div></div></div>'+
+    '<section class="panel"><table><thead><tr><th>날짜</th><th>'+(pg.lab||'클릭')+'</th><th></th></tr></thead><tbody>'+rws+'</tbody></table></section>'}
   var art=!!pg.k;
   return '<h2 class="vzh"><a href="'+pg.u+'"'+(art?' target="_blank" rel="noopener"':'')+'>'+pg.t+'</a></h2>'+
    '<div class="tiles">'+
@@ -1767,6 +1769,92 @@ def ad_strip():
             '</div>')
 
 
+# ---------- 오늘의 주식 퀴즈 (홈, 계산기·공부 바로 위) ----------
+# 날마다 3문제: quiz/questions.json(주식 상식, "퀴즈 추가해줘"로 늘린다) 2개 + study/terms.json(용어사전)으로 만든 용어 문제 1개.
+# 문제는 보는 사람 브라우저가 한국 날짜로 고르므로 사이트를 다시 만들지 않아도 자정(KST)에 바뀐다. 푼 기록은 그 기기에만 남는다.
+QUIZ_FILE = ROOT / "quiz" / "questions.json"
+QUIZ_CSS = """.home>#quiz{order:98}
+#quiz .qz{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:10px}
+#quiz .qz-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+#quiz .qz-top b{color:var(--text)}
+#quiz .qc{display:inline-block;font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:6px;background:#FBE7B0;color:#3D3A35}
+#quiz .qq{font-size:16.5px;font-weight:800;line-height:1.5;margin:8px 0 10px;word-break:keep-all}
+#quiz .qd{font-size:15px;font-weight:600;line-height:1.55;margin:-2px 0 10px;padding:10px 12px;border-radius:10px;background:var(--bg);word-break:keep-all}
+#quiz .qo{display:grid;gap:7px}
+#quiz .qo button{font:600 15px/1.4 inherit;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);
+ color:var(--text);cursor:pointer;word-break:keep-all}
+#quiz .qo button:hover:enabled{border-color:#F2A900}
+#quiz .qo button.ok{background:#e6f6ec;border-color:#2f9e44;color:#1b5e2b;font-weight:800}
+#quiz .qo button.no{background:#fdecec;border-color:#e03131;color:#a51d1d}
+#quiz .qo button:disabled{cursor:default}
+#quiz .qx{display:none;margin-top:10px;font-size:14px;line-height:1.6;padding:10px 12px;border-left:4px solid #F2A900;background:var(--bg);border-radius:0 10px 10px 0;word-break:keep-all}
+#quiz .qz.done .qx{display:block}
+#quiz .qx b.r{color:#2f9e44}#quiz .qx b.w{color:#e03131}
+#quiz .qsum a{font-size:13.5px;color:inherit}
+#quiz .qsum{margin-top:12px;font-size:15px;font-weight:800;text-align:center;padding:10px;border-radius:12px;background:#FBE7B0;color:#3D3A35}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) #quiz .qo button.ok{background:#16301f;color:#8ce99a}
+ :root:not([data-theme=light]) #quiz .qo button.no{background:#3a1c1c;color:#ffa8a8}}
+:root[data-theme=dark] #quiz .qo button.ok{background:#16301f;color:#8ce99a}:root[data-theme=dark] #quiz .qo button.no{background:#3a1c1c;color:#ffa8a8}"""
+QUIZ_JS = r"""(function(){var box=document.getElementById('qzb');if(!box)return;
+var day=new Date(Date.now()+9*36e5).toISOString().slice(0,10),seed=0;
+for(var i=0;i<day.length;i++)seed=(seed*31+day.charCodeAt(i))>>>0;
+function rnd(){seed=(seed+0x6D2B79F5)>>>0;var t=seed;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}
+function pick(a){return a[Math.floor(rnd()*a.length)]}
+function shuf(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(rnd()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var qs=[];
+shuf(QB).slice(0,2).forEach(function(b){var o=shuf(b.choices.map(function(c,i){return{t:c,ok:i===b.answer}}));
+ qs.push({cat:b.cat,q:b.q,o:o,x:b.explain})});
+if(TERMS.length>=4){var t=pick(TERMS),same=TERMS.filter(function(x){return x.cat===t.cat&&x.term!==t.term}),
+ rest=TERMS.filter(function(x){return x.term!==t.term}),pool=same.length>=3?same:rest,dis=shuf(pool).slice(0,3);
+ var core=t.term.split(/[\s(]/)[0],d=t.def;[t.term,core].forEach(function(w){if(w&&w.length>1)d=d.split(w).join('○○')});
+ qs.push({cat:'용어 · '+t.cat,q:'다음 설명에 맞는 용어는?',d:d,o:shuf([{t:t.term,ok:true}].concat(dis.map(function(x){return{t:x.term,ok:false}}))),
+  x:'<b>'+esc(t.term)+'</b>'+(t.formula?' · '+esc(t.formula):'')+(t.point?'<br>'+esc(t.point):'')+' <a href="study/#term">용어사전 ›</a>',xh:1})}
+var KEY='quiz-'+day,saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}}
+function streak(){try{var s=JSON.parse(localStorage.getItem('quiz-streak')||'{}'),y=new Date(Date.parse(day)-864e5).toISOString().slice(0,10);
+ if(s.last===day)return s.n;s={last:day,n:s.last===y?(s.n||0)+1:1};localStorage.setItem('quiz-streak',JSON.stringify(s));return s.n}catch(e){return 1}}
+function count(){try{if(localStorage.getItem('brian-admin')==='1'||saved.c)return;saved.c=1;save();var d=day.replace(/-/g,'');
+ ['c-quiz-'+d,'t-c-quiz'].forEach(function(k){fetch(QAPI+'/hit/'+QNS+'/'+k,{cache:'no-store'}).catch(function(){})})}catch(e){}}
+function sum(){var n=0,a=0;qs.forEach(function(q,i){if(saved[i]!=null){a++;if(q.o[saved[i]].ok)n++}});var el=document.getElementById('qzs');
+ if(a<qs.length){el.hidden=true;return}el.hidden=false;
+ el.innerHTML=(n===qs.length?'🎉 ':'')+qs.length+'문제 중 '+n+'개 정답'+' · 연속 '+streak()+'일째 · 내일 새 문제가 나와요'+
+ '<br><a href="study/#quiz">더 풀어 보기: 재무제표 공부 퀴즈 ›</a>'}
+function show(i){var q=qs[i],c=document.getElementById('qz'+i),bs=c.querySelectorAll('.qo button'),s=saved[i];
+ c.classList.add('done');bs.forEach(function(b,j){b.disabled=true;if(q.o[j].ok)b.classList.add('ok');else if(j===s)b.classList.add('no')});
+ c.querySelector('.qx').innerHTML=(q.o[s].ok?'<b class="r">정답!</b> ':'<b class="w">아쉬워요.</b> ')+(q.xh?q.x:esc(q.x))}
+box.innerHTML=qs.map(function(q,i){return '<div class="qz" id="qz'+i+'"><div class="qz-top"><span class="qc">'+esc(q.cat)+'</span><span>'+(i+1)+' / '+qs.length+'</span></div>'+
+ '<div class="qq">Q'+(i+1)+'. '+esc(q.q)+'</div>'+(q.d?'<div class="qd">'+esc(q.d)+'</div>':'')+
+ '<div class="qo">'+q.o.map(function(o,j){return '<button type="button" data-i="'+i+'" data-j="'+j+'">'+'①②③④'[j]+' '+esc(o.t)+'</button>'}).join('')+'</div>'+
+ '<div class="qx"></div></div>'}).join('')+'<div class="qsum" id="qzs" hidden></div>';
+box.addEventListener('click',function(e){var b=e.target.closest('button[data-i]');if(!b||b.disabled)return;var i=+b.dataset.i;
+ saved[i]=+b.dataset.j;save();count();show(i);sum()});
+qs.forEach(function(q,i){if(saved[i]!=null)show(i)});sum();
+document.getElementById('qzd').textContent=day.slice(5).replace('-','/')})();"""
+
+
+def quiz_home():
+    """오늘의 주식 퀴즈 칸. 문제 은행이 비어도 용어사전만으로 돈다."""
+    try:
+        bank = json.loads(QUIZ_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        bank = []
+    bank = [q for q in bank if len(q.get("choices") or []) == 4 and isinstance(q.get("answer"), int)]
+    try:
+        terms = [{k: t.get(k, "") for k in ("term", "cat", "def", "formula", "point")}
+                 for t in json.loads((ROOT / "study" / "terms.json").read_text(encoding="utf-8")) if t.get("term") and t.get("def")]
+    except (OSError, ValueError):
+        terms = []
+    if len(bank) < 2:
+        return ""
+    data = (f"var QB={json.dumps(bank, ensure_ascii=False)},TERMS={json.dumps(terms, ensure_ascii=False)},"
+            f"QAPI={json.dumps(VISIT_API)},QNS={json.dumps(VISIT_NS)};").replace("</", "<\\/")
+    return (f'<section class="sec" id="quiz"><style>{QUIZ_CSS}</style>'
+            '<div class="sec-h"><h2>🧠 오늘의 주식 퀴즈</h2><span class="mt" id="qzd"></span></div>'
+            '<div id="qzb"><p class="err">퀴즈를 불러오는 중…</p></div>'
+            f'<script>{data}\n{QUIZ_JS}</script></section>')
+
+
 def tools_home():
     """퇴직연금 계산기·라이프 플랜(아티팩트)로 가는 카드. 눌러서 새 탭으로 연다."""
     url = dict((label, href) for href, label in MENU)
@@ -2062,7 +2150,7 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None):
             f'<section class="sec" id="daily">{s1}</section>'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
-            f'{tools_home()}</div>'
+            f'{quiz_home()}{tools_home()}</div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
