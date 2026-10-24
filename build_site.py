@@ -14,10 +14,12 @@
 """
 import json
 import os
+import random
 import re
 import shutil
 import subprocess
 import sys
+import urllib.request
 from datetime import datetime
 from html import escape, unescape
 from pathlib import Path
@@ -1803,38 +1805,135 @@ function pick(a){return a[Math.floor(rnd()*a.length)]}
 function shuf(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(rnd()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 var qs=[];
-shuf(QB).slice(0,2).forEach(function(b){var o=shuf(b.choices.map(function(c,i){return{t:c,ok:i===b.answer}}));
- qs.push({cat:b.cat,q:b.q,o:o,x:b.explain})});
-if(TERMS.length>=4){var t=pick(TERMS),same=TERMS.filter(function(x){return x.cat===t.cat&&x.term!==t.term}),
+function mk(b,id,cat){return{id:id,cat:cat||b.cat,q:b.q,o:shuf(b.choices.map(function(c,i){return{t:c,ok:i===b.answer}})),x:b.explain,link:b.link}}
+var grp=function(id){var g=id.split(':')[0];return g==='px'?'ef':g},used={};
+shuf(NEWS).sort(function(a,b){return (b.day||'').localeCompare(a.day||'')}).forEach(function(n){if(qs.length<2&&!used[grp(n.id)]){used[grp(n.id)]=1;qs.push(mk(n,n.id,'오늘의 소식 · '+n.cat))}});
+var bank=shuf(QB.map(function(b,i){return[b,i]})),useTerm=TERMS.length>=4&&(qs.length<2||(seed&1)),bi=0;
+while(qs.length<(useTerm?2:3)&&bi<bank.length){qs.push(mk(bank[bi][0],'b'+bank[bi][1]));bi++}
+if(useTerm){var t=pick(TERMS),same=TERMS.filter(function(x){return x.cat===t.cat&&x.term!==t.term}),
  rest=TERMS.filter(function(x){return x.term!==t.term}),pool=same.length>=3?same:rest,dis=shuf(pool).slice(0,3);
  var core=t.term.split(/[\s(]/)[0],d=t.def;[t.term,core].forEach(function(w){if(w&&w.length>1)d=d.split(w).join('○○')});
- qs.push({cat:'용어 · '+t.cat,q:'다음 설명에 맞는 용어는?',d:d,o:shuf([{t:t.term,ok:true}].concat(dis.map(function(x){return{t:x.term,ok:false}}))),
+ qs.push({id:'t:'+t.term,cat:'용어 · '+t.cat,q:'다음 설명에 맞는 용어는?',d:d,o:shuf([{t:t.term,ok:true}].concat(dis.map(function(x){return{t:x.term,ok:false}}))),
   x:'<b>'+esc(t.term)+'</b>'+(t.formula?' · '+esc(t.formula):'')+(t.point?'<br>'+esc(t.point):'')+' <a href="study/#term">용어사전 ›</a>',xh:1})}
-var KEY='quiz-'+day,saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+var KEY='quiz2-'+day,saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}}
 function streak(){try{var s=JSON.parse(localStorage.getItem('quiz-streak')||'{}'),y=new Date(Date.parse(day)-864e5).toISOString().slice(0,10);
  if(s.last===day)return s.n;s={last:day,n:s.last===y?(s.n||0)+1:1};localStorage.setItem('quiz-streak',JSON.stringify(s));return s.n}catch(e){return 1}}
 function count(){try{if(localStorage.getItem('brian-admin')==='1'||saved.c)return;saved.c=1;save();var d=day.replace(/-/g,'');
  ['c-quiz-'+d,'t-c-quiz'].forEach(function(k){fetch(QAPI+'/hit/'+QNS+'/'+k,{cache:'no-store'}).catch(function(){})})}catch(e){}}
-function sum(){var n=0,a=0;qs.forEach(function(q,i){if(saved[i]!=null){a++;if(q.o[saved[i]].ok)n++}});var el=document.getElementById('qzs');
+function sum(){var n=0,a=0;qs.forEach(function(q){if(saved[q.id]!=null){a++;if(q.o[saved[q.id]]&&q.o[saved[q.id]].ok)n++}});var el=document.getElementById('qzs');
  if(a<qs.length){el.hidden=true;return}el.hidden=false;
  el.innerHTML=(n===qs.length?'🎉 ':'')+qs.length+'문제 중 '+n+'개 정답'+' · 연속 '+streak()+'일째 · 내일 새 문제가 나와요'+
  '<br><a href="study/#quiz">더 풀어 보기: 재무제표 공부 퀴즈 ›</a>'}
-function show(i){var q=qs[i],c=document.getElementById('qz'+i),bs=c.querySelectorAll('.qo button'),s=saved[i];
+function show(i){var q=qs[i],c=document.getElementById('qz'+i),bs=c.querySelectorAll('.qo button'),s=saved[q.id];if(!q.o[s])return;
  c.classList.add('done');bs.forEach(function(b,j){b.disabled=true;if(q.o[j].ok)b.classList.add('ok');else if(j===s)b.classList.add('no')});
- c.querySelector('.qx').innerHTML=(q.o[s].ok?'<b class="r">정답!</b> ':'<b class="w">아쉬워요.</b> ')+(q.xh?q.x:esc(q.x))}
+ c.querySelector('.qx').innerHTML=(q.o[s].ok?'<b class="r">정답!</b> ':'<b class="w">아쉬워요.</b> ')+(q.xh?q.x:esc(q.x))+(q.link?' <a href="'+esc(q.link)+'">자세히 보기 ›</a>':'')}
 box.innerHTML=qs.map(function(q,i){return '<div class="qz" id="qz'+i+'"><div class="qz-top"><span class="qc">'+esc(q.cat)+'</span><span>'+(i+1)+' / '+qs.length+'</span></div>'+
  '<div class="qq">Q'+(i+1)+'. '+esc(q.q)+'</div>'+(q.d?'<div class="qd">'+esc(q.d)+'</div>':'')+
  '<div class="qo">'+q.o.map(function(o,j){return '<button type="button" data-i="'+i+'" data-j="'+j+'">'+'①②③④'[j]+' '+esc(o.t)+'</button>'}).join('')+'</div>'+
  '<div class="qx"></div></div>'}).join('')+'<div class="qsum" id="qzs" hidden></div>';
 box.addEventListener('click',function(e){var b=e.target.closest('button[data-i]');if(!b||b.disabled)return;var i=+b.dataset.i;
- saved[i]=+b.dataset.j;save();count();show(i);sum()});
-qs.forEach(function(q,i){if(saved[i]!=null)show(i)});sum();
+ saved[qs[i].id]=+b.dataset.j;save();count();show(i);sum()});
+qs.forEach(function(q,i){if(saved[q.id]!=null)show(i)});sum();
 document.getElementById('qzd').textContent=day.slice(5).replace('-','/')})();"""
 
 
-def quiz_home():
-    """오늘의 주식 퀴즈 칸. 문제 은행이 비어도 용어사전만으로 돈다."""
+# 오늘 홈페이지에 올라온 내용(강세종목·실적 속보·국내 영업이익 급증·목표주가 변동)으로 만드는 문제.
+# 사이트를 만들 때(2시간마다) 새로 만들고, 정답·해설은 그 자료의 숫자를 그대로 쓴다. 최근 3일 안의 자료만 쓴다.
+NQ_FRESH_DAYS = 3
+NQ_SECTORS = ["반도체 장비", "바이오 신약", "2차전지 소재", "클라우드 소프트웨어", "뷰티 전문 리테일", "전기차",
+              "온라인 광고 플랫폼", "원자력 발전(SMR)", "데이터센터 전력 장비", "우주 발사체", "게임", "조선"]
+NQ_KR_POOL = ["삼성전자", "SK하이닉스", "현대차", "NAVER", "카카오", "LG화학", "셀트리온", "KB금융", "POSCO홀딩스", "삼성SDI"]
+
+
+def _nq_fresh(day, now):
+    try:
+        return 0 <= (now.date() - datetime.strptime(day[:10], "%Y-%m-%d").date()).days <= NQ_FRESH_DAYS
+    except (TypeError, ValueError):
+        return False
+
+
+def _nq(qid, cat, q, right, wrong, explain, link="", day=""):
+    wrong = [w for w in dict.fromkeys(wrong) if w and w != right][:3]
+    if len(wrong) < 3:
+        return None
+    return {"id": qid, "cat": cat, "q": q, "choices": [right] + wrong, "answer": 0, "explain": explain, "link": link, "day": day}
+
+
+def news_quiz(now, target=None, strong=None):
+    """오늘의 소식 문제 목록 [{id, cat, q, choices(정답이 0번), answer, explain, link, day}]. 자료가 없으면 빈 목록."""
+    out = []
+    md = lambda day: f"{int(day[5:7])}/{int(day[8:10])}"
+    # 1) 전일 미국장 강세종목: 어떤 회사인가
+    for it in (strong or [])[:1]:
+        if _nq_fresh(it.get("date", ""), now) and it.get("sector"):
+            others = [x.get("sector") for x in strong[1:]] + NQ_SECTORS
+            out.append(_nq(f"st:{it['file']}", "강세종목", f"오늘 강세종목 리포트로 다룬 {it['name']}은(는) 어떤 회사일까요?",
+                           it["sector"], random.Random(it["file"]).sample(others, len(others)),
+                           f"{it['name']}({it['ticker']}) · {it['sector']} · 전일 {it.get('changePct', 0):+.2f}%. {it.get('headline', '')}",
+                           "strong/" + it["file"], it["date"]))
+    # 2) 실적 속보 카드: 컨센서스 대비, 발표 뒤 주가
+    for f in sorted(d.FLASH_DIR.glob("*.json"), reverse=True)[:3] if d.FLASH_DIR.is_dir() else []:
+        try:
+            c = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not _nq_fresh(c.get("day", ""), now):
+            continue
+        row = next((r for r in c.get("rows") or [] if len(r) > 3 and r[3] in ("상회", "부합", "하회")), None)
+        if row:
+            opts = {"상회": "예상보다 높았다(상회)", "부합": "예상과 비슷했다(부합)", "하회": "예상보다 낮았다(하회)"}
+            right = opts[row[3]]
+            out.append(_nq(f"ef:{f.stem}:{row[0]}", "실적 속보", f"{c['company']} {c.get('period', '')} {row[0]}은(는) 시장 예상(컨센서스)과 비교해 어땠을까요?",
+                           right, [v for v in opts.values() if v != right] + ["실적을 발표하지 않았다"],
+                           f"{row[0]} {row[1]} · {row[2]}. {c.get('verdict', '')}", "#earn", c["day"]))
+        px = (c.get("px") or [None])[0] or {}
+        ch = px.get("d1") if px.get("d1") is not None else px.get("c")
+        if ch is not None:
+            buckets = ["5% 넘게 올랐다", "0~5% 올랐다", "0~5% 내렸다", "5% 넘게 내렸다"]
+            right = buckets[0 if ch > 5 else 1 if ch >= 0 else 2 if ch > -5 else 3]
+            when = "발표 뒤 첫 정규장" if px.get("d1") is not None else f"{px.get('s', '발표 뒤')}({px.get('t', '')})"
+            out.append(_nq(f"px:{f.stem}", "실적 속보", f"실적 발표 뒤 {c['company']} 주가는 어떻게 움직였을까요? ({when} 기준)",
+                           right, [b for b in buckets if b != right],
+                           f"{px.get('l', c['company'])}: 발표 전 종가 대비 {ch:+.2f}% ({when}). {c.get('verdict', '')}", "#earn", c["day"]))
+    # 3) 국내 잠정실적 영업이익 급증 (kb earnings-live)
+    try:
+        with urllib.request.urlopen(urllib.request.Request(d.EARN_FEED, headers={"User-Agent": d.UA}), timeout=15) as r:
+            feed = json.loads(r.read())
+    except Exception as e:
+        print("퀴즈: earnings-live 읽기 실패:", type(e).__name__, e, file=sys.stderr)
+        feed = {}
+    surge = [i for i in feed.get("items") or [] if str(i.get("surge")) in ("True", "true") and _nq_fresh(i.get("day", ""), now)]
+    names = {i.get("name") for i in surge}
+    for it in surge[:2]:
+        pool = [x["company"] for x in (target or {}).get("up", []) + (target or {}).get("down", [])] + NQ_KR_POOL
+        pool = [p for p in pool if p not in names]
+        cons = it.get("cons") or []
+        out.append(_nq(f"kr:{it['key']}", "국내 실적 공시", f"{md(it['day'])} 잠정실적 공시에서 영업이익이 전분기보다 크게 늘어 '영업이익 급증' 카드에 오른 회사는?",
+                       it["name"], random.Random(it["key"]).sample(pool, len(pool)),
+                       f"{it['name']}: " + " · ".join(cons[:2] if isinstance(cons, list) else [str(cons)]),
+                       it.get("report") or "#earn", it["day"]))
+    # 4) 목표주가 변동: 가장 크게 올린·내린 종목
+    if target and _nq_fresh(target.get("day", ""), now):
+        for key, word in (("up", "올린"), ("down", "내린")):
+            best = {}
+            for x in target.get(key) or []:
+                if x["company"] not in best:
+                    best[x["company"]] = x  # 이미 상승률(하락률) 순으로 정렬돼 있어 처음 것이 그 종목의 최대폭
+            ranked = list(best.values())
+            if len(ranked) >= 2 and abs(ranked[0]["pct"]) > abs(ranked[1]["pct"]):
+                t0 = ranked[0]
+                other = "down" if key == "up" else "up"  # 오답은 같은 쪽 다음 순위 → 반대쪽 종목 → 대형주 순으로 채운다
+                wrong = [x["company"] for x in ranked[1:]] + [x["company"] for x in target.get(other) or []] + NQ_KR_POOL
+                out.append(_nq(f"tp:{target['day']}:{key}", "목표주가 변동", f"{md(target['day'])} 증권사 리포트에서 목표주가를 가장 크게 {word} 종목은?",
+                               t0["company"], wrong,
+                               f"{t0['company']}: {t0['broker']} {t0.get('prev_target') or 0:,}원 → {t0.get('target') or 0:,}원 ({t0['pct']:+.1f}%) · '{t0.get('title', '')}'",
+                               "target/", target["day"]))
+    return [q for q in out if q]
+
+
+def quiz_home(news=()):
+    """오늘의 주식 퀴즈 칸: 오늘의 소식 문제(news) 2개 + 주식 상식·용어 1개. 소식이 모자라면 상식 문제로 채운다."""
     try:
         bank = json.loads(QUIZ_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -1847,7 +1946,7 @@ def quiz_home():
         terms = []
     if len(bank) < 2:
         return ""
-    data = (f"var QB={json.dumps(bank, ensure_ascii=False)},TERMS={json.dumps(terms, ensure_ascii=False)},"
+    data = (f"var NEWS={json.dumps(list(news), ensure_ascii=False)},QB={json.dumps(bank, ensure_ascii=False)},TERMS={json.dumps(terms, ensure_ascii=False)},"
             f"QAPI={json.dumps(VISIT_API)},QNS={json.dumps(VISIT_NS)};").replace("</", "<\\/")
     return (f'<section class="sec" id="quiz"><style>{QUIZ_CSS}</style>'
             '<div class="sec-h"><h2>🧠 오늘의 주식 퀴즈</h2><span class="mt" id="qzd"></span></div>'
@@ -2150,7 +2249,7 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None):
             f'<section class="sec" id="daily">{s1}</section>'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
-            f'{quiz_home()}{tools_home()}</div>'
+            f'{quiz_home(news_quiz(now, target, strong))}{tools_home()}</div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
