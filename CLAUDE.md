@@ -52,3 +52,8 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 ## 실적발표 종목 (/reports/) 한 줄 설명
 - 종목명 아래 설명은 `company_ko.py` 의 `KR_COMPANY`(종목코드 → 한 줄, 약 40자)에서 온다. 새 보고서 종목이 생기면 한 줄 추가하고 merge 한다.
 - 없는 종목은 화면이 보고서 HTML 의 '주요 사업' 첫 문장을 대신 보여 준다(길면 잘림).
+
+## 오늘의 주식 퀴즈 (홈, 계산기·공부 바로 위)
+- 날마다 3문제: `quiz/questions.json`(주식 상식) 2개 + `study/terms.json`(용어사전)으로 자동으로 만드는 용어 문제 1개. 보는 사람 브라우저가 한국 날짜로 골라 자정에 바뀐다.
+- 사용자가 "퀴즈 추가해줘"라고 하면 `quiz/questions.json` 끝에 {cat, q, choices[보기 4개], answer(정답 번호 0~3), explain} 를 넣고 merge 한다. 사실은 출처로 확인하고, 정답이 하나만 맞도록 보기를 쓴다(보기 순서는 화면에서 섞인다).
+- 참여 수는 방문자 현황(/visits/)의 '오늘의 주식 퀴즈' 칸(c-quiz)에서 본다. 코드: build_site.py 의 `quiz_home()`·`QUIZ_JS`.
