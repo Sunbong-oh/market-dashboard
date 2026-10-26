@@ -427,6 +427,8 @@ def build_live(now):
     nhd = next((p for p in dated_dirs(DAILY) if (p / "newhighs.html").exists()), None)
     if nhd:
         html = with_newhighs(html, f"../{nhd.name}/newhighs.html", newhighs_count(nhd))
+    # 사이트 빌드(예약 실행)가 늦거나 멈춰도 카드 시세는 us-live 의 1분 시세로 계속 바뀌게 한다 (이 화면을 만든 시각 이후 시세만)
+    html = with_us_live(html, now.strftime("%Y-%m-%d %H:%M"))  # now 는 KST
     (dest / "index.html").write_text(with_nav(html, "../../", "daily/"), encoding="utf-8")
     (dest / "embed.html").write_text(embed_html(html, btc_live=True), encoding="utf-8")
     return dict(at=now, embed="daily/live/embed.html")
