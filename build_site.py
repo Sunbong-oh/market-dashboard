@@ -664,18 +664,28 @@ FUT_CSS = """<style>
 .fut .note{margin:6px 0 0;font-size:12px;color:#8a92a3}
 .fut .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e03131;margin-right:5px;animation:futp 1.4s infinite}
 @keyframes futp{50%{opacity:.25}}
+.fut .ftab{display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+.fut .ftab button{font:800 14px/1 'Malgun Gothic',system-ui,sans-serif;padding:9px 14px;border-radius:10px;border:1px solid #d6dae2;background:#fff;color:#1c2330;cursor:pointer}
+.fut .ftab button.on{background:#1c2330;color:#fff;border-color:#1c2330}
 </style>"""
 # 선물 교차 차트: 장마감 페이지(저장된 json)와 홈 실시간 박스(flow-live 브랜치)에서 같은 함수로 그린다.
 FUT_JS = r"""<script>
+/* d.idx = {코스피:{p:전일 종가, pts:[[HHMM,값],…]}, 코스닥:…} 가 있으면 위 버튼으로 검은 선을 KOSPI200 선물 ↔ 코스피 ↔ 코스닥으로 바꿔 본다 */
+function futIdx(it){var o={};[['KGG01P','코스피'],['QGG01P','코스닥']].forEach(function(k){var v=it&&it[k[0]],pts=((v&&v.points)||[]).filter(function(p){return p.c!=null}).map(function(p){return [p.t,p.c]});
+ if(pts.length>1&&v.prev_close)o[k[1]]={p:v.prev_close,pts:pts}});return o}
 function futChart(el,d,live){
  var tm=function(t){t=String(t);while(t.length<4)t='0'+t;return (+t.slice(0,2))*60+(+t.slice(2,4))-525};
  var ok=function(m){return m>=0&&m<=420};
- var bars=(d.bars||[]).filter(function(b){return b.c!=null}).map(function(b){return [tm(b.t),b.c]}).filter(function(p){return ok(p[0])});
+ var IX=d.idx||{},S=el._s&&IX[el._s]?el._s:'fut';el._d=d;el._live=live;
+ el.onclick=function(e){var b=e.target.closest('[data-fs]');if(!b)return;el._s=b.dataset.fs;futChart(el,el._d,el._live)};
+ var fbars=(d.bars||[]).filter(function(b){return b.c!=null}),futLast=fbars.length?fbars[fbars.length-1].c:null;
+ var bars=(S==='fut'?fbars.map(function(b){return [tm(b.t),b.c]}):IX[S].pts.map(function(p){return [tm(p[0]),p[1]]})).filter(function(p){return ok(p[0])});
+ var NM=S==='fut'?'KOSPI200 선물':S;
  var fl=(d.flows||[]).filter(function(r){return r['외국인']!=null}).map(function(r){return [tm(r.t),r['외국인']]}).filter(function(p){return ok(p[0])});
  if(bars.length<2)return false;
  var hf=fl.length>=2,cf=d.current_flows||{},lf=bars[bars.length-1],last=lf[1];
  var fg=hf?fl[fl.length-1][1]:cf['외국인'];
- var F=d.futures||{},prev=(F.price!=null&&F.change!=null)?F.price-F.change:null;
+ var F=d.futures||{},prev=S!=='fut'?IX[S].p:(F.price!=null&&F.change!=null)?F.price-F.change:null;
  /* 장중에는 가로축을 08:45~(마지막 기록+30분)으로 줄여 지금까지의 흐름을 넓게 보여 준다. 장 마감 뒤엔 하루 전체 */
  var lastM=Math.max(lf[0],hf?fl[fl.length-1][0]:0),END=live?Math.min(420,Math.max(lastM+30,90)):420;
  var W=640,H=310,L=92,R=548,T=14,B=262,x=function(m){return L+(R-L)*m/END};
@@ -683,7 +693,7 @@ function futChart(el,d,live){
    return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
  var sf=sc(bars.map(function(p){return p[1]})),sg=hf?sc(fl.map(function(p){return p[1]})):null;
  /* 두 축의 비율 고정: 선물 지수 2포인트 = 외국인 200억(1포인트 = 100억). 더 크게 움직인 쪽에 맞춰 둘 다 같은 비율로 */
- if(hf){var RATIO=100,span=Math.max(sf.hi-sf.lo,(sg.hi-sg.lo)/RATIO),fm=(sf.hi+sf.lo)/2,gm=(sg.hi+sg.lo)/2;
+ if(hf){var RATIO=S==='fut'||!futLast?100:100*futLast/last,span=Math.max(sf.hi-sf.lo,(sg.hi-sg.lo)/RATIO),fm=(sf.hi+sf.lo)/2,gm=(sg.hi+sg.lo)/2;
   var mk=function(lo,hi){return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
   sf=mk(fm-span/2,fm+span/2);sg=mk(gm-span*RATIO/2,gm+span*RATIO/2)}
  var path=function(ps,y){return 'M'+ps.map(function(p){return x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)}).join(' L')};
@@ -701,7 +711,7 @@ function futChart(el,d,live){
    (z0&&yz-T>=24&&B-yz>=20?'<text x="'+(R+6)+'" y="'+(yz+5).toFixed(1)+'" fill="#e03131">0</text>':'')+
    '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#e03131" stroke-width="3.2" stroke-linejoin="round"/>'+
    '<circle cx="'+x(fl[fl.length-1][0]).toFixed(1)+'" cy="'+sg.y(fl[fl.length-1][1]).toFixed(1)+'" r="5" fill="#e03131"/>'}
- var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="KOSPI200 선물과 외국인 선물 순매수 누적 교차 차트" style="font:15px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'+
+ var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+NM+'과 외국인 선물 순매수 누적 교차 차트" style="font:15px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'+
   '<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(B-T)+'" fill="#fafbfc" stroke="#e3e6ec"/>'+grid+
   '<text x="'+(L-6)+'" y="'+(T+12)+'" text-anchor="end">'+f2(sf.hi)+'</text><text x="'+(L-6)+'" y="'+(B+4)+'" text-anchor="end">'+f2(sf.lo)+'</text>'+
   '<path d="'+path(bars,sf.y)+'" fill="none" stroke="#1c2330" stroke-width="1.4" stroke-linejoin="round" opacity=".7"/>'+fsvg+'</svg>';
@@ -710,12 +720,14 @@ function futChart(el,d,live){
  var gc=fg>0?'up':fg<0?'dn':'';
  var badge='<div class="badge2">'+(fg!=null?'<div class="fg '+gc+'"><span class="k">외국인 선물 누적 · 주간장'+(hf?'':' (마감)')+'</span><b>'+sg0(fg)+'억</b>'+
   '<span class="c">'+(fg>0?'순매수':fg<0?'순매도':'')+(d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+'억 '+(d30>0?'사는 중':d30<0?'파는 중':''):'')+'</span></div>':'')+
-  (ch!=null?'<div class="fu '+cls+'"><span class="k">KOSPI200 선물</span><b>'+f2(last)+'</b><span class="c"><em class="pc">'+(pct>0?'+':'')+pct.toFixed(2)+'%</em> '+
+  (ch!=null?'<div class="fu '+cls+'"><span class="k">'+NM+'</span><b>'+f2(last)+'</b><span class="c"><em class="pc">'+(pct>0?'+':'')+pct.toFixed(2)+'%</em> '+
   (ch>0?'▲':ch<0?'▼':'')+f2(Math.abs(ch))+'</span></div>':'')+'</div>';
  var rest=hf?(d.flows||[]).slice(-1)[0]||{}:cf,oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])}).join(' · ');
  var hh=lf[0]+525,hhmm=Math.floor(hh/60)+':'+('0'+hh%60).slice(-2);
- el.innerHTML=badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) · ':'')+
-  '<b style="color:#495057">━ KOSPI200 선물</b> (좌) '+f2(last)+'<br><span style="font-size:12px">※ 주간장 기준(08:45~15:45) · 야간장 미포함 — MTS·HTS 투자자동향(야간 포함)과 다를 수 있음</span></p>'+svg+
+ var tabs=Object.keys(IX).length?'<div class="ftab">'+[['fut','KOSPI200 선물']].concat(Object.keys(IX).map(function(k){return [k,k]})).map(function(t){
+   return '<button type="button" data-fs="'+t[0]+'"'+(t[0]===S?' class="on"':'')+'>'+t[1]+'</button>'}).join('')+'</div>':'';
+ el.innerHTML=tabs+badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ 외국인 순매수 누적</b> (우, 억원) · ':'')+
+  '<b style="color:#495057">━ '+NM+'</b> (좌) '+f2(last)+'<br><span style="font-size:12px">※ 주간장 기준(08:45~15:45) · 야간장 미포함 — MTS·HTS 투자자동향(야간 포함)과 다를 수 있음</span></p>'+svg+
   '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 1분마다 기록, 화면은 1~2분마다 자동 갱신':
   (hf?'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)':'외국인 분 단위 추이는 회사 PC 기록이 있는 날부터 함께 그려집니다'))+'</p>';
  return true}
@@ -726,7 +738,18 @@ def _fut_data(d):
     keep = ("t", "외국인", "기관계", "개인")
     return {"futures": d.get("futures"), "bars": [{"t": b["t"], "c": b.get("c")} for b in d.get("bars") or []],
             "flows": [{k: r[k] for k in keep if k in r} for r in d.get("flows") or []],
-            "current_flows": {k: v for k, v in (d.get("current_flows") or {}).items() if k in keep}}
+            "current_flows": {k: v for k, v in (d.get("current_flows") or {}).items() if k in keep}, "idx": d.get("idx") or {}}
+
+
+def _idx_data(it):
+    """/api/indices/intraday → {코스피: {p: 전일 종가, pts: [[HHMM, 값], …]}, 코스닥: …} (JS futIdx 와 같은 모양)."""
+    out = {}
+    for code, name in (("KGG01P", "코스피"), ("QGG01P", "코스닥")):
+        v = (it or {}).get(code) or {}
+        pts = [[p["t"], p["c"]] for p in v.get("points") or [] if p.get("c") is not None]
+        if len(pts) > 1 and v.get("prev_close"):
+            out[name] = {"p": v["prev_close"], "pts": pts}
+    return out
 
 
 # 리포트의 '투자자별 순매수' 카드는 스크립트가 나중에 그리므로, 다 그려지면 차트를 '선물 · 옵션' 막대 바로 아래로 옮긴다
@@ -774,10 +797,15 @@ def futures_chart(day_dir):
                 return ""
             raw = json.JSONDecoder().raw_decode(txt[txt.index("{", i):])[0]
         final_flows(raw, day_dir)
+        h = next(day_dir.glob("*.html"), None)
+        txt = h.read_text(encoding="utf-8") if h else ""
+        i = txt.find('"/api/indices/intraday": {')
+        if i >= 0:
+            raw["idx"] = _idx_data(json.JSONDecoder().raw_decode(txt[txt.index("{", i):])[0])
         data = json.dumps(_fut_data(raw), ensure_ascii=False).replace("</", "<\\/")
     except (ValueError, KeyError, TypeError, AttributeError):
         return ""
-    return (f'{FUT_CSS}<div class="box fut" id="futbox"><h3>선물지수 · 외국인 선물 순매수 (분 단위)</h3><div></div></div>{FUT_JS}'
+    return (f'{FUT_CSS}<div class="box fut" id="futbox"><h3>지수 · 외국인 선물 순매수 (분 단위)</h3><div></div></div>{FUT_JS}'
             f'<script>(function(b){{if(!futChart(b.lastChild,{data}))b.remove()}})'
             f'(document.currentScript.previousElementSibling.previousElementSibling)</script>{FUT_MOVE_JS}')
 
@@ -798,6 +826,7 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
   var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
   try{refreshFast();refreshSlow()}catch(e){}
   var f=j.data['/api/futures?minutes=1'],fb=document.getElementById('futbox');
+  if(f&&window.futIdx){f=Object.assign({},f,{idx:futIdx(j.data['/api/indices/intraday'])})}
   if(f&&fb&&window.futChart){fb.hidden=!futChart(fb.lastChild,f,true)}
   try{parent!==window&&parent.postMessage({liveClose:j.time,fut:f||null},'*')}catch(e){}}
  /* 리포트 페이지는 window.fetch를 스냅샷 읽기로 바꿔 두므로 XMLHttpRequest로 가져온다 */
