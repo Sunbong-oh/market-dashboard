@@ -113,5 +113,30 @@
    "sp500": -0.52,
    "source": "Yahoo Finance 일봉 종가(^IXIC 25,955.34 · ^GSPC 7,623.68)"
   }
+ },
+ {
+  "date": "2026-10-27",
+  "ticker": "TSLA",
+  "exchange": "NASDAQ",
+  "name": "테슬라",
+  "nameEn": "Tesla",
+  "sector": "전기차·에너지저장·AI",
+  "price": 394.58,
+  "changePct": 6.01,
+  "priceNote": "10/26 장중 · Barclays 투자의견 상향(목표가 $370→$450) · 연초 대비 −12% · 52주 고점 $498.83 대비 −21%",
+  "headline": "Barclays가 SpaceX 합병 시 인수 프리미엄 가능성을 들어 Overweight로 올리며 급등. 이사회 특별위원회가 합병 포함 검토 중(10-Q)이지만, 영업이익은 3년째 줄어 TTM 이익률 3.3%, 2026 CAPEX $20bn+로 FCF $3.3bn — EV/EBITDA 약 100배.",
+  "tags": [
+   "설비 집약 산업",
+   "EV/EBITDA 102x",
+   "SpaceX 합병 검토",
+   "Non-GAAP PER 229x"
+  ],
+  "file": "2026-10-27_TSLA.html",
+  "market": {
+   "day": "2026-10-26",
+   "nasdaq": 1.0,
+   "sp500": 0.76,
+   "source": "Yahoo Finance 일봉 장중(^IXIC 26,214.72 · ^GSPC 7,681.68)"
+  }
  }
 ]
