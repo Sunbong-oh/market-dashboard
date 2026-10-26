@@ -152,6 +152,13 @@ button.gm-card{font:inherit;color:inherit;cursor:pointer}button.gm-card:hover:en
 .gm-over b{font-size:20px}.gm-over button{margin-top:10px;font:800 15px/1 inherit;padding:11px 20px;border-radius:10px;border:0;background:#F2A900;color:#3D3A35;cursor:pointer}
 .up{color:var(--up)}.down{color:var(--down)}
 .gm-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:14px}
+.cg-tag{display:inline-block;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;background:#FBE7B0;color:#3D3A35}
+.cg-svg{display:block;width:100%;height:170px;margin:8px 0 6px;background:var(--bg);border-radius:12px}
+.cg-info{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13.5px;justify-content:center}.cg-info b{font-size:16px}
+.cg-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cg-opts button{font:800 15px/1.3 inherit;padding:12px 6px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;word-break:keep-all}
+.cg-opts button.ok{border-color:#2f9e44;background:#e6f6ec}.cg-opts button.no{border-color:#e03131;background:#fdecec}
+.cg-ex{margin-top:10px;font-size:13.5px;line-height:1.6;padding:10px 12px;border-left:4px solid #F2A900;background:var(--bg);border-radius:0 10px 10px 0;word-break:keep-all}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .gm-card.ok{background:#16301f}:root:not([data-theme=light]) .gm-card.no{background:#3a1c1c}}
 :root[data-theme=dark] .gm-card.ok{background:#16301f}:root[data-theme=dark] .gm-card.no{background:#3a1c1c}"""
 
@@ -177,10 +184,33 @@ function draw(msg){busy=false;
   '<div class="gm-row">'+card(A,false,'button')+'<span class="gm-vs">VS</span>'+card(B,false,'button')+'</div><div class="gm-msg">'+(msg||'')+'</div>'}}
 function over(msg){var b=best();if(score>b)setBest(score);
  box.insertAdjacentHTML('beforeend','<div class="gm-over">'+msg+'<br>이번 판 <b>'+score+'점</b>'+(score>b?' · 🎉 최고 기록!':' · 최고 '+Math.max(b,score)+'점')+'<br><button type="button" data-g="again">다시 하기</button></div>')}
-function start(){score=0;A=pick();B=pair(A);draw()}
-box.addEventListener('click',function(e){var g=e.target.closest('[data-g]'),c=e.target.closest('button.gm-card');
+var CQ=[],cq=null;
+function cqueue(){var pat=CP.filter(function(x){return x.pat!=='차트'}),gen=CP.filter(function(x){return x.pat==='차트'});
+ function sh(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+ pat=sh(pat);gen=sh(gen);var q=[];while(pat.length||gen.length){if(pat.length)q.push(pat.shift());if(gen.length)q.push(gen.shift())}return q}
+function svg(p){var w=300,h=120,n=p.pts.length,xs=function(i){return (i/(n-1)*w).toFixed(1)},ys=function(v){return (h-6-v/100*(h-12)).toFixed(1)};
+ var line=p.pts.map(function(v,i){return xs(i)+','+ys(v)}).join(' '),col=p.ch>=0?'#e03131':'#1c6dd0';
+ return '<svg class="cg-svg" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><polygon points="0,'+h+' '+line+' '+w+','+h+'" fill="'+col+'" opacity=".12"/>'+
+  '<polyline points="'+line+'" fill="none" stroke="'+col+'" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>'}
+function opts(p){var near=S.filter(function(x){return x.n!==p.n&&x.c>p.c*0.33&&x.c<p.c*3}),o=[p.n];
+ while(o.length<4&&near.length){var k=Math.floor(Math.random()*near.length),x=near.splice(k,1)[0];if(o.indexOf(x.n)<0)o.push(x.n)}
+ while(o.length<4){var r=pick();if(o.indexOf(r.n)<0)o.push(r.n)}
+ for(var i=o.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=o[i];o[i]=o[j];o[j]=t}return o}
+function dlab(d){return d.slice(2,4)+'.'+d.slice(4,6)+'.'+d.slice(6,8)}
+function drawChart(msg){busy=false;if(!CQ.length)CQ=cqueue();cq=CQ.shift();var p=cq,o=opts(p);cq.o=o;
+ box.innerHTML=top()+'<div class="gm-q">이 차트와 가격은 어느 회사일까요? '+(p.pat!=='차트'?'<span class="cg-tag">'+esc(p.pat)+(p.pat==='u자형'?' · 오른쪽 덜 오름':'')+'</span>':'')+'</div>'+svg(p)+
+  '<div class="cg-info"><span>현재가 <b>'+p.price.toLocaleString('ko-KR')+'원</b></span><span>1년 '+pct(p.ch)+'</span>'+
+  '<span>52주 '+p.lo.toLocaleString('ko-KR')+' ~ '+p.hi.toLocaleString('ko-KR')+'</span><span style="color:var(--muted)">'+dlab(p.d0)+' ~ '+dlab(p.d1)+' 일봉 종가</span></div>'+
+  '<div class="cg-opts">'+o.map(function(n){return '<button type="button" data-o="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div><div class="gm-msg">'+(msg||'')+'</div>'}
+function start(){score=0;if(mode==='chart'){if(!CP.length){box.innerHTML='<p class="gm-msg">차트 자료를 불러오지 못했어요.</p>';return}drawChart();return}A=pick();B=pair(A);draw()}
+box.addEventListener('click',function(e){var g=e.target.closest('[data-g]'),c=e.target.closest('button.gm-card'),op=e.target.closest('button[data-o]');
  if(g&&g.dataset.g==='again'){start();return}
  if(busy)return;
+ if(mode==='chart'&&op){count();busy=true;var ok=op.dataset.o===cq.n;
+  box.querySelectorAll('.cg-opts button').forEach(function(x){x.disabled=true;if(x.dataset.o===cq.n)x.classList.add('ok');else if(x===op)x.classList.add('no')});
+  var ex='<div class="cg-ex"><b>'+esc(cq.n)+'</b> · '+esc(cq.m)+' · '+esc(cq.s)+(PN[cq.pat]?'<br><b>'+esc(cq.pat)+'</b>: '+esc(PN[cq.pat]):'')+'</div>';
+  box.querySelector('.gm-msg').insertAdjacentHTML('beforebegin',ex);
+  if(ok){score++;setTimeout(function(){drawChart('✅ 정답! '+esc(cq.n))},1800)}else over('❌ 정답은 '+esc(cq.n));return}
  if(mode==='cap'&&g){count();busy=true;var ok=(g.dataset.g==='hi')===(B.c>A.c);
   box.querySelectorAll('.gm-card')[1].outerHTML=card(B,true,'div',ok?'ok':'no');box.querySelectorAll('.gm-btns button').forEach(function(x){x.disabled=true});
   if(ok){score++;var nb=B;setTimeout(function(){A=nb;B=pair(A);draw('✅ 정답! '+esc(nb.n)+' '+won(nb.c))},900)}
@@ -202,16 +232,165 @@ def build(out, page, now, api, ns):
     else:
         d = datetime.strptime(day[:10], "%Y-%m-%d") if day else now
         dlab = f"{d.month}/{d.day}({'월화수목금토일'[d.weekday()]})"
+        try:
+            puzzles = chart_puzzles(rows)
+        except Exception as e:  # 차트 문제가 실패해도 다른 게임은 돈다
+            print("차트 문제 실패:", type(e).__name__, e)
+            puzzles = []
         data = (f"var S={json.dumps(rows, ensure_ascii=False, separators=(',', ':'))},DAY={json.dumps(dlab)},"
+                f"CP={json.dumps(puzzles, ensure_ascii=False, separators=(',', ':'))},PN={json.dumps(PATTERN_NOTE, ensure_ascii=False)},"
                 f"PAPI={json.dumps(api)},PNS={json.dumps(ns)};").replace("</", "<\\/")
         body = (f'<style>{GAME_CSS}</style>'
                 '<div class="gm-tabs"><button type="button" class="on" data-m="cap">💰 시가총액 대결</button>'
-                '<button type="button" data-m="chg">📈 오늘 더 오른 종목</button></div>'
+                '<button type="button" data-m="chg">📈 오늘 더 오른 종목</button>'
+                '<button type="button" data-m="chart">📊 차트 보고 맞히기</button></div>'
                 '<div class="gm" id="gm"></div>'
                 f'<p class="gm-note">· 자료: 네이버 증권 업종별 종목 시가총액·등락률 ({escape(day)} 기준, 시가총액 상위 {len(rows)}종목, ETF·우선주 제외).<br>'
                 '· 틀릴 때까지 계속 이어집니다. 최고 기록은 이 기기에만 저장돼요.<br>'
                 '· 홈의 <a href="../#predict">🎯 코스피 오를까 내릴까?</a>에서 다음 장을 맞혀 보세요.</p>'
                 f'<script>{data}\n{GAME_JS}</script>')
     (out / "play" / "index.html").write_text(page("🎮 놀이터", body, "../", "play/", "PLAYGROUND",
-                                                  "시가총액 대결 · 오늘 더 오른 종목 맞히기"), encoding="utf-8")
+                                                  "시가총액 대결 · 오늘 더 오른 종목 · 차트 보고 회사 맞히기"), encoding="utf-8")
     return len(rows)
+
+
+# ---------- 📊 차트 보고 맞히기 (패턴: 52주 신고가 · N자형 · 오른쪽이 덜 오른 u자형) ----------
+FCHART = "https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count=260&requestType=0"
+CODES_URL = "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/study-fin/index.json"
+PATTERN_NOTE = {
+    "신고가": "최근 1년(52주) 가장 높은 가격 근처에서 마감. 위에 매물이 없어 추세가 이어지기 쉬운 자리로 봅니다.",
+    "N자형": "한 번 오르고(첫 다리) 눌림을 준 뒤 다시 올라 직전 고점을 넘은 모양. 눌림에서 버틴 매수세를 확인한 돌파로 봅니다.",
+    "u자형": "고점에서 크게 빠진 뒤 바닥을 둥글게 다지고 오른쪽이 아직 덜 올라온 모양(컵의 오른쪽 벽이 덜 찬 상태). 왼쪽 고점까지 회복할지가 관전 포인트입니다.",
+}
+
+
+def _closes(code):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(FCHART.format(code=code), headers=UA), timeout=15) as r:
+            xml = r.read().decode("euc-kr", "replace")
+    except Exception:
+        return []
+    out = []
+    for d in re.findall(r'<item data="([^"]+)"', xml):
+        f = d.split("|")
+        try:
+            out.append((f[0], float(f[4])))
+        except (IndexError, ValueError):
+            continue
+    return out
+
+
+def find_pattern(cl):
+    """종가 목록(오래된 것부터, 약 1년)에서 패턴 이름. 없으면 None."""
+    n = len(cl)
+    if n < 200:
+        return None
+    last = cl[-1]
+    # 52주 신고가: 최근 20거래일 안에 1년 최고가를 찍었고, 지금도 그 가격의 95% 이상
+    hi = max(cl)
+    if cl.index(hi) >= n - 20 and last >= hi * 0.95:
+        return "신고가"
+    # N자형: 최근 120일 안에 첫 고점(12% 넘게 오른 뒤) → 6% 넘게 눌림 → 최근 15일 안에 첫 고점을 넘음
+    w = cl[-120:]
+    p1 = max(range(len(w) - 10), key=lambda i: w[i])
+    lo0 = min(w[max(0, p1 - 60):p1 + 1])
+    tr = min(w[p1:])
+    if (w[p1] >= lo0 * 1.12 and tr <= w[p1] * 0.94 and w.index(tr, p1) < len(w) - 3
+            and last > w[p1] and any(x <= w[p1] for x in w[-15:-1])):
+        return "N자형"
+    # u자형(오른쪽 미상승): 90일 넘은 왼쪽 고점 → 25% 넘게 빠진 바닥(가운데쯤, 30일 넘게 지남) → 바닥 근처에서 15일 넘게 다짐
+    # → 지금은 바닥보다 8% 넘게 올랐지만 낙폭의 절반도 못 회복, 최근 20일은 오르는 중
+    left = max(range(n - 90), key=lambda i: cl[i])
+    b = min(range(left, n), key=lambda i: cl[i])
+    H, B = cl[left], cl[b]
+    base = sum(1 for x in cl[left:] if x <= B * 1.12)
+    if (H >= B * 1.33 and b - left >= 30 and n - 1 - b >= 30 and base >= 15
+            and B * 1.08 <= last <= B + (H - B) * 0.5 and last > cl[-20]):
+        return "u자형"
+    return None
+
+
+def chart_puzzles(rows):
+    """게임에 쓸 차트 문제 [{n, m, s, c(시가총액), pat, price, hi, lo, ch(1년 등락 %), pts(0~100 정규화 120점), d0, d1}]."""
+    codes = {}
+    j = _get(CODES_URL) or {}
+    for code, name, *_ in j.get("list") or []:
+        codes[name] = code
+    cands = [r for r in rows[:220] if r["n"] in codes]
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        series = list(ex.map(lambda r: _closes(codes[r["n"]]), cands))
+    out = []
+    for r, ser in zip(cands, series):
+        cl = [c for _, c in ser]
+        pat = find_pattern(cl) or ("차트" if len(cl) >= 200 else None)  # 패턴이 없는 종목도 '차트 보고 맞히기'로 쓴다
+        if not pat:
+            continue
+        step = max(1, len(cl) // 120)
+        pick = cl[::step][-120:]
+        lo, hi = min(pick), max(pick)
+        pts = [round((x - lo) / (hi - lo) * 100, 1) if hi > lo else 50 for x in pick]
+        out.append({"n": r["n"], "m": r["m"], "s": r["s"], "c": r["c"], "pat": pat, "price": cl[-1], "hi": max(cl), "lo": min(cl),
+                    "ch": round((cl[-1] / cl[0] - 1) * 100, 1), "pts": pts, "d0": ser[0][0], "d1": ser[-1][0]})
+    keep = []
+    for pat in list(PATTERN_NOTE) + ["차트"]:  # 패턴마다 시가총액 큰 순으로 12개까지, 패턴 없는 차트는 40개까지
+        keep += [x for x in out if x["pat"] == pat][:40 if pat == "차트" else 12]
+    print("차트 문제:", {p: sum(1 for x in keep if x["pat"] == p) for p in list(PATTERN_NOTE) + ["차트"]}, "/ 후보", len(cands))
+    return keep
+
+
+# ---------- 🧪 전략 검증 (/lab/): '영업이익 급증' 알림 시각 매수 → 5분 뒤 매도 ----------
+FEED_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/earnings-live/earnings.json"
+LAB_CSS = """.lb-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px}
+@media (max-width:560px){.lb-sum{grid-template-columns:1fr 1fr}}
+.lb-sum div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.lb-sum>div>span{display:block;font-size:12.5px;color:var(--muted);font-weight:700}.lb-sum b{font-size:22px;font-variant-numeric:tabular-nums}
+.lb-rule{background:#FBE7B0;color:#3D3A35;border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.6;margin:0 0 12px;word-break:keep-all}
+.lb-eq{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 12px}
+.lb-eq svg{display:block;width:100%;height:120px}.lb-eq .t{font-size:13px;color:var(--muted);font-weight:700}
+.lb-t{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.lb-t td,.lb-t th{padding:8px 6px;border-top:1px solid var(--line);text-align:right;vertical-align:top}
+.lb-t th{font-size:12.5px;color:var(--muted)}.lb-t td:first-child,.lb-t th:first-child{text-align:left}
+.lb-t .n{font-weight:800}.lb-t .s{font-size:12px;color:var(--muted)}.lb-t .r{font-weight:900;font-size:16px}
+.up{color:var(--up)}.down{color:var(--down)}
+.lb-note{font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:14px}"""
+LAB_JS = r"""(function(){var box=document.getElementById('lab'),COST=0.25;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function pc(v,d){return '<span class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+v.toFixed(d==null?2:d)+'%</span>'}
+function hm(s){return s.slice(0,2)+':'+s.slice(2,4)}
+function md(iso){return (+iso.slice(5,7))+'/'+(+iso.slice(8,10))+' '+iso.slice(11,16)}
+function render(L){var done=L.filter(function(e){return e.ret!=null}),wait=L.filter(function(e){return e.ret==null&&!e.skip}),skip=L.filter(function(e){return e.skip});
+ var n=done.length,win=done.filter(function(e){return e.ret>0}).length,avg=n?done.reduce(function(a,e){return a+e.ret},0)/n:0;
+ var eq=[100],m=100;done.slice().reverse().forEach(function(e){m*=1+(e.ret-COST)/100;eq.push(m)});
+ var sum='<div class="lb-sum"><div><span>매매 건수</span><b>'+n+'</b></div><div><span>승률</span><b>'+(n?Math.round(win/n*100):0)+'%</b></div>'+
+  '<div><span>평균 수익률</span><b>'+(n?pc(avg):'-')+'</b></div><div><span>비용 뺀 누적</span><b>'+(n?pc(m-100,1):'-')+'</b></div></div>';
+ var chart='';if(n>=2){var w=300,h=100,lo=Math.min.apply(0,eq),hi=Math.max.apply(0,eq);if(hi===lo){hi+=1;lo-=1}
+  var pts=eq.map(function(v,i){return (i/(eq.length-1)*w).toFixed(1)+','+(h-6-(v-lo)/(hi-lo)*(h-12)).toFixed(1)}).join(' ');
+  var y0=(h-6-(100-lo)/(hi-lo)*(h-12)).toFixed(1);
+  chart='<div class="lb-eq"><div class="t">100에서 시작해 매매마다 (수익률 − 비용 '+COST+'%)씩 불린 값 · 지금 '+m.toFixed(1)+'</div>'+
+   '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><line x1="0" x2="'+w+'" y1="'+y0+'" y2="'+y0+'" stroke="#aaa" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>'+
+   '<polyline points="'+pts+'" fill="none" stroke="'+(m>=100?'#e03131':'#1c6dd0')+'" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div>'}
+ var rows=L.map(function(e){var lag=Math.round((Date.parse(e.sent)-Date.parse(e.disclosed))/6e4);
+  var res=e.ret!=null?'<span class="r">'+pc(e.ret)+'</span><div class="s">'+hm(e.buy_t)+' '+e.buy.toLocaleString('ko-KR')+' → '+hm(e.sell_t)+' '+e.sell.toLocaleString('ko-KR')+'</div>'
+   :e.skip?'<span class="s">'+esc(e.skip)+'</span>':'<span class="s">계산 중 (매도 시각 뒤 다음 감시 때)</span>';
+  return '<tr><td><span class="n">'+esc(e.name)+'</span><div class="s">'+esc(e.head||'')+'</div><div class="s">공시 '+md(e.disclosed)+' → 알림 '+md(e.sent).slice(-5)+' ('+lag+'분 뒤)'+(e.note?' · '+esc(e.note):'')+'</div></td><td>'+res+'</td></tr>'}).join('');
+ box.innerHTML='<div class="lb-rule">📌 규칙: 국내 <b>영업이익 급증</b> 알림(텔레그램)이 도착한 시각에 <b>다음 1분봉 시가로 매수</b>하고, <b>5분 뒤 1분봉 시가로 매도</b>했다면?</div>'+sum+chart+
+  (L.length?'<table class="lb-t"><thead><tr><th>종목 · 공시 → 알림</th><th>5분 수익률</th></tr></thead><tbody>'+rows+'</tbody></table>':'<p class="err">아직 기록이 없습니다.</p>')}
+render(SEED);
+fetch(FEED+'?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.strategy&&j.strategy.length)render(j.strategy)}).catch(function(){})})();"""
+
+
+def build_lab(out, page):
+    """전략 검증 페이지. 기록은 kb 실적 감시가 earnings.json 의 strategy 에 쌓는다(사이트를 만들 때 넣고, 볼 때 최신으로 다시 읽음)."""
+    seed = (_get(FEED_URL) or {}).get("strategy") or []
+    data = (f"var SEED={json.dumps(seed, ensure_ascii=False)},FEED={json.dumps(FEED_URL)};").replace("</", "<\\/")
+    body = (f'<style>{LAB_CSS}</style><div id="lab"></div>'
+            '<p class="lb-note">· 메시지 시각은 실적 감시가 알림을 보낸 분(分)입니다. 그 다음 1분봉 시가에 사고 5분 뒤 1분봉 시가에 판 것으로 계산합니다(네이버 증권 1분봉).<br>'
+            '· 장 시작 전 알림은 09:00 시가에 사서 09:05에 판 것으로, 15:20 이후 알림은 매매하지 않은 것으로 봅니다.<br>'
+            '· 누적은 수수료·세금·체결 차이를 합쳐 매매마다 0.25%를 뺀 <b>가정</b>입니다. 실제 체결가는 호가·주문량에 따라 다릅니다.<br>'
+            '· 투자 권유가 아닌 전략 점검용 기록입니다. 알림이 나갈 때마다 자동으로 늘어납니다.</p>'
+            f'<script>{data}\n{LAB_JS}</script>')
+    (out / "lab").mkdir(parents=True, exist_ok=True)
+    (out / "lab" / "index.html").write_text(page("🧪 전략 검증", body, "../", "lab/", "STRATEGY LAB",
+                                                 "실적 서프라이즈 알림에 사서 5분 뒤에 팔면?"), encoding="utf-8")
+    return len(seed)

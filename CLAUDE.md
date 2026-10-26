@@ -66,4 +66,9 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 ## 놀이터 (/play/) · 코스피 오를까 내릴까? (홈, 퀴즈 바로 위)
 - 코드 `play_page.py`. 홈 투표: 다음 거래일 코스피가 직전 종가보다 오를지 내릴지(그날 09:00 마감). 채점은 야후 ^KS11 일봉(사이트 만들 때 넣음)으로 보는 사람 브라우저가 한다.
   다른 사람 투표 수는 Abacus `vote-YYYYMMDD-u/d`, 내 기록은 그 기기(localStorage `pd-votes`).
-- 게임: 시가총액 대결 · 오늘 더 오른 종목 맞히기. 자료는 kb flow-live `map.json`(시가총액 상위 500, ETF·우선주 제외)을 사이트 만들 때 넣는다. 최고 기록은 그 기기에만, 플레이 수는 방문자 현황 '놀이터 게임'(c-game).
+- 게임: 시가총액 대결 · 오늘 더 오른 종목 · 📊 차트 보고 회사 맞히기. 자료는 kb flow-live `map.json`(시가총액 상위 500, ETF·우선주 제외)을 사이트 만들 때 넣는다. 최고 기록은 그 기기에만, 플레이 수는 방문자 현황 '놀이터 게임'(c-game).
+- 차트 맞히기: 시가총액 상위 220종목의 1년 일봉(네이버 fchart)에서 패턴을 찾아(`find_pattern`: 52주 신고가 · N자형 · 오른쪽이 덜 오른 u자형) 패턴마다 12개 + 패턴 없는 차트 40개를 문제로 넣는다. 패턴 문제가 먼저 번갈아 나온다.
+
+## 전략 검증 (/lab/)
+- 국내 '영업이익 급증' 알림 시각 다음 1분봉 시가 매수 → 5분 뒤 1분봉 시가 매도. 계산은 kb-market-report earnings_watch.py `strategy_update()`가 10분마다(1분봉은 2주 뒤 사라짐) earnings-live 의 earnings.json `strategy` 에 쌓는다.
+- 페이지 코드는 play_page.py `build_lab()`. 누적은 매매마다 비용 0.25%를 뺀 가정.
