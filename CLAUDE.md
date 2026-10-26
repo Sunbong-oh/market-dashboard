@@ -21,6 +21,8 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 파일: `us_strong/YYYY-MM-DD_TICKER.html` (date = 등록일, KST) + `us_strong/index.json` 에 한 줄 추가.
 - index.json 항목: date, ticker, exchange, name, nameEn, sector, price, changePct, priceNote, headline, tags, file,
   market{day(전일 미국장 날짜), nasdaq, sp500, source}.
+- index.json 에 `pod`(출근길 음성 브리핑에서 읽을 2~3문장: 강세 이유·핵심 숫자·다음 이벤트)도 넣는다. 소리 내어 읽기 좋게 기호·영문 약어를 풀어 쓰고($→달러, EV/EBITDA→풀이), 위스퍼 넘버는 넣지 않는다(공개 피드).
+  briefing.py 가 그날(KST) 게시분을 AI 급등락 다음에 읽는다. pod 가 없으면 headline 첫 문장. 음성은 07:00 무렵 만들어지니 그 전에 merge 해야 들어간다(늦으면 12시 전 `trigger-podcast/` 커밋으로 음성만 다시).
 - HTML 은 기존 리포트(예: `us_strong/2026-10-23_ULTA.html`)의 `<style>` 과 구조를 그대로 쓴다: `section.page` > `.ph`(머리) / `.pb`(본문) / `.pf`(출처·쪽번호),
   표지 `.cover` + `.keydata`, 그림은 인라인 SVG(`.chart`). 휴대폰 폭(390px)에서 가로 스크롤이 생기지 않게 확인.
 - 주가는 Yahoo Finance 일봉 종가, 재무는 SEC 공시(10-K·10-Q·8-K). 리포트 작성 뒤 주가가 크게 움직였으면 표지에 "작성 후 추가" 상자로 적는다.
