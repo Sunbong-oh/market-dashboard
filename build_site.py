@@ -98,7 +98,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
-        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
+        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"), ("lab/", "전략 검증"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
@@ -1712,7 +1712,8 @@ TOOLS_CSS = """.home>#tools{order:99}  /* 계산기·공부는 시간대(장중 
 TOOLS = (("연금 계산기", "💰", "퇴직연금·개인연금을 연금으로 받을 때 내는 세금과 해마다의 수령한도를 계산합니다."),
          ("라이프 플랜", "🗓️", "소득·지출·교육비·주택을 넣어 평생 현금흐름과 자산 흐름을 그려 봅니다."),
          ("재무제표 공부", "📒", "재무제표로 지뢰 종목 거르기, 업종별 체크리스트, 용어사전, 사례노트."),
-         ("놀이터", "🎮", "시가총액 대결 · 오늘 더 오른 종목 맞히기. 틀릴 때까지 이어지는 게임, 최고 기록에 도전!"))
+         ("놀이터", "🎮", "시가총액 대결 · 오늘 더 오른 종목 · 차트 보고 회사 맞히기. 틀릴 때까지 이어지는 게임, 최고 기록에 도전!"),
+         ("전략 검증", "🧪", "실적 서프라이즈 알림에 사서 5분 뒤에 팔았다면? 알림마다 자동으로 쌓이는 모의투자 기록."))
 
 
 # 홈 왼쪽 날개 광고 (제주 만보농장). 본문(1080px) 왼쪽 빈 공간에만 작게 띄우고, 공간이 없는 화면(휴대폰·좁은 창)에서는 숨긴다.
@@ -2420,6 +2421,7 @@ def main():
     build_reports()
     study = study_page.build(OUT, page)
     play_page.build(OUT, page, now, VISIT_API, VISIT_NS)
+    play_page.build_lab(OUT, page)
     build_home(now, daily, close, live, target, us, strong, play_page.kospi_history())
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "us": us and us["day"], "study": study,
