@@ -159,7 +159,7 @@ def cleanup_recap(t):
 # ---------- 원고 ----------
 def build_script(data):
     """순서: 나스닥과 이유(+어젯밤 지표 결과) -> 풋콜 -> 주요 지표 -> 실적 -> AI 급등락과 이유(+공통 키워드 해설)
-    -> 52주 신고가 -> 오늘·내일 일정."""
+    -> 전일 강세종목 리포트 -> 52주 신고가 -> 오늘·내일 일정."""
     now = datetime.fromisoformat(data["now"])
     sday = date.fromisoformat(data["session_day"])
     wd = "월화수목금토일"
@@ -245,7 +245,16 @@ def build_script(data):
     if data.get("notes") and not movers:  # 급등락 종목이 없는 날의 해설(나스닥을 움직인 재료)
         say(f"{P}자세히 짚어 보겠습니다.{P}" + data["notes"])
 
-    # 6) 52주 신고가(종목명만)
+    # 6) 전일 강세종목 리포트(홈페이지 /strong/ 오늘 게시분): 강세 이유·핵심 숫자·다음 이벤트를 짧게
+    picks = data.get("strong") or []
+    if picks:
+        read = {m["sym"] for m in movers or []}
+        say(f"{GAP}전일 강세종목입니다.{P}오늘 투자노트에 올린 강세종목 리포트는 {len(picks)}종목입니다.")
+        for e in picks:
+            say(strong_sentence(e, e["ticker"] in read))
+        say("리포트 전문은 투자노트 홈페이지 강세종목 메뉴에서 보실 수 있습니다.")
+
+    # 7) 52주 신고가(종목명만)
     nh = data.get("new_highs")
     if nh is not None:
         names = nh["names"]
@@ -256,7 +265,7 @@ def build_script(data):
         else:
             say(f"{GAP}52주 신고가입니다.{P}미국 52주 신고가 종목은 없었습니다.")
 
-    # 7) 오늘·내일 일정: ★ 핵심 항목만, 수치는 첫 예상치 하나만
+    # 8) 오늘·내일 일정: ★ 핵심 항목만, 수치는 첫 예상치 하나만
     days = []
     for label, items in (("오늘", data.get("cal_today")), ("내일", data.get("cal_tomorrow"))):
         hot = [short_event(e, v) for e, v in items or [] if e.startswith("★")]
@@ -445,6 +454,37 @@ def briefing_notes(now):
         return None
 
 
+def strong_picks(now):
+    """us_strong/index.json(강세종목 리포트) 중 오늘(KST) 게시분, 등락률 큰 순."""
+    try:
+        idx = json.loads((ROOT / "us_strong" / "index.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return sorted((e for e in idx if e.get("date") == f"{now:%Y-%m-%d}"), key=lambda e: -(e.get("changePct") or 0))
+
+
+CURRENCY = {"$": "달러", "¥": "위안", "HK$": "홍콩달러", "€": "유로", "₩": "원"}
+
+
+def strong_sentence(e, already=False):
+    """강세종목 한 종목: '루멘텀 홀딩스, 8.2% 올라 818.10달러.' + 요점(index.json의 pod, 없으면 headline 첫 문장).
+    pod는 소리 내어 읽을 2~3문장(강세 이유·핵심 숫자·다음 이벤트). 위스퍼 넘버는 넣지 않는다(공개 피드)."""
+    name = NAME_SPLIT.get(e["name"], e["name"])
+    name = re.sub(r"\([^)]*\)", "", name).strip()  # 유니트리(宇树科技) -> 유니트리
+    where = f"{e['region'].split()[-1]}의 " if e.get("region") else ""  # '🇨🇳 중국시장' -> '중국시장의 '
+    if already:  # 앞의 AI 급등락에서 등락률을 이미 읽은 종목
+        s = f"앞서 전해 드린 {name}, 리포트 요점입니다."
+    else:
+        c = e.get("changePct") or 0
+        unit = CURRENCY.get(e.get("currency", "$"), "달러")
+        s = f"{where}{name}, {pct(c, 1)} {updown(c)}고, 종가는 {num(e['price'])}{unit}입니다."
+    body = e.get("pod")
+    if not body:  # 홈페이지용 한 줄 요약에서 첫 문장(강세 이유)만
+        body = re.split(r"\.\s", e.get("headline", ""))[0]
+    body = speakable(body)
+    return f"{s} {body}" + ("" if body.endswith(".") else ".")
+
+
 def new_highs_names(session_day):
     """newhighs.py가 아침 발송 때 남긴 newhighs.json(같은 기준일)을 쓰고, 없으면 직접 스캔한다. 실패하면 None."""
     import newhighs
@@ -588,7 +628,7 @@ def update_feed(pod, mp3, text, now, kbps):
   <link>{SITE}/</link>
   <atom:link href="{FEED_URL}" rel="self" type="application/rss+xml"/>
   <language>ko-kr</language>
-  <description>평일 아침 7시, 나스닥·주요 지표·AI 기업 급등락·52주 신고가를 음성으로 짚어 드립니다. 투자 판단의 참고용입니다.</description>
+  <description>평일 아침 7시, 나스닥·주요 지표·AI 기업 급등락·전일 강세종목·52주 신고가를 음성으로 짚어 드립니다. 투자 판단의 참고용입니다.</description>
   <itunes:author>market-dashboard</itunes:author>
   <itunes:explicit>false</itunes:explicit>
   <itunes:block>Yes</itunes:block>
@@ -638,6 +678,7 @@ def main():
     data["flashes"] = earnings_flashes(now)
     data["cal_tomorrow"] = calendar_next(now)
     data["notes"] = briefing_notes(now)
+    data["strong"] = strong_picks(now)
     text = build_script(data)
     plain = re.sub(f"{PAUSE}+", " ", text).replace(SLOW, "").replace(SLOW_END, "").replace(" \n", "\n").strip()  # 피드 설명·원고 파일용
     TXT.write_text(plain, encoding="utf-8")
