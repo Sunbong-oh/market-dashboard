@@ -1290,7 +1290,7 @@ a.st:hover{border-color:#F2A900}
 .st .go i{font-style:normal;color:#E5484D;font-weight:800;font-size:14px;white-space:nowrap;display:inline-block;animation:rpt-tap .9s ease-in-out infinite}
 /* '<-- 터치!!' 좌우 움직임: 윈도우·휴대폰의 '애니메이션 줄이기' 설정과 관계없이 항상 움직인다 (8px 정도라 부담 없음) */
 @keyframes rpt-tap{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
-.st-mk{font-size:13.5px;font-weight:700;color:var(--muted)}.st-mk>span{white-space:nowrap}.st-mk b{margin-left:3px}.st-mk .up{color:var(--up)}.st-mk .down{color:var(--down)}
+.st-mk{font-size:13.5px;font-weight:700;color:var(--muted)}.st-mk+.st-mk{margin-left:4px}.st-mk>span{white-space:nowrap}.st-mk b{margin-left:3px}.st-mk .up{color:var(--up)}.st-mk .down{color:var(--down)}
 .sec-h.st-h{flex-wrap:wrap;justify-content:flex-start;column-gap:12px}.sec-h.st-h>a{margin-left:auto}
 /* 홈: 광고·핵심 이슈·실적속보(order:-2)와 장중 수급(order:-1)보다 위. 17시 뒤 #strong-low 안으로 옮겨지면 이 값은 상관없다 */
 .home>#strong{order:-3;margin-top:0;margin-bottom:12px}
@@ -1323,9 +1323,26 @@ def strong_card(it, href):
             + '</a>')
 
 
-def strong_market(it):
-    """제목 옆 전일 나스닥·S&P500 등락 (index.json 의 market: day, nasdaq, sp500, source)."""
-    m = it.get("market") or {}
+def strong_market(its):
+    """제목 옆 전일 지수 등락 (index.json 의 market: day, nasdaq, sp500, idx, source).
+    같은 날 카드가 여러 시장(예: 중국 + 미국)이면 시장마다 지수를 모두 붙인다."""
+    if isinstance(its, dict):
+        its = [its]
+    out, seen, days = [], set(), set()
+    for it in its:
+        m = it.get("market") or {}
+        key = json.dumps(m, sort_keys=True, ensure_ascii=False)
+        if not m or key in seen:
+            continue
+        seen.add(key)
+        html = _strong_market_one(m, show_day=m.get("day") not in days)
+        if html:
+            days.add(m.get("day"))
+            out.append(html)
+    return "".join(out)
+
+
+def _strong_market_one(m, show_day=True):
     parts = [f'{n}<b class="{"up" if m[k] > 0 else "down"}">{m[k]:+.2f}%</b>'
              for k, n in (("nasdaq", "나스닥"), ("sp500", "S&amp;P500")) if m.get(k) is not None]
     parts += [f'{escape(n)}<b class="{"up" if v > 0 else "down"}">{v:+.2f}%</b>' for n, v in m.get("idx", [])]
@@ -1333,7 +1350,8 @@ def strong_market(it):
         return ""
     day = escape(m.get("day", "")[5:].replace("-", "/"))
     parts = [f"<span>{x}</span>" for x in parts]  # 지수가 많아 좁은 화면에서 넘치면 지수 단위로 줄을 바꾼다
-    return f'<span class="st-mk" title="{escape(m.get("source", ""))}"><span>{day}</span> {" · ".join(parts)}</span>'
+    return (f'<span class="st-mk" title="{escape(m.get("source", ""))}">' + (f"<span>{day}</span> " if show_day else "· ")
+            + f'{" · ".join(parts)}</span>')
 
 
 def strong_bar(it):
@@ -1379,7 +1397,7 @@ def build_strong():
     for it in items:
         if it["date"] != last:
             last = it["date"]
-            rows.append(f'<div class="st-day">{label(last)}{strong_market(it)}</div>')
+            rows.append(f'<div class="st-day">{label(last)}{strong_market([x for x in items if x["date"] == last])}</div>')
         rows.append(strong_card(it, it["file"]))
         # 리포트 원본(Artifact용 조각 HTML)을 온전한 페이지로 감싸고 맨 위에 메뉴를 붙인다
         src = (US_STRONG / it["file"]).read_text(encoding="utf-8")
@@ -1411,10 +1429,10 @@ def strong_home(items):
     # 전일 미국장 강세종목이라 등록일 17:00(KST)까지는 홈 맨 위에 두고, 그 뒤로는 해외주식 리포트 아래(#strong-low)로 내린다.
     # 사이트를 다시 빌드하지 않아도 되게 보는 사람 브라우저 시각으로 옮긴다.
     return (f'<section class="sec" id="strong" data-until="{day}T17:00:00+09:00"><style>{STRONG_CSS}</style>'
-            f'<div class="sec-h st-h"><h2>{title}</h2>{strong_market(items[0])}'
+            f'<div class="sec-h st-h"><h2>{title}</h2>{strong_market(today)}'
             f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}'
             + ('<div class="st-note" style="margin-top:6px">지수: 전일 종가 기준 등락(Yahoo Finance)</div>'
-               if strong_market(items[0]) else "") + '</section>')
+               if strong_market(today) else "") + '</section>')
 
 
 STRONG_LOW_JS = """<div id="strong-low"></div><script>(function(){var s=document.getElementById('strong'),l=document.getElementById('strong-low');
