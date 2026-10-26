@@ -1,0 +1,8 @@
+# KB증권 해외시세(kb-px.yml)가 매일 아침 받는 기본 목록. 한 줄에 하나, 거래소를 알면 TICKER:NYS (NAS·NYS·AMX).
+# 강세종목(us_strong/index.json)의 미국 종목은 따로 적지 않아도 함께 받는다.
+SPY:AMX
+QQQ:NAS
+LLY:NYS
+NVO:NYS
+PANW:NAS
+ULTA:NAS

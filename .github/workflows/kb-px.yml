@@ -1,0 +1,59 @@
+name: KB증권 해외주식 시세
+
+# KB증권 Open API 해외주식 현재가(GSS10030)·일봉(GSC10060)을 받아 kb-px 브랜치에 저장한다(kb_overseas.py).
+# Claude 작업 환경에서는 KB 서버가 연결을 끊어서(IP 제한 추정) 같은 키가 되는 Actions 에서 받는다.
+# 결과: https://raw.githubusercontent.com/sunbong-oh/market-dashboard/kb-px/us/<티커>.json  (목록 index.json, 실행 결과 log.json)
+# 리포트 작업 중 새 종목이 필요하면 workflow_dispatch 로 tickers 에 "NVDA,BRK.B:NYS" 처럼 넣고 돌린다(1~2분).
+# 조회 TR 만 쓴다. 주문·정정·취소·잔고 TR 은 부르지 않는다.
+on:
+  schedule:
+    - cron: "20 21 * * 1-5"   # 화~토 06:20 KST (미국 정규장 마감 뒤) — 기본 목록(kb_overseas_tickers.txt + 강세종목)
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: "티커(쉼표로). 거래소를 알면 TICKER:NYS (NAS·NYS·AMX). 비우면 기본 목록"
+        default: ""
+      only:
+        description: "준 티커만 받기 (기본 목록 빼기)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kb-px
+  cancel-in-progress: false
+
+jobs:
+  px:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: KB 에서 받기
+        env:
+          KB_OPENAPI_APP_KEY: ${{ secrets.KB_OPENAPI_APP_KEY || secrets.KB_APP_KEY || secrets.KB_APPKEY || secrets.KB_OPENAPI_KEY || vars.KB_OPENAPI_APP_KEY }}
+          KB_OPENAPI_APP_SECRET: ${{ secrets.KB_OPENAPI_APP_SECRET || secrets.KB_APP_SECRET || secrets.KB_APPSECRET || secrets.KB_OPENAPI_SECRET || vars.KB_OPENAPI_APP_SECRET }}
+          KB_TICKERS: ${{ github.event.inputs.tickers }}
+          PYTHONIOENCODING: utf-8
+        run: |
+          mkdir -p _kbpx
+          if git fetch -q --depth 1 origin kb-px; then git archive FETCH_HEAD | tar -x -C _kbpx; fi
+          if [ -n "$KB_TICKERS" ] && [ "${{ github.event.inputs.only }}" = "true" ]; then ONLY=--only; fi
+          python kb_overseas.py --data _kbpx $ONLY
+      - name: kb-px 브랜치에 저장
+        if: ${{ !cancelled() && hashFiles('_kbpx/log.json') != '' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/kbpx.index"
+          rm -f "$GIT_INDEX_FILE"
+          git --work-tree=_kbpx add -A -f .
+          commit=$(git commit-tree "$(git write-tree)" -m "kb-px: $(date -u -d '+9 hours' '+%Y-%m-%d %H:%M') KST")
+          git push --force origin "$commit:refs/heads/kb-px"
