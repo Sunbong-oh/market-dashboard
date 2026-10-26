@@ -138,5 +138,30 @@
    "sp500": 0.7,
    "source": "Yahoo Finance 일봉 종가(^IXIC 26,169.38 · ^GSPC 7,676.77)"
   }
+ },
+ {
+  "date": "2026-10-27",
+  "ticker": "LITE",
+  "exchange": "NASDAQ",
+  "name": "루멘텀 홀딩스",
+  "nameEn": "Lumentum Holdings",
+  "sector": "AI 광통신 부품(레이저 칩·트랜시버)",
+  "price": 818.1,
+  "changePct": 8.19,
+  "priceNote": "10/26 종가 · 10/22 −11.5% 급락 뒤 반등, 광통신주 동반 강세(코히런트 +5.8%, AAOI +6.6%) · 52주 고점 $1,143 대비 −28%, 1년 전 대비 4.6배",
+  "headline": "StoneX 신규 매수(목표 $1,200)에 광통신주 반등. 분기 매출이 1년 새 2.1배($1.01bn), Non-GAAP 영업이익률 15%→37%, 1Q27 가이던스 40%. GAAP 순손실 $6.9bn은 전환사채 주식 전환 비현금 손실 — 11/5 1분기 실적이 확인 지점.",
+  "tags": [
+   "고성장 기술주",
+   "Non-GAAP PER 94x(TTM)",
+   "가이던스 연환산 49x",
+   "11/5 1Q 실적"
+  ],
+  "file": "2026-10-27_LITE.html",
+  "market": {
+   "day": "2026-10-26",
+   "nasdaq": 0.82,
+   "sp500": 0.7,
+   "source": "Yahoo Finance 일봉 종가(^IXIC 26,169.38 · ^GSPC 7,676.77)"
+  }
  }
 ]
