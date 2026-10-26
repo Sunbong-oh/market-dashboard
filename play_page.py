@@ -141,6 +141,17 @@ GAME_CSS = """.gm-tabs{display:grid;grid-template-columns:repeat(auto-fill,minma
 .gm-lv .ms{display:flex;flex-wrap:wrap;gap:6px}.gm-lv .ms span{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:12.5px;font-weight:700}
 .gm-lv .ms span.ok{background:#FBE7B0;color:#3D3A35;border-color:#F2A900}
 .gm-top .tm{font-size:18px;color:#e03131}
+.gm-top{flex-wrap:wrap;gap:4px 10px}.gm-top .wr{color:#b07800;font-weight:800}
+.gm-king{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(20,18,15,.55);padding:16px;overflow:hidden}
+.gm-king>div{background:#FAF8F3;color:#3D3A35;border:4px solid #F2A900;border-radius:22px;padding:26px 22px 20px;text-align:center;max-width:340px;width:100%;animation:gmk .5s cubic-bezier(.2,1.6,.4,1)}
+.gm-king .cr{font-size:64px;line-height:1;animation:gmc 1.2s ease-in-out infinite}
+.gm-king h3{margin:10px 0 6px;font-size:28px;font-weight:900;color:#3D3A35}
+.gm-king p{margin:0;font-size:15px;line-height:1.6;word-break:keep-all}.gm-king p b{color:#e03131;font-size:20px}
+.gm-king button{margin-top:16px;font:900 16px/1 inherit;padding:13px 30px;border-radius:12px;border:0;background:#F2A900;color:#3D3A35;cursor:pointer}
+.gm-king .cf{position:absolute;top:-10%;font-size:22px;animation:gmf linear forwards;pointer-events:none}
+@keyframes gmk{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes gmc{50%{transform:translateY(-8px) rotate(-6deg)}}
+@keyframes gmf{to{transform:translateY(120vh) rotate(360deg)}}
 .cg-opts .os{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
 .gm-start{text-align:center;padding:10px 4px;line-height:1.7;font-size:14.5px;word-break:keep-all}
 .gm-start button{margin-top:10px;font:900 17px/1 inherit;padding:14px 28px;border-radius:12px;border:0;background:#F2A900;color:#3D3A35;cursor:pointer}
@@ -166,7 +177,7 @@ button.gm-card{font:inherit;color:inherit;cursor:pointer}button.gm-card:hover:en
 .up{color:var(--up)}.down{color:var(--down)}
 .gm-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:14px}
 .cg-tag{display:inline-block;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;background:#FBE7B0;color:#3D3A35}
-.cg-svg{display:block;width:100%;height:170px;margin:8px 0 6px;background:var(--bg);border-radius:12px}
+.cg-svg.cg-vol{height:215px}.cg-svg{display:block;width:100%;height:170px;margin:8px 0 6px;background:var(--bg);border-radius:12px}
 .cg-info{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13.5px;justify-content:center}.cg-info b{font-size:16px}
 .cg-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .cg-opts button{font:800 15px/1.3 inherit;padding:12px 6px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;word-break:keep-all}
@@ -188,15 +199,17 @@ function count(){if(started)return;started=true;try{if(localStorage.getItem('bri
  ['c-game-'+d,'t-c-game'].forEach(function(k){fetch(PAPI+'/hit/'+PNS+'/'+k,{cache:'no-store'}).catch(function(){})})}catch(e){}}
 function card(x,show,tag,cls){var v=mode==='cap'?(show?won(x.c):'?'):(show?pct(x.p):'?');
  return '<'+tag+' class="gm-card'+(cls?' '+cls:'')+'"'+(tag==='button'?' type="button" data-n="'+esc(x.n)+'"':'')+'><span class="n">'+esc(x.n)+'</span><span class="s">'+esc(x.m)+' · '+esc(x.s)+'</span><span class="v'+(show?'':' hid')+'">'+v+'</span></'+tag+'>'}
-function top(){return '<div class="gm-top"><span>점수 <span class="sc">'+score+'</span></span><span class="best">최고 '+best()+'</span></div>'}
+function wtxt(){return GM[mode]!=null?'🏆 전체 '+GM[mode]+'점':'🏆 전체 …'}
+function top(){setTimeout(wr);return '<div class="gm-top"><span>점수 <span class="sc">'+score+'</span></span><span class="best">내 최고 '+best()+' · <span class="wr">'+wtxt()+'</span></span></div>'}
 function draw(msg){busy=false;
  if(mode==='cap'){box.innerHTML=top()+'<div class="gm-q">오른쪽 회사 시가총액은 왼쪽보다 클까요, 작을까요?</div>'+
   '<div class="gm-row">'+card(A,true,'div')+'<span class="gm-vs">VS</span>'+card(B,false,'div')+'</div>'+
   '<div class="gm-btns"><button type="button" data-g="hi">⬆ 더 크다</button><button type="button" data-g="lo">⬇ 더 작다</button></div><div class="gm-msg">'+(msg||'')+'</div>'}
  else{box.innerHTML=top()+'<div class="gm-q">'+DAY+' 하루 동안 더 많이 오른(덜 내린) 종목은?</div>'+
   '<div class="gm-row">'+card(A,false,'button')+'<span class="gm-vs">VS</span>'+card(B,false,'button')+'</div><div class="gm-msg">'+(msg||'')+'</div>'}}
-function over(msg){var b=best();if(score>b)setBest(score);
- box.insertAdjacentHTML('beforeend','<div class="gm-over">'+msg+'<br>이번 판 <b>'+score+'점</b>'+(score>b?' · 🎉 최고 기록!':' · 최고 '+Math.max(b,score)+'점')+'<br><button type="button" data-g="again">다시 하기</button></div>')}
+function over(msg){var b=best(),m=mode,sc=score;if(score>b)setBest(score);
+ box.insertAdjacentHTML('beforeend','<div class="gm-over">'+msg+'<br>이번 판 <b>'+score+'점</b>'+(score>b?' · 🎉 내 최고 기록!':' · 내 최고 '+Math.max(b,score)+'점')+' · <span class="wr">'+wtxt()+'</span><br><button type="button" data-g="again">다시 하기</button></div>');
+ if(sc>0)gmax(m).then(function(g){if(sc>g)king(m,g,sc)},function(){})}
 var CQ=[],cq=null;
 function cqueue(){var pat=CP.filter(function(x){return x.pat!=='차트'}),gen=CP.filter(function(x){return x.pat==='차트'});
  function sh(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
@@ -215,6 +228,21 @@ function drawChart(msg){busy=false;if(!CQ.length)CQ=cqueue();cq=CQ.shift();var p
   '<div class="cg-info"><span>현재가 <b>'+p.price.toLocaleString('ko-KR')+'원</b></span><span>1년 '+pct(p.ch)+'</span>'+
   '<span>52주 '+p.lo.toLocaleString('ko-KR')+' ~ '+p.hi.toLocaleString('ko-KR')+'</span><span style="color:var(--muted)">'+dlab(p.d0)+' ~ '+dlab(p.d1)+' 일봉 종가</span></div>'+
   '<div class="cg-opts">'+o.map(function(n){return '<button type="button" data-o="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div><div class="gm-msg">'+(msg||'')+'</div>'}
+var GM={},MN={rush:'60초 챌린지',cap:'시가총액 대결',chg:'오늘 더 오른 종목',chart:'차트 보고 맞히기',fut:'차트 다음은?',sec:'업종 맞히기',px:'주가 맞히기',r1:'1년 수익률 대결',fin:'실적 대결'};
+/* 전체 최고 기록: Abacus 에 hs-<게임>-<점수> 키를 1점부터 그 점수까지 하나씩 만들어 두고(기록이 오른 만큼만 hit), 있는 키 중 가장 큰 점수를 찾는다 */
+function hk(m,n){return 'hs-'+m+'-'+n}
+function has(k){return fetch(PAPI+'/get/'+PNS+'/'+k,{cache:'no-store'}).then(function(r){if(r.status===404)return false;if(!r.ok)throw 0;return r.json().then(function(j){return j&&j.value>0})})}
+function gmax(m){if(GM[m]!=null)return Promise.resolve(GM[m]);var lo=0,hi=1;
+ function bs(){if(hi-lo<=1)return lo;var mid=(lo+hi)>>1;return has(hk(m,mid)).then(function(ok){if(ok)lo=mid;else hi=mid;return bs()})}
+ function up(){return has(hk(m,hi)).then(function(ok){if(!ok)return bs();lo=hi;hi*=2;return hi>4096?lo:up()})}
+ return up().then(function(v){GM[m]=v;return v})}
+function wr(){var m=mode;gmax(m).then(function(v){if(m!==mode)return;box.querySelectorAll('.wr').forEach(function(e){e.textContent='🏆 전체 '+v+'점'})},function(){})}
+function admin(){try{return localStorage.getItem('brian-admin')==='1'}catch(e){return false}}
+function king(m,old,sc){if(!admin())for(var n=old+1;n<=sc&&n<=old+300;n++)fetch(PAPI+'/hit/'+PNS+'/'+hk(m,n),{cache:'no-store'}).catch(function(){});
+ GM[m]=sc;var d=document.createElement('div');d.className='gm-king';
+ var cf='';for(var i=0;i<18;i++)cf+='<span class="cf" style="left:'+Math.round(Math.random()*100)+'%;animation-duration:'+(1.8+Math.random()*1.8).toFixed(2)+'s;animation-delay:'+(Math.random()*.6).toFixed(2)+'s">'+['🎉','✨','💰','📈','👑'][i%5]+'</span>';
+ d.innerHTML=cf+'<div><div class="cr">👑</div><h3>당신은 주식왕!</h3><p>'+MN[m]+' 전체 최고 기록 갱신<br><b>'+sc+'점</b> (이전 최고 '+old+'점)</p><button type="button">고마워요!</button></div>';
+ d.addEventListener('click',function(e){if(e.target===d||e.target.tagName==='BUTTON')d.remove()});document.body.appendChild(d);wr()}
 var TD=new Date(Date.now()+9*36e5).toISOString().slice(0,10),RUN=60,rushEnd=0,timer=null,cur=null;
 function lsj(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
 function lss(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -234,13 +262,16 @@ function f1(v){return (Math.abs(v)>=100?Math.round(v):v.toFixed(1)).toLocaleStri
 var XN=S.filter(function(x){return X[x.n]}),PO={};
 function pool(k){if(!PO[k])PO[k]=XN.filter(function(x){return X[x.n][k]!=null});return PO[k]}
 function lab(x,sub){return esc(x.n)+'<span class="os">'+esc(sub)+'</span>'}
-function svgRaw(a,cut,full){var w=300,h=120,n=a.length,v=full?a:a.slice(0,cut+1),lo=Math.min.apply(null,v),hi=Math.max.apply(null,v);if(hi<=lo)hi=lo+1;
+function svgRaw(a,cut,full,vo){var w=300,h=vo?112:120,HH=vo?150:120,n=a.length,v=full?a:a.slice(0,cut+1),lo=Math.min.apply(null,v),hi=Math.max.apply(null,v);if(hi<=lo)hi=lo+1;
  var X_=function(i){return (i/(n-1)*w).toFixed(1)},Y=function(x){return (h-6-(x-lo)/(hi-lo)*(h-12)).toFixed(1)};
  var pl=function(s,e){var r=[];for(var i=s;i<=e;i++)r.push(X_(i)+','+Y(a[i]));return r.join(' ')},cx=X_(cut);
- var o='<svg class="cg-svg" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+(full?'':'<rect x="'+cx+'" y="0" width="'+(w-cx)+'" height="'+h+'" fill="rgba(136,136,136,.22)"/>')+
+ var o='<svg class="cg-svg'+(vo?' cg-vol':'')+'" viewBox="0 0 '+w+' '+HH+'" preserveAspectRatio="none">'+(full?'':'<rect x="'+cx+'" y="0" width="'+(w-cx)+'" height="'+HH+'" fill="rgba(136,136,136,.22)"/>');
+ if(vo){var ve=full?n-1:cut,vm=Math.max.apply(null,vo.slice(0,ve+1))||1,bw=Math.max(1,w/n*.7);o+='<line x1="0" x2="'+w+'" y1="'+(h+2)+'" y2="'+(h+2)+'" stroke="rgba(136,136,136,.35)" vector-effect="non-scaling-stroke"/>';
+  for(var i=0;i<=ve;i++){var bh=vo[i]/vm*(HH-h-6);if(bh>0)o+='<rect x="'+(X_(i)-bw/2).toFixed(1)+'" y="'+(HH-bh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" fill="'+(i&&a[i]<a[i-1]?'#1c6dd0':'#e03131')+'" opacity="'+(i>cut?.85:.5)+'"/>'}}
+ o+=
   '<polyline points="'+pl(0,cut)+'" fill="none" style="stroke:var(--muted)" stroke-width="2" vector-effect="non-scaling-stroke"/>';
  if(full)o+='<polyline points="'+pl(cut,n-1)+'" fill="none" stroke="'+(a[n-1]>=a[cut]?'#e03131':'#1c6dd0')+'" stroke-width="3" vector-effect="non-scaling-stroke"/>';
- return o+'<line x1="'+cx+'" x2="'+cx+'" y1="0" y2="'+h+'" stroke="#F2A900" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/></svg>'}
+ return o+'<line x1="'+cx+'" x2="'+cx+'" y1="0" y2="'+HH+'" stroke="#F2A900" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/></svg>'}
 var FM=[{k:'opm',q:'영업이익률이 더 높은 회사는?',u:'%',hi:1,note:'영업이익률 = 영업이익 ÷ 매출. 100원어치 팔아 본업으로 남긴 돈입니다.'},
  {k:'g',q:'매출이 작년 같은 기간보다 더 많이 늘어난 회사는?',u:'%',hi:1,note:'매출 증가율 = 올해 누적 매출 ÷ 작년 같은 기간 매출 − 1.'},
  {k:'roe',q:'ROE(자기자본이익률)가 더 높은 회사는?',u:'%',hi:1,note:'ROE = 순이익 ÷ 자기자본(1년 기준으로 환산). 주주 돈 100원으로 번 이익입니다.'},
@@ -248,9 +279,9 @@ var FM=[{k:'opm',q:'영업이익률이 더 높은 회사는?',u:'%',hi:1,note:'�
 function two(P,k,gap){var a,b;for(var t=0;t<150;t++){a=rnd(P);b=rnd(P);if(a.n!==b.n&&(!k||gap(a,b)))break}return [a,b]}
 var G={
  fut:function(){var p=rnd(FU),n=p.cl.length,ch=(p.cl[n-1]/p.cl[p.cut]-1)*100;
-  return {q:'회색 칸(약 2달, 40거래일) 뒤 주가는 어떻게 됐을까요?',body:'<div id="cgs">'+svgRaw(p.cl,p.cut,false)+'</div><div class="cg-info"><span>'+dlab(p.d0)+' ~ '+dlab(p.dc)+' 일봉 종가</span><span>마지막 <b>'+p.cl[p.cut].toLocaleString('ko-KR')+'원</b></span></div>',
+  return {q:'회색 칸(약 2달, 40거래일) 뒤 주가는 어떻게 됐을까요?',body:'<div id="cgs">'+svgRaw(p.cl,p.cut,false,p.vo)+'</div><div class="cg-info"><span>'+dlab(p.d0)+' ~ '+dlab(p.dc)+' 일봉 종가 · 아래 막대 거래량</span><span>마지막 <b>'+p.cl[p.cut].toLocaleString('ko-KR')+'원</b></span></div>',
    o:['⬆ 올랐다','⬇ 내렸다'],a:ch>0?0:1,ex:'<b>'+esc(p.n)+'</b> · '+esc(p.s)+'<br>'+dlab(p.dc)+' '+p.cl[p.cut].toLocaleString('ko-KR')+'원 → '+dlab(p.d1)+' '+p.cl[n-1].toLocaleString('ko-KR')+'원 ('+pct(ch)+')',
-   after:function(){document.getElementById('cgs').innerHTML=svgRaw(p.cl,p.cut,true)}}},
+   after:function(){document.getElementById('cgs').innerHTML=svgRaw(p.cl,p.cut,true,p.vo)}}},
  sec:function(){var x=rnd(S),ss=[];S.forEach(function(y){if(y.s&&y.s!==x.s&&ss.indexOf(y.s)<0)ss.push(y.s)});var o=shuf(shuf(ss).slice(0,3).concat([x.s]));
   return {q:'<b>'+esc(x.n)+'</b>은(는) 어느 업종일까요?',body:'<div class="cg-info"><span>'+esc(x.m)+'</span><span>시가총액 <b>'+won(x.c)+'</b></span></div>',o:o.map(esc),a:o.indexOf(x.s),
    ex:'<b>'+esc(x.n)+'</b> 업종: '+esc(x.s)+' (네이버 증권 업종 분류)'}},
@@ -271,13 +302,13 @@ var G={
  chart2:function(){var p=rnd(CP),o=opts(p);return {q:'이 차트와 가격은 어느 회사일까요?',body:svg(p)+'<div class="cg-info"><span>현재가 <b>'+p.price.toLocaleString('ko-KR')+'원</b></span><span>1년 '+pct(p.ch)+'</span></div>',
   o:o.map(esc),a:o.indexOf(p.n),ex:'<b>'+esc(p.n)+'</b> · '+esc(p.s)}}};
 var RG=['sec','cap2','chg2'].concat(FU.length?['fut']:[],CP.length?['chart2']:[],pool('p').length>=10?['px','r1']:[],FM.some(function(m){return pool(m.k).length>=10})?['fin']:[]);
-function rtop(){var left=Math.max(0,Math.ceil((rushEnd-Date.now())/1000));return '<div class="gm-top"><span>점수 <span class="sc">'+score+'</span></span><span class="tm" id="gmt">⏱ '+left+'초</span><span class="best">최고 '+best()+'</span></div>'}
+function rtop(){setTimeout(wr);var left=Math.max(0,Math.ceil((rushEnd-Date.now())/1000));return '<div class="gm-top"><span>점수 <span class="sc">'+score+'</span></span><span class="tm" id="gmt">⏱ '+left+'초</span><span class="best">내 최고 '+best()+' · <span class="wr">'+wtxt()+'</span></span></div>'}
 function mcDraw(msg){busy=false;cur=G[mode==='rush'?rnd(RG):mode]();
  box.innerHTML=(mode==='rush'?rtop():top())+'<div class="gm-q">'+cur.q+'</div>'+(cur.body||'')+'<div class="cg-opts">'+cur.o.map(function(t,i){return '<button type="button" data-i="'+i+'">'+t+'</button>'}).join('')+'</div><div class="gm-msg">'+(msg||'')+'</div>'}
 function rushStart(){score=0;rushEnd=Date.now()+RUN*1000;clearInterval(timer);timer=setInterval(function(){var el=document.getElementById('gmt'),left=Math.ceil((rushEnd-Date.now())/1000);
   if(el)el.textContent='⏱ '+Math.max(0,left)+'초';if(left<=0){clearInterval(timer);busy=true;box.querySelectorAll('.cg-opts button').forEach(function(x){x.disabled=true});over('⏱ 시간 끝!')}},250);mcDraw()}
 function start(){score=0;clearInterval(timer);
- if(mode==='rush'){box.innerHTML='<div class="gm-start"><b style="font-size:18px">⏱ 60초 챌린지</b><br>차트·업종·주가·시가총액·실적 문제가 섞여 나와요.<br>60초 동안 최대한 많이 맞혀 보세요. <b>틀려도 계속!</b><br><span style="color:var(--muted)">최고 '+best()+'점</span><br><button type="button" data-g="go">시작!</button></div>';return}
+ if(mode==='rush'){box.innerHTML='<div class="gm-start"><b style="font-size:18px">⏱ 60초 챌린지</b><br>차트·업종·주가·시가총액·실적 문제가 섞여 나와요.<br>60초 동안 최대한 많이 맞혀 보세요. <b>틀려도 계속!</b><br><span style="color:var(--muted)">내 최고 '+best()+'점 · <span class="wr">'+wtxt()+'</span></span><br><button type="button" data-g="go">시작!</button></div>';wr();return}
  if(G[mode]){mcDraw();return}
  if(mode==='chart'){if(!CP.length){box.innerHTML='<p class="gm-msg">차트 자료를 불러오지 못했어요.</p>';return}drawChart();return}A=pick();B=pair(A);draw()}
 box.addEventListener('click',function(e){var g=e.target.closest('[data-g]'),c=e.target.closest('button.gm-card'),op=e.target.closest('button[data-o]'),oi=e.target.closest('button[data-i]');
@@ -340,7 +371,7 @@ def build(out, page, now, api, ns):
                 '<div class="gm" id="gm"></div>'
                 f'<p class="gm-note">· 자료: 네이버 증권 업종별 종목 시가총액·등락률 ({escape(day)} 기준, 시가총액 상위 {len(rows)}종목, ETF·우선주 제외), '
                 '네이버 증권 일봉 종가(차트·주가·1년 수익률), DART 최근 정기보고서 누적 숫자·KB증권 현재가 PER(실적 대결).<br>'
-                '· 60초 챌린지는 틀려도 계속, 나머지는 틀릴 때까지 이어집니다. 등급·미션·최고 기록은 이 기기에만 저장돼요.<br>'
+                '· 60초 챌린지는 틀려도 계속, 나머지는 틀릴 때까지 이어집니다. 등급·미션·내 최고 기록은 이 기기에만, 🏆 전체 최고 기록은 모든 방문자 중 1등 점수예요. 깨면 👑 주식왕!<br>'
                 '· 홈의 <a href="../#predict">🎯 코스피 오를까 내릴까?</a>에서 다음 장을 맞혀 보세요.</p>'
                 f'<script>{data}\n{GAME_JS}</script>')
     (out / "play" / "index.html").write_text(page("🎮 놀이터", body, "../", "play/", "PLAYGROUND",
@@ -368,7 +399,7 @@ def _closes(code):
     for d in re.findall(r'<item data="([^"]+)"', xml):
         f = d.split("|")
         try:
-            out.append((f[0], float(f[4])))
+            out.append((f[0], float(f[4]), float(f[5] or 0)))
         except (IndexError, ValueError):
             continue
     return out
@@ -433,15 +464,19 @@ def _metrics(j):
 
 
 def future_puzzle(r, ser):
-    """🔮 차트 다음은?: 약 1년 종가를 이틀 간격 120점으로 줄이고, 마지막 20점(약 40거래일)을 가린다. 5% 넘게 움직인 것만."""
+    """🔮 차트 다음은?: 약 1년 종가를 이틀 간격 120점으로 줄이고, 마지막 20점(약 40거래일)을 가린다. 5% 넘게 움직인 것만.
+    거래량은 그 이틀의 합을 가장 큰 값 = 1000 으로 줄여 vo 에 넣는다."""
     if len(ser) < 240:
         return None
-    pick = ser[::-1][::2][:120][::-1]
+    rv = ser[::-1]
+    pick = rv[::2][:120][::-1]
+    vol = [rv[2 * i][2] + (rv[2 * i + 1][2] if 2 * i + 1 < len(rv) else 0) for i in range(len(pick))][::-1]
+    vmax = max(vol) or 1
     cut = 99
     ch = pick[-1][1] / pick[cut][1] - 1
     if abs(ch) < 0.05:
         return None
-    return {"n": r["n"], "s": r["s"], "cl": [round(c) for _, c in pick], "cut": cut,
+    return {"n": r["n"], "s": r["s"], "cl": [round(x[1]) for x in pick], "vo": [round(v / vmax * 1000) for v in vol], "cut": cut,
             "d0": pick[0][0], "dc": pick[cut][0], "d1": pick[-1][0]}
 
 
@@ -476,7 +511,7 @@ def chart_puzzles(cands, series):
     """게임에 쓸 차트 문제 [{n, m, s, c(시가총액), pat, price, hi, lo, ch(1년 등락 %), pts(0~100 정규화 120점), d0, d1}]."""
     out = []
     for r, ser in zip(cands, series):
-        cl = [c for _, c in ser]
+        cl = [x[1] for x in ser]
         pat = find_pattern(cl) or ("차트" if len(cl) >= 200 else None)  # 패턴이 없는 종목도 '차트 보고 맞히기'로 쓴다
         if not pat:
             continue
