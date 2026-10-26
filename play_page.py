@@ -1,4 +1,5 @@
-"""놀이터: 홈 '코스피 오를까 내릴까?' 투표 + /play/ 게임(시가총액 대결 · 오늘 더 오른 종목).
+"""놀이터: 홈 '코스피 오를까 내릴까?' 투표 + /play/ 게임 9가지(60초 챌린지 · 시가총액 대결 · 오늘 더 오른 종목 · 차트 보고 맞히기 ·
+차트 다음은? · 업종 맞히기 · 주가 맞히기 · 1년 수익률 대결 · 실적 대결) + 등급·오늘의 미션(그 기기에만 저장).
 
 - 투표: 다음 거래일 코스피가 직전 종가보다 오를지 내릴지. 그날 09:00 에 마감하고, 결과는 야후 ^KS11 일봉 종가로
   보는 사람 브라우저가 채점한다(사이트를 만들 때 최근 두 달 종가를 넣어 둔다). 다른 사람 투표 수는 Abacus 카운터
@@ -82,7 +83,8 @@ PD_CSS = """.home>#predict{order:97}
 #predict .bar-l .u{color:#e03131}#predict .bar-l .d{color:#1c6dd0}
 #predict .rec{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:13.5px;line-height:1.7}
 #predict .rec b.ok{color:#2f9e44}#predict .rec b.no{color:#e03131}
-#predict .go{display:block;margin-top:12px;text-align:center;font-weight:800;padding:10px;border-radius:12px;background:#FBE7B0;color:#3D3A35;text-decoration:none}"""
+#predict .gos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+#predict .go{display:block;text-align:center;font-weight:800;padding:10px;border-radius:12px;background:#FBE7B0;color:#3D3A35;text-decoration:none}"""
 
 PD_JS = r"""(function(){var box=document.getElementById('pdb');if(!box)return;
 var WD='일월화수목금토',now=new Date(Date.now()+9*36e5),iso=function(d){return d.toISOString().slice(0,10)};
@@ -108,7 +110,7 @@ function render(){var my=V[S],r=record();
   '<button type="button" class="d'+(my==='d'?' on':'')+'" data-v="d"'+(my?' disabled':'')+'>📉 내린다</button></div><div class="pr" id="pdr"></div>';
  var rec='';if(r.n){rec='<div class="rec">내 기록 <b>'+r.n+'번 중 '+r.ok+'번 적중</b> ('+Math.round(r.ok/r.n*100)+'%)'+(r.streak>1?' · 🔥 '+r.streak+'연속 적중':'')+
   r.last.map(function(x){return '<br>'+md(x[0])+' '+(x[1]==='u'?'상승':'하락')+' 예측 → 코스피 '+(x[2]>0?'+':'')+x[2].toFixed(2)+'% '+(x[3]?'<b class="ok">적중</b>':'<b class="no">빗나감</b>')}).join('')+'</div>'}
- box.innerHTML=q+rec+'<a class="go" href="play/">🎮 놀이터에서 더 놀기: 시가총액 대결 · 오늘 더 오른 종목 ›</a>';
+ box.innerHTML=q+rec+'<div class="gos"><a class="go" href="play/#rush">⏱ 60초 챌린지 도전 ›</a><a class="go" href="play/">🎮 놀이터 게임 9가지 ›</a></div>';
  if(my&&!pending)counts()}
 function counts(){var el=document.getElementById('pdr');el.textContent='다른 사람들은…';
  Promise.all([get(key(S,'u')),get(key(S,'d'))]).then(function(c){var u=c[0],d=c[1],t=u+d;if(!t){el.innerHTML='첫 번째로 투표했어요!';return}
@@ -130,8 +132,19 @@ def home_section(history, api, ns):
             f'<div class="pd" id="pdb"><p class="err">불러오는 중…</p></div><script>{data}\n{PD_JS}</script></section>')
 
 
-GAME_CSS = """.gm-tabs{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
-.gm-tabs button{font:800 15px/1 inherit;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
+GAME_CSS = """.gm-tabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;margin:0 0 12px}
+.gm-tabs button.hot{border:2px solid #F2A900}.gm-tabs button.hot.on{background:#F2A900;color:#3D3A35;border-color:#F2A900}
+.gm-lv{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 12px;font-size:13.5px}
+.gm-lv .lh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}.gm-lv .lh b{font-size:18px}
+.gm-lv .lh span{color:var(--muted);font-size:12.5px}
+.gm-lv .bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin:7px 0 9px}.gm-lv .bar i{display:block;height:100%;background:#F2A900}
+.gm-lv .ms{display:flex;flex-wrap:wrap;gap:6px}.gm-lv .ms span{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:12.5px;font-weight:700}
+.gm-lv .ms span.ok{background:#FBE7B0;color:#3D3A35;border-color:#F2A900}
+.gm-top .tm{font-size:18px;color:#e03131}
+.cg-opts .os{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
+.gm-start{text-align:center;padding:10px 4px;line-height:1.7;font-size:14.5px;word-break:keep-all}
+.gm-start button{margin-top:10px;font:900 17px/1 inherit;padding:14px 28px;border-radius:12px;border:0;background:#F2A900;color:#3D3A35;cursor:pointer}
+.gm-tabs button{font:800 14px/1.25 inherit;padding:10px 6px;word-break:keep-all;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
 .gm-tabs button.on{background:#3D3A35;color:#fff;border-color:#3D3A35}
 .gm{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
 .gm-top{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:800;margin-bottom:10px}
@@ -202,25 +215,97 @@ function drawChart(msg){busy=false;if(!CQ.length)CQ=cqueue();cq=CQ.shift();var p
   '<div class="cg-info"><span>현재가 <b>'+p.price.toLocaleString('ko-KR')+'원</b></span><span>1년 '+pct(p.ch)+'</span>'+
   '<span>52주 '+p.lo.toLocaleString('ko-KR')+' ~ '+p.hi.toLocaleString('ko-KR')+'</span><span style="color:var(--muted)">'+dlab(p.d0)+' ~ '+dlab(p.d1)+' 일봉 종가</span></div>'+
   '<div class="cg-opts">'+o.map(function(n){return '<button type="button" data-o="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div><div class="gm-msg">'+(msg||'')+'</div>'}
-function start(){score=0;if(mode==='chart'){if(!CP.length){box.innerHTML='<p class="gm-msg">차트 자료를 불러오지 못했어요.</p>';return}drawChart();return}A=pick();B=pair(A);draw()}
-box.addEventListener('click',function(e){var g=e.target.closest('[data-g]'),c=e.target.closest('button.gm-card'),op=e.target.closest('button[data-o]');
- if(g&&g.dataset.g==='again'){start();return}
+var TD=new Date(Date.now()+9*36e5).toISOString().slice(0,10),RUN=60,rushEnd=0,timer=null,cur=null;
+function lsj(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
+function lss(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+var LV=[[0,'🐣 주린이'],[20,'🐜 개미'],[60,'🐜 똑똑한 개미'],[150,'🦸 슈퍼개미'],[300,'🐳 큰손'],[600,'👑 전설의 투자자']];
+function day(){var M=lsj('gm-day',{});if(M.d!==TD)M={d:TD,m:[],st:0,run:0,rush:0};return M}
+function lvl(){var el=document.getElementById('gmlv');if(!el)return;var P=lsj('gm-prog',{t:0,a:0}),M=day(),i=0;
+ while(i+1<LV.length&&P.t>=LV[i+1][0])i++;var nx=LV[i+1],w=nx?Math.round((P.t-LV[i][0])/(nx[0]-LV[i][0])*100):100;
+ var ms=[[M.m.length>=3,'게임 3가지 해 보기 ('+Math.min(M.m.length,3)+'/3)'],[M.st>=5,'5문제 연속 정답 ('+Math.min(M.st,5)+'/5)'],[M.rush>=10,'60초 챌린지 10점 ('+Math.min(M.rush,10)+'/10)']],all=ms.every(function(x){return x[0]});
+ el.innerHTML='<div class="lh"><b>'+LV[i][1]+'</b><span>누적 정답 '+P.t+'개'+(nx?' · 다음 「'+nx[1]+'」까지 '+(nx[0]-P.t)+'개':' · 최고 등급!')+'</span></div><div class="bar"><i style="width:'+w+'%"></i></div>'+
+  '<div class="ms"><span'+(all?' class="ok"':'')+'>'+(all?'🎉 오늘 미션 완료!':'🎯 오늘의 미션')+'</span>'+ms.map(function(x){return '<span'+(x[0]?' class="ok"':'')+'>'+(x[0]?'✅ ':'⬜ ')+x[1]+'</span>'}).join('')+'</div>'}
+function track(ok){var P=lsj('gm-prog',{t:0,a:0});P.a++;if(ok)P.t++;lss('gm-prog',P);var M=day();if(M.m.indexOf(mode)<0)M.m.push(mode);
+ M.run=ok?M.run+1:0;if(M.run>M.st)M.st=M.run;if(mode==='rush')M.rush=Math.max(M.rush,score);lss('gm-day',M);lvl()}
+function shuf(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function rnd(a){return a[Math.floor(Math.random()*a.length)]}
+function sig(v){var e=Math.pow(10,Math.max(0,Math.floor(Math.log10(v))-2));return Math.round(v/e)*e}
+function f1(v){return (Math.abs(v)>=100?Math.round(v):v.toFixed(1)).toLocaleString('ko-KR')}
+var XN=S.filter(function(x){return X[x.n]}),PO={};
+function pool(k){if(!PO[k])PO[k]=XN.filter(function(x){return X[x.n][k]!=null});return PO[k]}
+function lab(x,sub){return esc(x.n)+'<span class="os">'+esc(sub)+'</span>'}
+function svgRaw(a,cut,full){var w=300,h=120,n=a.length,v=full?a:a.slice(0,cut+1),lo=Math.min.apply(null,v),hi=Math.max.apply(null,v);if(hi<=lo)hi=lo+1;
+ var X_=function(i){return (i/(n-1)*w).toFixed(1)},Y=function(x){return (h-6-(x-lo)/(hi-lo)*(h-12)).toFixed(1)};
+ var pl=function(s,e){var r=[];for(var i=s;i<=e;i++)r.push(X_(i)+','+Y(a[i]));return r.join(' ')},cx=X_(cut);
+ var o='<svg class="cg-svg" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+(full?'':'<rect x="'+cx+'" y="0" width="'+(w-cx)+'" height="'+h+'" fill="rgba(136,136,136,.22)"/>')+
+  '<polyline points="'+pl(0,cut)+'" fill="none" style="stroke:var(--muted)" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+ if(full)o+='<polyline points="'+pl(cut,n-1)+'" fill="none" stroke="'+(a[n-1]>=a[cut]?'#e03131':'#1c6dd0')+'" stroke-width="3" vector-effect="non-scaling-stroke"/>';
+ return o+'<line x1="'+cx+'" x2="'+cx+'" y1="0" y2="'+h+'" stroke="#F2A900" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/></svg>'}
+var FM=[{k:'opm',q:'영업이익률이 더 높은 회사는?',u:'%',hi:1,note:'영업이익률 = 영업이익 ÷ 매출. 100원어치 팔아 본업으로 남긴 돈입니다.'},
+ {k:'g',q:'매출이 작년 같은 기간보다 더 많이 늘어난 회사는?',u:'%',hi:1,note:'매출 증가율 = 올해 누적 매출 ÷ 작년 같은 기간 매출 − 1.'},
+ {k:'roe',q:'ROE(자기자본이익률)가 더 높은 회사는?',u:'%',hi:1,note:'ROE = 순이익 ÷ 자기자본(1년 기준으로 환산). 주주 돈 100원으로 번 이익입니다.'},
+ {k:'per',q:'PER이 더 낮은(이익에 비해 주가가 싼) 회사는?',u:'배',hi:0,note:'PER = 주가 ÷ 주당순이익. 낮을수록 이익에 비해 싸다는 뜻이지만, 성장성·업종에 따라 적정 수준이 다릅니다.'}];
+function two(P,k,gap){var a,b;for(var t=0;t<150;t++){a=rnd(P);b=rnd(P);if(a.n!==b.n&&(!k||gap(a,b)))break}return [a,b]}
+var G={
+ fut:function(){var p=rnd(FU),n=p.cl.length,ch=(p.cl[n-1]/p.cl[p.cut]-1)*100;
+  return {q:'회색 칸(약 2달, 40거래일) 뒤 주가는 어떻게 됐을까요?',body:'<div id="cgs">'+svgRaw(p.cl,p.cut,false)+'</div><div class="cg-info"><span>'+dlab(p.d0)+' ~ '+dlab(p.dc)+' 일봉 종가</span><span>마지막 <b>'+p.cl[p.cut].toLocaleString('ko-KR')+'원</b></span></div>',
+   o:['⬆ 올랐다','⬇ 내렸다'],a:ch>0?0:1,ex:'<b>'+esc(p.n)+'</b> · '+esc(p.s)+'<br>'+dlab(p.dc)+' '+p.cl[p.cut].toLocaleString('ko-KR')+'원 → '+dlab(p.d1)+' '+p.cl[n-1].toLocaleString('ko-KR')+'원 ('+pct(ch)+')',
+   after:function(){document.getElementById('cgs').innerHTML=svgRaw(p.cl,p.cut,true)}}},
+ sec:function(){var x=rnd(S),ss=[];S.forEach(function(y){if(y.s&&y.s!==x.s&&ss.indexOf(y.s)<0)ss.push(y.s)});var o=shuf(shuf(ss).slice(0,3).concat([x.s]));
+  return {q:'<b>'+esc(x.n)+'</b>은(는) 어느 업종일까요?',body:'<div class="cg-info"><span>'+esc(x.m)+'</span><span>시가총액 <b>'+won(x.c)+'</b></span></div>',o:o.map(esc),a:o.indexOf(x.s),
+   ex:'<b>'+esc(x.n)+'</b> 업종: '+esc(x.s)+' (네이버 증권 업종 분류)'}},
+ px:function(){var x=rnd(pool('p')),v=X[x.n].p,o=[sig(v)];shuf([0.3,0.45,0.65,1.5,2.2,3.2]).forEach(function(k){var c=sig(v*k);if(o.length<4&&o.indexOf(c)<0)o.push(c)});
+  var r=o[0];o=shuf(o);return {q:'<b>'+esc(x.n)+'</b> 지금 주가는 약 얼마일까요?',body:'<div class="cg-info"><span>'+esc(x.m)+' · '+esc(x.s)+'</span></div>',
+   o:o.map(function(c){return '약 '+c.toLocaleString('ko-KR')+'원'}),a:o.indexOf(r),ex:'<b>'+esc(x.n)+'</b> 최근 종가 '+v.toLocaleString('ko-KR')+'원 · 시가총액 '+won(x.c)}},
+ r1:function(){var ab=two(pool('r'),1,function(a,b){return Math.abs(X[a.n].r-X[b.n].r)>=5}),a=ab[0],b=ab[1];
+  return {q:'최근 1년 동안 주가가 더 많이 오른(덜 내린) 종목은?',o:[lab(a,a.s),lab(b,b.s)],a:X[a.n].r>X[b.n].r?0:1,
+   ex:'1년 등락 <b>'+esc(a.n)+'</b> '+pct(X[a.n].r)+' · <b>'+esc(b.n)+'</b> '+pct(X[b.n].r)}},
+ fin:function(){var ms=FM.filter(function(m){return pool(m.k).length>=10}),m=rnd(ms),k=m.k;
+  var ab=two(pool(k),1,function(a,b){var x=X[a.n][k],y=X[b.n][k];return Math.abs(x-y)>=Math.max(2,Math.abs(x)*0.15,Math.abs(y)*0.15)}),a=ab[0],b=ab[1],va=X[a.n][k],vb=X[b.n][k];
+  return {q:m.q,o:[lab(a,a.s),lab(b,b.s)],a:m.hi?(va>vb?0:1):(va<vb?0:1),
+   ex:'<b>'+esc(a.n)+'</b> '+f1(va)+m.u+' · <b>'+esc(b.n)+'</b> '+f1(vb)+m.u+'<br>'+m.note+'<br><span style="color:var(--muted)">'+(k==='per'?'KB증권 현재가 기준 PER':'DART 최근 정기보고서(누적) 기준')+'</span>'}},
+ cap2:function(){var ab=two(S,1,function(a,b){var r=b.c/a.c;return r>0.25&&r<4&&Math.abs(r-1)>0.05}),a=ab[0],b=ab[1];
+  return {q:'시가총액이 더 큰 회사는?',o:[lab(a,a.s),lab(b,b.s)],a:a.c>b.c?0:1,ex:'<b>'+esc(a.n)+'</b> '+won(a.c)+' · <b>'+esc(b.n)+'</b> '+won(b.c)}},
+ chg2:function(){var ab=two(S,1,function(a,b){return Math.abs(a.p-b.p)>=0.5}),a=ab[0],b=ab[1];
+  return {q:DAY+' 하루 더 많이 오른(덜 내린) 종목은?',o:[lab(a,a.s),lab(b,b.s)],a:a.p>b.p?0:1,ex:'<b>'+esc(a.n)+'</b> '+pct(a.p)+' · <b>'+esc(b.n)+'</b> '+pct(b.p)}},
+ chart2:function(){var p=rnd(CP),o=opts(p);return {q:'이 차트와 가격은 어느 회사일까요?',body:svg(p)+'<div class="cg-info"><span>현재가 <b>'+p.price.toLocaleString('ko-KR')+'원</b></span><span>1년 '+pct(p.ch)+'</span></div>',
+  o:o.map(esc),a:o.indexOf(p.n),ex:'<b>'+esc(p.n)+'</b> · '+esc(p.s)}}};
+var RG=['sec','cap2','chg2'].concat(FU.length?['fut']:[],CP.length?['chart2']:[],pool('p').length>=10?['px','r1']:[],FM.some(function(m){return pool(m.k).length>=10})?['fin']:[]);
+function rtop(){var left=Math.max(0,Math.ceil((rushEnd-Date.now())/1000));return '<div class="gm-top"><span>점수 <span class="sc">'+score+'</span></span><span class="tm" id="gmt">⏱ '+left+'초</span><span class="best">최고 '+best()+'</span></div>'}
+function mcDraw(msg){busy=false;cur=G[mode==='rush'?rnd(RG):mode]();
+ box.innerHTML=(mode==='rush'?rtop():top())+'<div class="gm-q">'+cur.q+'</div>'+(cur.body||'')+'<div class="cg-opts">'+cur.o.map(function(t,i){return '<button type="button" data-i="'+i+'">'+t+'</button>'}).join('')+'</div><div class="gm-msg">'+(msg||'')+'</div>'}
+function rushStart(){score=0;rushEnd=Date.now()+RUN*1000;clearInterval(timer);timer=setInterval(function(){var el=document.getElementById('gmt'),left=Math.ceil((rushEnd-Date.now())/1000);
+  if(el)el.textContent='⏱ '+Math.max(0,left)+'초';if(left<=0){clearInterval(timer);busy=true;box.querySelectorAll('.cg-opts button').forEach(function(x){x.disabled=true});over('⏱ 시간 끝!')}},250);mcDraw()}
+function start(){score=0;clearInterval(timer);
+ if(mode==='rush'){box.innerHTML='<div class="gm-start"><b style="font-size:18px">⏱ 60초 챌린지</b><br>차트·업종·주가·시가총액·실적 문제가 섞여 나와요.<br>60초 동안 최대한 많이 맞혀 보세요. <b>틀려도 계속!</b><br><span style="color:var(--muted)">최고 '+best()+'점</span><br><button type="button" data-g="go">시작!</button></div>';return}
+ if(G[mode]){mcDraw();return}
+ if(mode==='chart'){if(!CP.length){box.innerHTML='<p class="gm-msg">차트 자료를 불러오지 못했어요.</p>';return}drawChart();return}A=pick();B=pair(A);draw()}
+box.addEventListener('click',function(e){var g=e.target.closest('[data-g]'),c=e.target.closest('button.gm-card'),op=e.target.closest('button[data-o]'),oi=e.target.closest('button[data-i]');
+ if(g&&g.dataset.g==='again'){if(mode==='rush')rushStart();else start();return}
+ if(g&&g.dataset.g==='go'){count();rushStart();return}
  if(busy)return;
+ if(oi&&cur){count();busy=true;var ok=+oi.dataset.i===cur.a;if(ok)score++;
+  box.querySelectorAll('.cg-opts button').forEach(function(x,i){x.disabled=true;if(i===cur.a)x.classList.add('ok');else if(x===oi)x.classList.add('no')});
+  if(cur.after)cur.after();box.querySelector('.gm-msg').insertAdjacentHTML('beforebegin','<div class="cg-ex">'+cur.ex+'</div>');track(ok);
+  if(mode==='rush'){box.querySelector('.sc').textContent=score;setTimeout(function(){if(mode==='rush'&&Date.now()<rushEnd)mcDraw(ok?'✅ 정답!':'❌ 아쉬워요')},ok?(cur.after?1500:800):(cur.after?2400:1800));return}
+  var md=mode;if(ok)setTimeout(function(){if(mode===md)mcDraw('✅ 정답!')},cur.after?2400:1600);else over('❌ 아쉬워요');return}
  if(mode==='chart'&&op){count();busy=true;var ok=op.dataset.o===cq.n;
   box.querySelectorAll('.cg-opts button').forEach(function(x){x.disabled=true;if(x.dataset.o===cq.n)x.classList.add('ok');else if(x===op)x.classList.add('no')});
   var ex='<div class="cg-ex"><b>'+esc(cq.n)+'</b> · '+esc(cq.m)+' · '+esc(cq.s)+(PN[cq.pat]?'<br><b>'+esc(cq.pat)+'</b>: '+esc(PN[cq.pat]):'')+'</div>';
   box.querySelector('.gm-msg').insertAdjacentHTML('beforebegin',ex);
-  if(ok){score++;setTimeout(function(){drawChart('✅ 정답! '+esc(cq.n))},1800)}else over('❌ 정답은 '+esc(cq.n));return}
+  track(ok);if(ok){score++;setTimeout(function(){drawChart('✅ 정답! '+esc(cq.n))},1800)}else over('❌ 정답은 '+esc(cq.n));return}
  if(mode==='cap'&&g){count();busy=true;var ok=(g.dataset.g==='hi')===(B.c>A.c);
   box.querySelectorAll('.gm-card')[1].outerHTML=card(B,true,'div',ok?'ok':'no');box.querySelectorAll('.gm-btns button').forEach(function(x){x.disabled=true});
-  if(ok){score++;var nb=B;setTimeout(function(){A=nb;B=pair(A);draw('✅ 정답! '+esc(nb.n)+' '+won(nb.c))},900)}
+  if(ok)score++;track(ok);if(ok){var nb=B;setTimeout(function(){A=nb;B=pair(A);draw('✅ 정답! '+esc(nb.n)+' '+won(nb.c))},900)}
   else over('❌ '+esc(B.n)+' 시가총액은 '+won(B.c)+' ('+esc(A.n)+' '+won(A.c)+')')}
  if(mode==='chg'&&c){count();busy=true;var pickA=c.dataset.n===A.n,win=pickA?A.p>B.p:B.p>A.p;
   var row=box.querySelector('.gm-row');row.innerHTML=card(A,true,'div',pickA?(win?'ok':'no'):'')+'<span class="gm-vs">VS</span>'+card(B,true,'div',pickA?'':(win?'ok':'no'));
-  if(win){score++;setTimeout(function(){A=pick();B=pair(A);draw('✅ 정답!')},1000)}else over('❌ 아쉬워요')}});
-document.querySelector('.gm-tabs').addEventListener('click',function(e){var b=e.target.closest('button[data-m]');if(!b)return;mode=b.dataset.m;
- document.querySelectorAll('.gm-tabs button').forEach(function(x){x.classList.toggle('on',x===b)});start()});
-start()})();"""
+  if(win)score++;track(win);if(win){setTimeout(function(){A=pick();B=pair(A);draw('✅ 정답!')},1000)}else over('❌ 아쉬워요')}});
+function sel(b){mode=b.dataset.m;document.querySelectorAll('.gm-tabs button').forEach(function(x){x.classList.toggle('on',x===b)});start()}
+document.querySelector('.gm-tabs').addEventListener('click',function(e){var b=e.target.closest('button[data-m]');if(!b)return;sel(b);
+ try{history.replaceState(null,'','#'+mode)}catch(x){}});
+var hb=location.hash&&document.querySelector('.gm-tabs button[data-m="'+location.hash.slice(1).replace(/[^a-z0-9]/g,'')+'"]');
+lvl();if(hb)sel(hb);else start()})();"""
 
 
 def build(out, page, now, api, ns):
@@ -233,24 +318,33 @@ def build(out, page, now, api, ns):
         d = datetime.strptime(day[:10], "%Y-%m-%d") if day else now
         dlab = f"{d.month}/{d.day}({'월화수목금토일'[d.weekday()]})"
         try:
-            puzzles = chart_puzzles(rows)
-        except Exception as e:  # 차트 문제가 실패해도 다른 게임은 돈다
+            puzzles, nums, future = game_data(rows)
+        except Exception as e:  # 차트·숫자 자료가 실패해도 다른 게임은 돈다
             print("차트 문제 실패:", type(e).__name__, e)
-            puzzles = []
+            puzzles, nums, future = [], {}, []
         data = (f"var S={json.dumps(rows, ensure_ascii=False, separators=(',', ':'))},DAY={json.dumps(dlab)},"
-                f"CP={json.dumps(puzzles, ensure_ascii=False, separators=(',', ':'))},PN={json.dumps(PATTERN_NOTE, ensure_ascii=False)},"
+                f"CP={json.dumps(puzzles, ensure_ascii=False, separators=(',', ':'))},X={json.dumps(nums, ensure_ascii=False, separators=(',', ':'))},"
+                f"FU={json.dumps(future, ensure_ascii=False, separators=(',', ':'))},PN={json.dumps(PATTERN_NOTE, ensure_ascii=False)},"
                 f"PAPI={json.dumps(api)},PNS={json.dumps(ns)};").replace("</", "<\\/")
         body = (f'<style>{GAME_CSS}</style>'
-                '<div class="gm-tabs"><button type="button" class="on" data-m="cap">💰 시가총액 대결</button>'
+                '<div class="gm-lv" id="gmlv"></div>'
+                '<div class="gm-tabs"><button type="button" class="hot" data-m="rush">⏱ 60초 챌린지</button>'
+                '<button type="button" class="on" data-m="cap">💰 시가총액 대결</button>'
                 '<button type="button" data-m="chg">📈 오늘 더 오른 종목</button>'
-                '<button type="button" data-m="chart">📊 차트 보고 맞히기</button></div>'
+                '<button type="button" data-m="chart">📊 차트 보고 맞히기</button>'
+                '<button type="button" data-m="fut">🔮 차트 다음은?</button>'
+                '<button type="button" data-m="sec">🏭 업종 맞히기</button>'
+                '<button type="button" data-m="px">💵 주가 맞히기</button>'
+                '<button type="button" data-m="r1">📅 1년 수익률 대결</button>'
+                '<button type="button" data-m="fin">🧾 실적 대결</button></div>'
                 '<div class="gm" id="gm"></div>'
-                f'<p class="gm-note">· 자료: 네이버 증권 업종별 종목 시가총액·등락률 ({escape(day)} 기준, 시가총액 상위 {len(rows)}종목, ETF·우선주 제외).<br>'
-                '· 틀릴 때까지 계속 이어집니다. 최고 기록은 이 기기에만 저장돼요.<br>'
+                f'<p class="gm-note">· 자료: 네이버 증권 업종별 종목 시가총액·등락률 ({escape(day)} 기준, 시가총액 상위 {len(rows)}종목, ETF·우선주 제외), '
+                '네이버 증권 일봉 종가(차트·주가·1년 수익률), DART 최근 정기보고서 누적 숫자·KB증권 현재가 PER(실적 대결).<br>'
+                '· 60초 챌린지는 틀려도 계속, 나머지는 틀릴 때까지 이어집니다. 등급·미션·최고 기록은 이 기기에만 저장돼요.<br>'
                 '· 홈의 <a href="../#predict">🎯 코스피 오를까 내릴까?</a>에서 다음 장을 맞혀 보세요.</p>'
                 f'<script>{data}\n{GAME_JS}</script>')
     (out / "play" / "index.html").write_text(page("🎮 놀이터", body, "../", "play/", "PLAYGROUND",
-                                                  "시가총액 대결 · 오늘 더 오른 종목 · 차트 보고 회사 맞히기"), encoding="utf-8")
+                                                  "60초 챌린지 · 시가총액 대결 · 차트 · 업종 · 주가 · 실적 대결 등 게임 9가지"), encoding="utf-8")
     return len(rows)
 
 
@@ -310,8 +404,50 @@ def find_pattern(cl):
     return None
 
 
-def chart_puzzles(rows):
-    """게임에 쓸 차트 문제 [{n, m, s, c(시가총액), pat, price, hi, lo, ch(1년 등락 %), pts(0~100 정규화 120점), d0, d1}]."""
+FIN_URL = "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/study-fin/fin/{code}.json"
+
+
+def _fin(code):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(FIN_URL.format(code=code), headers=UA), timeout=15) as r:
+            return json.loads(r.read())
+    except Exception:
+        return None
+
+
+def _metrics(j):
+    """study-fin 숫자 → 실적 대결용 {opm(영업이익률), g(매출 증가율), roe, per}. 금융사는 영업이익률·매출 증가율을 뺀다."""
+    if not j:
+        return {}
+    v, px, m = j.get("v") or {}, j.get("px") or {}, {}
+    rev, op = v.get("rev"), v.get("op")
+    if not j.get("fin") and isinstance(rev, list) and isinstance(op, list) and rev and op and rev[0] and rev[0] > 0 and op[0] is not None:
+        m["opm"] = round(op[0] / rev[0] * 100, 1)
+        if len(rev) > 1 and rev[1] and rev[1] > 0:
+            m["g"] = round((rev[0] / rev[1] - 1) * 100, 1)
+    if isinstance(v.get("roe"), (int, float)):
+        m["roe"] = round(v["roe"], 1)
+    if isinstance(px.get("per"), (int, float)) and px["per"] > 0:
+        m["per"] = round(px["per"], 1)
+    return m
+
+
+def future_puzzle(r, ser):
+    """🔮 차트 다음은?: 약 1년 종가를 이틀 간격 120점으로 줄이고, 마지막 20점(약 40거래일)을 가린다. 5% 넘게 움직인 것만."""
+    if len(ser) < 240:
+        return None
+    pick = ser[::-1][::2][:120][::-1]
+    cut = 99
+    ch = pick[-1][1] / pick[cut][1] - 1
+    if abs(ch) < 0.05:
+        return None
+    return {"n": r["n"], "s": r["s"], "cl": [round(c) for _, c in pick], "cut": cut,
+            "d0": pick[0][0], "dc": pick[cut][0], "d1": pick[-1][0]}
+
+
+def game_data(rows):
+    """시가총액 상위 220종목의 1년 일봉(네이버 fchart)·DART 숫자(study-fin)를 한 번에 받아
+    (차트 문제 CP, 종목별 숫자 X{이름: {p 현재가, r 1년 등락, opm, g, roe, per}}, 차트 다음은? 문제 FU)."""
     codes = {}
     j = _get(CODES_URL) or {}
     for code, name, *_ in j.get("list") or []:
@@ -320,6 +456,24 @@ def chart_puzzles(rows):
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=8) as ex:
         series = list(ex.map(lambda r: _closes(codes[r["n"]]), cands))
+        fins = list(ex.map(lambda r: _fin(codes[r["n"]]), cands))
+    X, FU = {}, []
+    for r, ser, fj in zip(cands, series, fins):
+        x = _metrics(fj)
+        if len(ser) >= 200:
+            x["p"] = round(ser[-1][1])
+            x["r"] = round((ser[-1][1] / ser[0][1] - 1) * 100, 1)
+        if x:
+            X[r["n"]] = x
+        fu = future_puzzle(r, ser)
+        if fu:
+            FU.append(fu)
+    print("게임 숫자:", len(X), "종목 / 차트 다음은?", len(FU), "문제")
+    return chart_puzzles(cands, series), X, FU[:90]
+
+
+def chart_puzzles(cands, series):
+    """게임에 쓸 차트 문제 [{n, m, s, c(시가총액), pat, price, hi, lo, ch(1년 등락 %), pts(0~100 정규화 120점), d0, d1}]."""
     out = []
     for r, ser in zip(cands, series):
         cl = [c for _, c in ser]
