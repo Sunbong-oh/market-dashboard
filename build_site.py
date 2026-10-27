@@ -1346,7 +1346,8 @@ def strong_card(it, href):
     chg = it.get("changePct")
     pct = f'<span class="{"up" if chg > 0 else "down"}">{chg:+.2f}%</span>' if chg is not None else ""
     cur = escape(it.get("currency", "$"))  # 미국 외 종목은 index.json 에 currency(예: "¥") 를 적는다
-    px = f'<div class="px"><b>{cur}{it["price"]:,.2f}</b>{pct}</div>' if it.get("price") else ""
+    dp = 0 if cur == "₩" else 2  # 한국 종목(원)은 소수점 없이
+    px = f'<div class="px"><b>{cur}{it["price"]:,.{dp}f}</b>{pct}</div>' if it.get("price") else ""
     tags = "".join(f"<span>{escape(t)}</span>" for t in it.get("tags", []))
     rg = f'<span class="rgb">{escape(it["region"])}</span>' if it.get("region") else ""
     return (f'<a class="st{" rg" if rg else ""}" href="{escape(href)}">{px}<div class="nm">{rg}{escape(it.get("name", ""))}'
@@ -1446,7 +1447,7 @@ def build_strong():
     body = (f'<style>{STRONG_CSS}</style>'
             + ("".join(rows) or '<p class="err">아직 올린 강세종목 리포트가 없습니다.</p>')
             + '<div class="st-note">전일 미국장에서 강세를 보인 종목을 골라 만든 종목 리포트입니다. 재무는 SEC 공시(10-K·10-Q), '
-              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 미국 외 시장 종목(예: 🇨🇳 중국시장)은 빨간 배지로 표시하고, 재무는 그 나라 거래소 공시를 씁니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.'
+              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 미국 외 시장 종목(예: 🇨🇳 중국시장, 🇰🇷 한국시장)은 빨간 배지로 표시하고, 재무는 그 나라 공시(한국은 OpenDART)를 씁니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.'
               + ('<br>날짜 옆 지수(나스닥·S&amp;P500, 중국 종목은 상하이종합·과창판50 등): 전일 종가 기준 등락(Yahoo Finance)' if any(it.get("market") for it in items) else '') + '</div>')
     (out / "index.html").write_text(page("🚀 전일 미국장 강세종목", body, "../", "strong/", "US STRONG STOCKS",
                                          "날짜별 · 같은 날은 등락률 높은 순"), encoding="utf-8")
