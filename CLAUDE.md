@@ -56,6 +56,9 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 페이지에서 직접 추가한 것은 그 기기에만 저장된다(localStorage). 다른 기기와 함께 보려면 위 방식으로 JSON 에 올린다.
 - 5분 체크 종목 불러오기: `study_fin.py` 가 OpenDART 에서 상장사별 최근 정기보고서 숫자를 받아 study-fin 브랜치(index.json, fin/<종목코드>.json)에 저장(study-fin.yml, 매일 21:40, Secret DART_API_KEY 필요). 이어서 KB증권 Open API 현재가(IVU10140)로 PER·PBR·주가를 px 에 넣는다(Secret KB_OPENAPI_APP_KEY·KB_OPENAPI_APP_SECRET, 없으면 건너뜀). site.yml 이 /study/fin/ 에 붙인다. 실행 결과(DART 호출 수·KB 성공/실패·첫 오류)는 study-fin 브랜치의 log.json 에서 본다 (Actions 로그는 이 환경에서 못 읽음).
 - 5분 체크 아래 '예상 PER·PBR': 내년 영업이익(직접 입력) × 순이익÷영업이익(최근 보고서 비율, 기본 78%) = 예상 순이익. 시가총액은 사이트 빌드 때 kb flow-live map.json 으로 만든 `study/mcap.json`(이름 → 억원). 예상 PER = 시가총액 ÷ 예상 순이익, 예상 PBR = 시가총액 ÷ (자기자본 + 예상 순이익). '지금' 값도 같은 시가총액으로(순이익 연환산).
+- 5분 체크 '📊 분기 실적'(종목을 불러오면 나옴): 분기 매출액·영업이익 증가율 막대(전분기 대비/전년 동기 대비), 분기 표, 실적 발표 기준 PER(최근 4분기 합·이번 분기×4)·PBR·ROE.
+  - 분기 표: `study_q.py`(study-q.yml, 매일 20:10)가 네이버 증권 finance/quarter·annual 을 study-fin 브랜치 `q/<코드>.json` 으로, site.yml 이 /study/q/ 에 붙인다.
+  - 발표 당일 잠정실적: kb-market-report earnings_watch 가 DART 영업(잠정)실적 공시를 10분마다 읽어 earnings-live earnings.json `kr_prelim`(코드 → 이번 분기·전분기·전년 동기, 억원)에 넣고, 화면이 바로 덧붙인다(분기 = 공시일의 직전 분기). 종목명 위 '최근 잠정실적 발표' 버튼으로 바로 불러온다.
 - 확인: `python -c "import build_site as b, study_page; from pathlib import Path; print(study_page.build(Path('_site'), b.page))"`
 
 ## 실적발표 종목 (/reports/) 한 줄 설명
