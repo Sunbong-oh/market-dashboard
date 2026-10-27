@@ -28,6 +28,12 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 주가는 Yahoo Finance 일봉 종가, 재무는 SEC 공시(10-K·10-Q·8-K). 리포트 작성 뒤 주가가 크게 움직였으면 표지에 "작성 후 추가" 상자로 적는다.
 - 확인: `python -c "import build_site as b; b.build_strong()"` 가 오류 없이 도는지.
 
+## Brian's memo (/memo/) — 생각거리
+- 종목 리포트가 아닌 시장 점검·생각거리 글. 파일: `memo/<YYYY-MM-DD>_<짧은영문>.html`(+ 내려받을 .ppt·.pdf) + `memo/index.json` 에 한 줄.
+- index.json 항목: date, title, sub, headline, tags, file, downloads[[버튼 이름, 파일]]. 코드는 build_site.py `build_memo()`.
+- site.yml 자동 실행 경로에 memo/ 가 없으므로, 메모만 바꾼 커밋은 `trigger-site/` 에 파일 하나를 같이 넣어 홈페이지를 다시 만든다.
+- 첫 글: 2026-10-27 "한국만 약한가, 메모리가 약한가"(빌더 /mnt/project-files/kr-weak/, make.sh).
+
 ## 실적 속보 카드 (earnings_flash/)
 - 파일 `earnings_flash/<YYYYMMDD(발표 KST 날짜)>-<한글 회사명>.json`. 형식은 기존 카드(메타·테슬라·넷플릭스)와 같게:
   day, time(KST), company, period, verdict, rows[[항목, 값, 비교, 판정]], guidance[], sym[[야후심볼, 표시 이름]], sources[[제목, URL]], px.

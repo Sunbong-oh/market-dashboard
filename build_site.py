@@ -39,6 +39,7 @@ CLOSE = Path(os.environ.get("CLOSE_REPO", ROOT.parent / "kb-market-report")) / "
 CONSENSUS = CLOSE.parent / "consensus"
 US_REPORTS = ROOT / "us_reports"
 US_STRONG = ROOT / "us_strong"
+MEMO = ROOT / "memo"
 SITE_NAME = "Brian's 투자노트"
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 WD = "월화수목금토일"
@@ -98,7 +99,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
-        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
+        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("memo/", "Brian's memo"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
@@ -2457,6 +2458,68 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None, 
                                     encoding="utf-8")
 
 
+# ---------- Brian's memo (생각거리) ----------
+# 종목 리포트가 아닌 시장 점검·생각거리 글. memo/ 에 리포트 HTML(+ 내려받을 PDF·PPT)을 넣고 memo/index.json 에 한 줄 추가하면
+# /memo/ 목록(최신순)과 글 페이지가 생긴다. index.json 항목: date, title, sub, headline, tags, file, downloads[[이름, 파일]]
+MEMO_CSS = STRONG_CSS + """
+.st .dl{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}.st .dl a{font-size:12.5px;font-weight:800;padding:4px 10px;border-radius:8px;
+  border:1px solid #F2A900;color:var(--fg,#3D3A35);text-decoration:none;background:transparent}
+"""
+
+
+MEMO_PAGE_CSS = ("<style>body{margin:0!important;padding:0 0 24px!important}body>section.page:first-of-type{margin-top:24px}"
+                 "@media(max-width:952px){body>section.page{margin-left:16px;margin-right:16px}}</style>")
+
+
+def memo_items():
+    try:
+        items = json.loads((MEMO / "index.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    items = [x for x in items if DATE_RE.match(x.get("date", "")) and x.get("file") and (MEMO / x["file"]).is_file()]
+    return sorted(items, key=lambda x: x["date"], reverse=True)
+
+
+def memo_card(it, prefix=""):
+    tags = "".join(f"<span>{escape(t)}</span>" for t in it.get("tags", []))
+    dls = "".join(f'<a href="{escape(prefix + f)}" download>⬇ {escape(n)}</a>' for n, f in it.get("downloads", []) if (MEMO / f).is_file())
+    return (f'<div class="st"><a href="{escape(prefix + it["file"])}" style="text-decoration:none;color:inherit;display:block">'
+            f'<div class="nm">{escape(it["title"])}<small>{escape(it.get("sub", ""))}</small>'
+            '<span class="go"><b>📝 메모 읽기</b><i>&lt;-- 터치!!</i></span></div>'
+            f'<div class="hl">{escape(it.get("headline", ""))}</div>'
+            + (f'<div class="tg">{tags}</div>' if tags else "") + '</a>'
+            + (f'<div class="dl">{dls}</div>' if dls else "") + '</div>')
+
+
+def build_memo():
+    out = OUT / "memo"
+    out.mkdir(parents=True, exist_ok=True)
+    items = memo_items()
+    rows, last = [], ""
+    for it in items:
+        if it["date"] != last:
+            last = it["date"]
+            rows.append(f'<div class="st-day">{label(last)}</div>')
+        rows.append(memo_card(it))
+        src = (MEMO / it["file"]).read_text(encoding="utf-8")
+        # 리포트 본문의 바깥 여백 때문에 메뉴가 좁아지지 않게: 여백은 지면(.page)에 준다
+        src = re.sub(r"</head>", lambda _: MEMO_PAGE_CSS + "</head>", src, count=1, flags=re.I)
+        src = re.sub(r"</body>", lambda _: STRONG_FIX + "</body>", src, count=1, flags=re.I) if re.search(r"</body>", src, re.I) else src + STRONG_FIX
+        bar = ('<div style="' + SUB_STYLE + '"><a href="./" style="' + SUB_LINK + '">← 메모 목록</a>'
+               '<a href="./" class="st-close-bar" style="margin-left:auto;background:#F2A900;color:#3D3A35;font-weight:900;text-decoration:none;padding:5px 14px;border-radius:16px" '
+               'onclick="event.preventDefault();if(history.length>1){history.back()}else{window.close();setTimeout(function(){location.href=\'./\'},200)}">✕ 닫기</a></div>')
+        (out / it["file"]).write_text(with_nav(src, "../", "memo/", extra=bar), encoding="utf-8")
+        for _, f in it.get("downloads", []):
+            if (MEMO / f).is_file():
+                shutil.copy(MEMO / f, out / f)
+    body = (f'<style>{MEMO_CSS}</style>'
+            + ("".join(rows) or '<p class="err">아직 올린 메모가 없습니다.</p>')
+            + '<div class="st-note">Brian의 생각거리: 시장 흐름을 자산·수급·지표로 점검한 메모입니다. 숫자의 출처와 기준 시각은 각 글에 적혀 있습니다. '
+              '매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.</div>')
+    (out / "index.html").write_text(page("📝 Brian's memo", body, "../", "memo/", "BRIAN'S MEMO", "생각거리 · 최신순"), encoding="utf-8")
+    return items
+
+
 def main():
     now = datetime.now(d.KST)
     if OUT.exists():
@@ -2469,6 +2532,7 @@ def main():
     target = build_target()
     us = build_us()
     strong = build_strong()
+    build_memo()
     live = build_live(now)
     build_visits(now)
     build_map()
