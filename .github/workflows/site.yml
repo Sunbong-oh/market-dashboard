@@ -79,6 +79,7 @@ jobs:
           mkdir -p _site/study
           git archive FETCH_HEAD fin | tar -x -C _site/study
           git show FETCH_HEAD:index.json > _site/study/fin/index.json
+          git archive FETCH_HEAD q | tar -x -C _site/study || echo "분기 실적(q/) 아직 없음"
       - name: 출근길 음성 브리핑 붙이기 (podcast 브랜치 -> /podcast/feed.xml)
         # daily-dashboard.yml이 만든 MP3·피드. 브랜치가 아직 없거나 실패해도 나머지는 배포한다.
         continue-on-error: true

@@ -1,0 +1,45 @@
+name: 재무제표 공부 분기 실적 (네이버)
+
+# 재무제표 공부 › 분기 실적: study-fin 브랜치 index.json 종목마다 네이버 증권 분기·연간 매출액·영업이익·순이익을
+# 받아(study_q.py) study-fin 브랜치 q/<종목코드>.json 으로 저장한다. site.yml 이 /study/q/ 에 붙인다.
+# 그날 나온 잠정실적은 화면이 kb earnings-live 의 kr_prelim 으로 바로 덧붙이므로 하루 한 번이면 된다.
+on:
+  schedule:
+    - cron: "10 11 * * *"   # 매일 20:10 KST (낮에 나온 실적이 네이버 표에 들어간 뒤)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: study-fin   # study-fin.yml 과 같은 브랜치를 덮어쓰므로 차례로
+  cancel-in-progress: false
+
+jobs:
+  q:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 네이버 증권에서 받기
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          mkdir -p _fin
+          git fetch -q --depth 1 origin study-fin
+          git archive FETCH_HEAD | tar -x -C _fin
+          python study_q.py --data _fin
+      - name: study-fin 브랜치에 저장
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/fin.index"
+          rm -f "$GIT_INDEX_FILE"
+          git --work-tree=_fin add -A -f .
+          commit=$(git commit-tree "$(git write-tree)" -m "study-fin: 분기 실적 $(date -u -d '+9 hours' +%Y-%m-%d)")
+          git push --force origin "$commit:refs/heads/study-fin"
