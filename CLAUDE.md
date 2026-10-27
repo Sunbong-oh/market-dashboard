@@ -76,5 +76,6 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 차트 맞히기: 시가총액 상위 220종목의 1년 일봉(네이버 fchart)에서 패턴을 찾아(`find_pattern`: 52주 신고가 · N자형 · 오른쪽이 덜 오른 u자형) 패턴마다 12개 + 패턴 없는 차트 40개를 문제로 넣는다. 패턴 문제가 먼저 번갈아 나온다.
 
 ## 전략 검증 (/lab/)
+- **2026-10-27 멈춤**(사용자 요청, 돌파매매 전략으로 바꿀 예정): kb earnings_watch.py `STRATEGY_ON=False`, play_page.py `LAB_PAUSED=True`, 메뉴·계산기 칸에서 뺌. 사용자가 다시 요청하면 새 전략으로 연다.
 - 국내 '영업이익 급증' 알림 시각 다음 1분봉 시가 매수 → 5분 뒤 1분봉 시가 매도. 계산은 kb-market-report earnings_watch.py `strategy_update()`가 10분마다(1분봉은 2주 뒤 사라짐) earnings-live 의 earnings.json `strategy` 에 쌓는다.
 - 페이지 코드는 play_page.py `build_lab()`. 누적은 매매마다 비용 0.25%를 뺀 가정.

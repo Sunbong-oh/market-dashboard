@@ -569,8 +569,16 @@ render(SEED);
 fetch(FEED+'?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.strategy&&j.strategy.length)render(j.strategy)}).catch(function(){})})();"""
 
 
+LAB_PAUSED = True  # 2026-10-27 사용자 요청으로 멈춤 (kb earnings_watch STRATEGY_ON=False 와 함께 다시 켠다)
+
+
 def build_lab(out, page):
     """전략 검증 페이지. 기록은 kb 실적 감시가 earnings.json 의 strategy 에 쌓는다(사이트를 만들 때 넣고, 볼 때 최신으로 다시 읽음)."""
+    if LAB_PAUSED:  # 멈춘 동안은 주소로 들어와도 안내만 (메뉴·계산기 칸에서도 뺐다)
+        (out / "lab").mkdir(parents=True, exist_ok=True)
+        (out / "lab" / "index.html").write_text(page("🧪 전략 검증", '<p class="err">전략 검증은 잠시 멈췄습니다. 새 전략(돌파매매)으로 바꿔 다시 열 예정입니다.</p>',
+                                                     "../", "lab/", "STRATEGY LAB", "잠시 멈춤"), encoding="utf-8")
+        return 0
     seed = (_get(FEED_URL) or {}).get("strategy") or []
     data = (f"var SEED={json.dumps(seed, ensure_ascii=False)},FEED={json.dumps(FEED_URL)};").replace("</", "<\\/")
     body = (f'<style>{LAB_CSS}</style><div id="lab"></div>'
