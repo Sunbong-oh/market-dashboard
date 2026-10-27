@@ -9,6 +9,7 @@
 '홈페이지에 올리기' 버튼이 Claude 에게 보낼 문장을 복사해 준다 → Claude 가 위 JSON 에 넣어 커밋한다.
 """
 import json
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -73,6 +74,11 @@ CSS = """
 .sig:first-of-type{border-top:0}
 .dot{flex:none;width:58px;text-align:center;font-size:12.5px;font-weight:800;border-radius:99px;padding:3px 0}
 .dot.g{background:var(--ok-bg);color:var(--ok)}.dot.y{background:var(--warn-bg);color:var(--warn)}.dot.r{background:var(--bad-bg);color:var(--bad)}.dot.n{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.fwd{margin-top:10px;border:2px solid var(--accent);border-radius:12px;padding:10px 12px}
+.fwd h4{margin:0 0 8px;font-size:14.5px}.fwd .tl{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fwd .tl>div{background:var(--bg);border-radius:10px;padding:8px 6px;text-align:center}.fwd .tl small{display:block;font-size:12px;color:var(--muted);font-weight:700}
+.fwd .tl b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.fwd .tl i{display:block;font-style:normal;font-size:12px;color:var(--muted)}
+.fwd p{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.6}
 .sig b{display:block;font-size:14.5px}.sig span{font-size:13.5px;color:var(--muted)}
 .verdict{font-size:16px;font-weight:800;padding:10px 12px;border-radius:10px}
 .verdict.g{background:var(--ok-bg);color:var(--ok)}.verdict.y{background:var(--warn-bg);color:var(--warn)}.verdict.r{background:var(--bad-bg);color:var(--bad)}
@@ -233,11 +239,16 @@ CHECK = """
    <label for="c-per">PER(배)<input id="c-per" inputmode="decimal" value="9"></label>
    <label for="c-pbr">PBR(배)<input id="c-pbr" inputmode="decimal" value=""></label>
    <label for="c-type">업종 성격<select id="c-type"><option value="gen">일반 제조·소비재</option><option value="cyc">경기민감 (반도체·화학·철강·해운)</option><option value="gro">성장주 (플랫폼·SaaS·바이오)</option><option value="ord">수주산업 (조선·건설·방산·전력기기)</option></select></label>
+   <div class="sep">예상 PER·PBR (내년 영업이익을 넣으면 계산)</div>
+   <label for="c-fop">내년 영업이익(예상)<input id="c-fop" inputmode="decimal" value="" placeholder="예: 증권사 컨센서스"></label>
+   <label for="c-nr">순이익 ÷ 영업이익(%)<input id="c-nr" inputmode="decimal" value="78"></label>
+   <label class="full" for="c-mcap">시가총액<input id="c-mcap" inputmode="decimal" value=""></label>
   </form>
  </div>
  <div class="panel" aria-live="polite">
   <div class="verdict" id="ckV"></div>
   <div id="ckS"></div>
+  <div class="fwd" id="ckFwd" hidden></div>
   <div class="row-btn"><button class="sb" type="button" id="ckSave">이 결과 저장</button><button class="sb gh" type="button" id="ckReset">빈칸으로 시작</button><span class="msg" id="ckMsg"></span></div>
   <div class="saved" id="ckList"></div>
  </div>
@@ -357,7 +368,29 @@ function check(){
   $('#ckV').className='verdict '+v[0];$('#ckV').textContent=($('#c-name').value||'이 종목')+' · '+v[1];
   $('#ckS').innerHTML=s.map(function(x){return '<div class="sig"><span class="dot '+x[0]+'">'+LV[x[0]]+'</span><div><b>'+esc(x[1])+'</b><span>'+esc(x[2])+'</span></div></div>'}).join('')
     +(pv?'<div class="sig"><span class="dot n">위치</span><div><b>가격 위치</b><span>'+esc(pv)+'</span></div></div>':'');
+  fwd(per,pbr);
   return {v:v,s:s,pv:pv};
+}
+/* 예상 PER·PBR: 내년 영업이익 × (순이익 ÷ 영업이익) = 예상 순이익. 시가총액 ÷ 예상 순이익 = 예상 PER,
+   시가총액 ÷ (지금 자기자본 + 예상 순이익) = 예상 PBR (배당·자사주는 빼고 이익이 그대로 자본에 쌓인다는 가정) */
+var CUR=null,MDATE='';
+function fwd(per,pbr){
+  var el=$('#ckFwd'),fop=n('c-fop'),nr=n('c-nr'),mc=n('c-mcap'),eq=n('c-eq');
+  if(fop==null){el.hidden=true;return}el.hidden=false;
+  if(nr==null)nr=78;var ni=fop*nr/100,h='<h4>📈 내년 예상 PER · PBR</h4>';
+  if(!mc){el.innerHTML=h+'<p>시가총액을 넣어 주세요 (불러오기를 하면 네이버 증권 시가총액으로 채웁니다).</p>';return}
+  /* '지금' 값도 같은 시가총액·자기자본으로: PER = 시가총액 ÷ 최근 보고서 순이익(연환산), PBR = 시가총액 ÷ 자기자본 */
+  var cur=CUR&&CUR.name===$('#c-name').value&&CUR.ni>0?mc/(CUR.ni*12/CUR.mo):null;if(cur!=null)per=cur;if(eq>0)pbr=mc/eq;
+  var fper=ni>0?mc/ni:null,fpbr=eq?mc/(eq+ni):null,froe=eq?ni/(eq+ni/2)*100:null;
+  var t=function(lab,v,unit,now){return '<div><small>'+lab+'</small><b>'+(v==null?'–':v.toFixed(unit==='%'?1:unit==='배P'?2:1)+(unit==='배P'?'배':unit))+'</b><i>'+(now!=null?'지금 '+now:'&nbsp;')+'</i></div>'};
+  var msg=[];
+  if(ni<=0)msg.push('예상 순이익이 0 이하라 PER을 구할 수 없습니다(적자)');
+  else if(per>0&&fper!=null){var ch=(fper/per-1)*100;msg.push('지금 PER '+per.toFixed(1)+'배 → 내년 '+fper.toFixed(1)+'배. '+(ch<-10?'이익이 늘어 지금 주가로도 내년엔 '+Math.abs(ch).toFixed(0)+'% 더 싸 보인다. 그 이익 증가가 실제로 나올지가 관건':ch>10?'내년 이익이 줄어 지금 주가가 내년 기준으론 더 비싸 보인다':'지금과 비슷한 수준'))}
+  msg.push('예상 순이익 '+fmtEok(ni)+' = 내년 영업이익 '+fmtEok(fop)+' × '+nr.toFixed(0)+'%(순이익 ÷ 영업이익, 가정)');
+  msg.push('시가총액 '+fmtEok(mc)+(MDATE&&$('#c-mcap').classList.contains('auto')?' (네이버 증권 '+MDATE+')':'')+' · 지금 PER = 시가총액 ÷ 최근 보고서 순이익(연환산), 지금 PBR = 시가총액 ÷ 자기자본');
+  msg.push('예상 PBR은 내년 말 자기자본 = 지금 자기자본 + 예상 순이익(배당·자사주 빼지 않은 가정)으로 계산');
+  el.innerHTML=h+'<div class="tl">'+t('예상 PER',fper,'배',per>0?per.toFixed(1)+'배':null)+t('예상 PBR',fpbr,'배P',pbr>0?pbr.toFixed(2)+'배':null)+t('예상 ROE',froe,'%',n('c-roe')!=null?n('c-roe').toFixed(1)+'%':null)+'</div>'
+   +'<p>'+msg.map(esc).join('<br>')+'</p>';
 }
 $('#ckF').addEventListener('input',function(){$('#ckEx').hidden=true;check()});
 $('#c-name').addEventListener('input',check);
@@ -415,6 +448,11 @@ function fill(d){
   $('#c-mkt').value=d.market==='코스닥'?'kosdaq':'kospi';
   setv('c-ebt',v.ebt!=null&&v.ebt<0?Math.abs(v.ebt):(v.ebt!=null?0:null));setv('c-eq',v.eq);
   var px=d.px||{};setv('c-roe',v.roe);setv('c-per',px.per>0?px.per:'');setv('c-pbr',px.pbr>0?px.pbr:'');
+  CUR={ni:v.ni,mo:b.months||12,name:d.name};setv('c-mcap','');
+  fetch('mcap.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null}).then(function(j){var x=j&&j.m&&j.m[d.name];
+   if(x&&$('#c-name').value===d.name){setv('c-mcap',x);MDATE=j.date;check()}}).catch(function(){});
+  setv('c-nr',v.ni!=null&&v.op[0]>0&&v.ni>0?Math.max(30,Math.min(150,Math.round(v.ni/v.op[0]*100))):78);
+  $('#c-fop').value='';
   $('#sepPL').textContent='손익·현금흐름 · 올해 = '+b.now+', 작년 = '+b.prev;
   $('#sepBS').textContent='재무상태표 · 올해 = '+b.bs_now+(b.bs_prev?', 작년 = '+b.bs_prev:' (작년 같은 시점 자료 없음)')+' 잔액';
   var f=b.filed||'',notes=[];
@@ -638,6 +676,25 @@ qstat();qstart('real');
 </script>"""
 
 
+MAP_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/map.json"
+
+
+def mcap_file(dest):
+    """예상 PER·PBR 칸의 시가총액: kb flow-live map.json(네이버 증권 업종별 종목, 시가총액 억원)을 이름 → 시가총액으로 저장."""
+    try:
+        with urllib.request.urlopen(urllib.request.Request(MAP_URL, headers={"User-Agent": "Mozilla/5.0"}), timeout=20) as r:
+            j = json.loads(r.read())
+    except Exception as e:
+        print("시가총액 자료 실패:", type(e).__name__, e)
+        return 0
+    m = {st["n"]: round(st["v"]) for secs in (j.get("data") or {}).values() for sec in secs for st in sec.get("st") or []
+         if st.get("n") and st.get("v")}
+    d = str(j.get("date") or "")
+    (dest / "mcap.json").write_text(json.dumps({"date": f"{d[:4]}-{d[4:6]}-{d[6:8]}" if len(d) == 8 else "", "m": m},
+                                               ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    return len(m)
+
+
 def build(out, page):
     """out: 사이트 출력 폴더, page: build_site.page (메뉴·머리 공통 틀)."""
     terms, inds, cases, quiz = _load("terms.json"), _load("industries.json"), _load("cases.json"), _load("quiz.json")
@@ -650,6 +707,7 @@ def build(out, page):
     body = f'<style>{CSS}</style><div class="st">{tabs}{HOW}{CHECK}{IND}{TERMS}{CASES}{QUIZ}</div>{SHEET}{js}'
     dest = out / "study"
     dest.mkdir(parents=True, exist_ok=True)
+    mcap_file(dest)
     (dest / "index.html").write_text(
         page("📒 재무제표 공부", body, "../", "study/", "FINANCIAL STATEMENTS",
              f"용어 {len(terms)}개 · 업종 {n_ind}개 · 사례 {len(cases)}개 · 퀴즈 {len(quiz)}문제 · 재무제표를 주식에 쓰는 법"),
