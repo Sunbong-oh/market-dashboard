@@ -1322,6 +1322,7 @@ a.st:hover{border-color:#F2A900}
 .st-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
 /* 미국 외 시장 종목(index.json 의 region): 카드 왼쪽 띠를 빨강으로 바꾸고 '🇨🇳 중국시장' 배지를 종목명 앞에 둔다 */
 .st.rg{border-left-color:#D7263D}.st .rgb{display:inline-block;font-size:13px;font-weight:900;padding:2px 9px;border-radius:6px;background:#D7263D;color:#fff;white-space:nowrap}
+.st .rgb.us{background:#1F4E9E}
 .st .go{display:inline-flex;align-items:center;gap:8px}
 .st .go b{display:inline-block;white-space:nowrap;padding:5px 12px;border-radius:10px;background:#F2A900;color:#3D3A35;font-size:14px;font-weight:800}
 .st .go i{font-style:normal;color:#E5484D;font-weight:800;font-size:14px;white-space:nowrap;display:inline-block;animation:rpt-tap .9s ease-in-out infinite}
@@ -1351,7 +1352,9 @@ def strong_card(it, href):
     px = f'<div class="px"><b>{cur}{it["price"]:,.{dp}f}</b>{pct}</div>' if it.get("price") else ""
     tags = "".join(f"<span>{escape(t)}</span>" for t in it.get("tags", []))
     rg = f'<span class="rgb">{escape(it["region"])}</span>' if it.get("region") else ""
-    return (f'<a class="st{" rg" if rg else ""}" href="{escape(href)}">{px}<div class="nm">{rg}{escape(it.get("name", ""))}'
+    # region 이 없는 항목은 미국 종목: 파란 '🇺🇸 미국시장' 배지 (2026-10-28 요청, 카드 띠 색은 그대로)
+    us = "" if rg else '<span class="rgb us">🇺🇸 미국시장</span>'
+    return (f'<a class="st{" rg" if rg else ""}" href="{escape(href)}">{px}<div class="nm">{rg or us}{escape(it.get("name", ""))}'
             f'<small>{escape(it["ticker"])} · {escape(it.get("exchange", ""))} · {escape(it.get("sector", ""))}</small>'
             # 리포트 버튼은 종목명 줄 바로 옆 (좁으면 다음 줄로)
             '<span class="go"><b>📑 실시간 작성된 리포트</b><i>&lt;-- 터치!!</i></span></div>'
@@ -1448,7 +1451,7 @@ def build_strong():
     body = (f'<style>{STRONG_CSS}</style>'
             + ("".join(rows) or '<p class="err">아직 올린 강세종목 리포트가 없습니다.</p>')
             + '<div class="st-note">전일 미국장에서 강세를 보인 종목을 골라 만든 종목 리포트입니다. 재무는 SEC 공시(10-K·10-Q), '
-              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 미국 외 시장 종목(예: 🇨🇳 중국시장, 🇰🇷 한국시장)은 빨간 배지로 표시하고, 재무는 그 나라 공시(한국은 OpenDART)를 씁니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.'
+              '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 미국 종목은 파란 🇺🇸 미국시장 배지, 미국 외 시장 종목(예: 🇨🇳 중국시장, 🇰🇷 한국시장)은 빨간 배지로 표시하고, 재무는 그 나라 공시(한국은 OpenDART)를 씁니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.'
               + ('<br>날짜 옆 지수(나스닥·S&amp;P500, 중국 종목은 상하이종합·과창판50 등): 전일 종가 기준 등락(Yahoo Finance)' if any(it.get("market") for it in items) else '') + '</div>')
     (out / "index.html").write_text(page("🚀 전일 미국장 강세종목", body, "../", "strong/", "US STRONG STOCKS",
                                          "날짜별 · 같은 날은 등락률 높은 순"), encoding="utf-8")
