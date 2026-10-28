@@ -1455,26 +1455,40 @@ def build_strong():
     return items
 
 
+def _strong_title(its):
+    """그날 카드가 전부 미국 외 시장(예: 중국)이면 제목에서 '미국'을 빼고 시장 이름을 붙인다."""
+    rgs = sorted({it.get("region", "") for it in its})
+    return "🚀 전일 미국시장 강세종목" if rgs == [""] else ("🚀 전일 강세종목 · " + " · ".join(escape(r) for r in rgs if r) if "" not in rgs else "🚀 전일 강세종목")
+
+
 def strong_home(items):
     if not items:
         return ""
     day = items[0]["date"]
     today = [it for it in items if it["date"] == day]
-    cards = "".join(strong_card(it, "strong/" + it["file"]) for it in today)
-    # 그날 카드가 전부 미국 외 시장(예: 중국)이면 제목에서 '미국'을 빼고 시장 이름을 붙인다
-    rgs = sorted({it.get("region", "") for it in today})
-    title = "🚀 전일 미국시장 강세종목" if rgs == [""] else ("🚀 전일 강세종목 · " + " · ".join(escape(r) for r in rgs if r) if "" not in rgs else "🚀 전일 강세종목")
+    # 한국시장 종목(전일 국내장 강세)은 등록일 15:30 장 마감 뒤 홈에서 내린다 (/strong/ 목록에는 남는다).
+    kr = [it for it in today if "한국" in (it.get("region") or "")]
+    rest = [it for it in today if it not in kr]
+    kr_until = f"{day}T15:30:00+09:00"
+    tag = lambda html: html.replace("<a ", f'<a data-kr-until="{kr_until}" ', 1)
+    cards = "".join(tag(strong_card(it, "strong/" + it["file"])) if it in kr else strong_card(it, "strong/" + it["file"]) for it in today)
+    mk = strong_market(rest) + (f'<span data-kr-until="{kr_until}">{strong_market(kr)}</span>' if kr and strong_market(kr) else "")
     # 전일 미국장 강세종목이라 등록일 17:00(KST)까지는 홈 맨 위에 두고, 그 뒤로는 해외주식 리포트 아래(#strong-low)로 내린다.
     # 사이트를 다시 빌드하지 않아도 되게 보는 사람 브라우저 시각으로 옮긴다.
-    return (f'<section class="sec" id="strong" data-until="{day}T17:00:00+09:00"><style>{STRONG_CSS}</style>'
-            f'<div class="sec-h st-h"><h2>{title}</h2>{strong_market(today)}'
+    return (f'<section class="sec" id="strong" data-until="{day}T17:00:00+09:00"'
+            + (f' data-title-after="{_strong_title(rest)}"' if kr and rest else "") + f'><style>{STRONG_CSS}</style>'
+            f'<div class="sec-h st-h"><h2>{_strong_title(today)}</h2>{mk}'
             f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}'
             + ('<div class="st-note" style="margin-top:6px">지수: 전일 종가 기준 등락(Yahoo Finance)</div>'
                if strong_market(today) else "") + '</section>')
 
 
 STRONG_LOW_JS = """<div id="strong-low"></div><script>(function(){var s=document.getElementById('strong'),l=document.getElementById('strong-low');
- if(s&&l&&Date.now()>=Date.parse(s.dataset.until))l.appendChild(s)})()</script>"""
+ if(s&&l&&Date.now()>=Date.parse(s.dataset.until))l.appendChild(s);
+ /* 한국시장 강세종목은 그날 15:30 장 마감 뒤 내린다. 남은 카드가 없으면 칸째로 */
+ function kr(){if(!s)return;var gone=0;s.querySelectorAll('[data-kr-until]').forEach(function(e){if(Date.now()>=Date.parse(e.dataset.krUntil)){e.remove();gone=1}});
+  if(!gone)return;if(!s.querySelector('a.st'))s.remove();else if(s.dataset.titleAfter){var h=s.querySelector('h2');if(h)h.textContent=s.dataset.titleAfter}}
+ kr();setInterval(kr,60000)})()</script>"""
 
 
 # ---------- 맵 (업종별 등락 트리맵) ----------

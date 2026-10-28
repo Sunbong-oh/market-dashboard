@@ -26,6 +26,7 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - HTML 은 기존 리포트(예: `us_strong/2026-10-23_ULTA.html`)의 `<style>` 과 구조를 그대로 쓴다: `section.page` > `.ph`(머리) / `.pb`(본문) / `.pf`(출처·쪽번호),
   표지 `.cover` + `.keydata`, 그림은 인라인 SVG(`.chart`). 휴대폰 폭(390px)에서 가로 스크롤이 생기지 않게 확인.
 - 주가는 Yahoo Finance 일봉 종가, 재무는 SEC 공시(10-K·10-Q·8-K). 리포트 작성 뒤 주가가 크게 움직였으면 표지에 "작성 후 추가" 상자로 적는다.
+- 홈 칸: 미국 종목은 등록일 17:00 뒤 해외주식 리포트 아래로 내리고, 한국시장 종목(region 에 '한국')은 등록일 15:30 장 마감 뒤 홈에서 뺀다(보는 사람 브라우저 시각, /strong/ 목록엔 남음).
 - 확인: `python -c "import build_site as b; b.build_strong()"` 가 오류 없이 도는지.
 
 ## Brian's memo (/memo/) — 생각거리
