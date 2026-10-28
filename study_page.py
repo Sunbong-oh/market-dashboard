@@ -88,7 +88,7 @@ CSS = """
 .qs p{margin:8px 0 0;font-size:12.5px;color:var(--muted);line-height:1.6}
 @media (max-width:520px){.qs .vt{grid-template-columns:repeat(2,1fr)}}
 .ck .pre{font-size:12.5px;line-height:1.9}.ck .pre button{font:700 12.5px/1 inherit;padding:5px 9px;border-radius:99px;border:1px solid #F2A900;background:#FBE7B0;color:#3D3A35;cursor:pointer;margin:0 4px 0 0}
-.fwd{margin-top:10px;border:2px solid var(--accent);border-radius:12px;padding:10px 12px}
+.ck .fwd{grid-column:1/-1}.fwd{margin-top:4px;border:2px solid var(--accent);border-radius:12px;padding:10px 12px}
 .fwd h4{margin:0 0 8px;font-size:14.5px}.fwd .tl{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .fwd .tl>div{background:var(--bg);border-radius:10px;padding:8px 6px;text-align:center}.fwd .tl small{display:block;font-size:12px;color:var(--muted);font-weight:700}
 .fwd .tl b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.fwd .tl i{display:block;font-style:normal;font-size:12px;color:var(--muted)}
@@ -253,17 +253,18 @@ CHECK = """
    <label for="c-per">PER(배)<input id="c-per" inputmode="decimal" value="9"></label>
    <label for="c-pbr">PBR(배)<input id="c-pbr" inputmode="decimal" value=""></label>
    <label for="c-type">업종 성격<select id="c-type"><option value="gen">일반 제조·소비재</option><option value="cyc">경기민감 (반도체·화학·철강·해운)</option><option value="gro">성장주 (플랫폼·SaaS·바이오)</option><option value="ord">수주산업 (조선·건설·방산·전력기기)</option></select></label>
-   <div class="sep">예상 PER·PBR (내년 영업이익을 넣으면 계산)</div>
-   <label for="c-fop">내년 영업이익(예상)<input id="c-fop" inputmode="decimal" value="" placeholder="예: 증권사 컨센서스"></label>
+   <div class="sep">예상 PER·PBR (예상 영업이익을 넣으면 계산)</div>
+   <label for="c-fpd">넣는 단위<select id="c-fpd"><option value="y">연간 (내년 1년치)</option><option value="q">분기 (한 분기 × 4 로 연환산)</option></select></label>
+   <label for="c-fop"><span id="c-fop-l">내년 영업이익(예상)</span><input id="c-fop" inputmode="decimal" value="" placeholder="예: 증권사 컨센서스"></label>
    <label for="c-nr">순이익 ÷ 영업이익(%)<input id="c-nr" inputmode="decimal" value="78"></label>
-   <label class="full" for="c-mcap">시가총액<input id="c-mcap" inputmode="decimal" value=""></label>
+   <label for="c-mcap">시가총액<input id="c-mcap" inputmode="decimal" value=""></label>
+   <div class="fwd" id="ckFwd" hidden></div>
   </form>
  </div>
  <div class="panel" aria-live="polite">
   <div class="verdict" id="ckV"></div>
   <div id="ckS"></div>
   <div class="qs" id="ckQ" hidden></div>
-  <div class="fwd" id="ckFwd" hidden></div>
   <div class="row-btn"><button class="sb" type="button" id="ckSave">이 결과 저장</button><button class="sb gh" type="button" id="ckReset">빈칸으로 시작</button><span class="msg" id="ckMsg"></span></div>
   <div class="saved" id="ckList"></div>
  </div>
@@ -440,13 +441,14 @@ function loadQ(code,name){QS.cur=null;$('#ckQ').hidden=true;
   QS.cur={name:name,qj:a[0],pre:a[1][code]||null};var Q=quarters(a[0],QS.cur.pre),last=Q[Q.length-1];
   var l4=Q.filter(function(x){return x.n!=null}).slice(-4);QS.cur.ttm=l4.length===4?l4.reduce(function(s,x){return s+x.n},0):null;
   if(last&&last.o!=null&&last.n!=null&&last.o>0&&last.n>0)setv('c-nr',Math.max(30,Math.min(150,Math.round(l4.reduce(function(s,x){return s+x.n},0)/Q.slice(-l4.length).reduce(function(s,x){return s+(x.o||0)},0)*100))));
-  /* 예상 PER 칸이 비어 있으면 이번 분기 영업이익 × 4 를 넣어 둔다 (연환산 가정, 직접 고치면 된다) */
-  if(last&&last.o!=null&&!$('#c-fop').value){setv('c-fop',Math.round(last.o*4))}
+  /* 예상 PER 칸이 비어 있으면 이번 분기 영업이익을 '분기' 단위로 넣어 둔다 (×4 연환산 가정, 직접 고치면 된다) */
+  if(last&&last.o!=null&&!$('#c-fop').value){$('#c-fpd').value='q';setv('c-fop',Math.round(last.o))}
   check()})}
 function fwd(per,pbr){
-  var el=$('#ckFwd'),fop=n('c-fop'),nr=n('c-nr'),mc=n('c-mcap'),eq=n('c-eq');
+  var el=$('#ckFwd'),qtr=$('#c-fpd').value==='q',fin=n('c-fop'),fop=fin==null?null:fin*(qtr?4:1),nr=n('c-nr'),mc=n('c-mcap'),eq=n('c-eq');
+  $('#c-fop-l').textContent=qtr?'분기 영업이익(예상)':'내년 영업이익(예상)';
   if(fop==null){el.hidden=true;return}el.hidden=false;
-  if(nr==null)nr=78;var ni=fop*nr/100,h='<h4>📈 내년 예상 PER · PBR</h4>';
+  if(nr==null)nr=78;var ni=fop*nr/100,h='<h4>📈 '+(qtr?'분기 실적 기준(×4 연환산)':'내년')+' 예상 PER · PBR</h4>';
   if(!mc){el.innerHTML=h+'<p>시가총액을 넣어 주세요 (불러오기를 하면 네이버 증권 시가총액으로 채웁니다).</p>';return}
   /* '지금' 값도 같은 시가총액·자기자본으로: PER = 시가총액 ÷ 최근 보고서 순이익(연환산), PBR = 시가총액 ÷ 자기자본 */
   var qt=QS.cur&&QS.cur.name===$('#c-name').value&&QS.cur.ttm>0?QS.cur.ttm:null;
@@ -455,15 +457,15 @@ function fwd(per,pbr){
   var t=function(lab,v,unit,now){return '<div><small>'+lab+'</small><b>'+(v==null?'–':v.toFixed(unit==='%'?1:unit==='배P'?2:1)+(unit==='배P'?'배':unit))+'</b><i>'+(now!=null?'지금 '+now:'&nbsp;')+'</i></div>'};
   var msg=[];
   if(ni<=0)msg.push('예상 순이익이 0 이하라 PER을 구할 수 없습니다(적자)');
-  else if(per>0&&fper!=null){var ch=(fper/per-1)*100;msg.push('지금 PER '+per.toFixed(1)+'배 → 내년 '+fper.toFixed(1)+'배. '+(ch<-10?'이익이 늘어 지금 주가로도 내년엔 '+Math.abs(ch).toFixed(0)+'% 더 싸 보인다. 그 이익 증가가 실제로 나올지가 관건':ch>10?'내년 이익이 줄어 지금 주가가 내년 기준으론 더 비싸 보인다':'지금과 비슷한 수준'))}
-  msg.push('예상 순이익 '+fmtEok(ni)+' = 내년 영업이익 '+fmtEok(fop)+' × '+nr.toFixed(0)+'%(순이익 ÷ 영업이익, 가정)');
-  if($('#c-fop').classList.contains('auto'))msg.push('내년 영업이익 칸은 이번 분기 영업이익 × 4 로 채운 값(가정)입니다. 증권사 전망치로 바꿔 넣어 보세요');
+  else if(per>0&&fper!=null){var ch=(fper/per-1)*100;var wd=qtr?'연환산':'내년';msg.push('지금 PER '+per.toFixed(1)+'배 → '+wd+' '+fper.toFixed(1)+'배. '+(ch<-10?'이익이 늘어 지금 주가로도 '+wd+' 기준 '+Math.abs(ch).toFixed(0)+'% 더 싸 보인다. 그 이익이 실제로 이어질지가 관건':ch>10?wd+' 이익이 줄어 지금 주가가 '+wd+' 기준으론 더 비싸 보인다':'지금과 비슷한 수준'))}
+  msg.push('예상 순이익 '+fmtEok(ni)+' = '+(qtr?'분기 영업이익 '+fmtEok(fin)+' × 4 = 연환산 '+fmtEok(fop):'내년 영업이익 '+fmtEok(fop))+' × '+nr.toFixed(0)+'%(순이익 ÷ 영업이익, 가정)');
+  if($('#c-fop').classList.contains('auto'))msg.push('영업이익 칸은 이번 분기 실제 영업이익으로 채운 값입니다. 다음 분기 전망치나 연간 컨센서스(단위를 연간으로)로 바꿔 넣어 보세요');
   msg.push('시가총액 '+fmtEok(mc)+(MDATE&&$('#c-mcap').classList.contains('auto')?' (네이버 증권 '+MDATE+')':'')+' · 지금 PER = 시가총액 ÷ '+(qt?'최근 4분기 순이익 합':'최근 보고서 순이익(연환산)')+', 지금 PBR = 시가총액 ÷ 자기자본');
-  msg.push('예상 PBR은 내년 말 자기자본 = 지금 자기자본 + 예상 순이익(배당·자사주 빼지 않은 가정)으로 계산');
+  msg.push('예상 PBR은 1년 뒤 자기자본 = 지금 자기자본 + 예상 순이익(배당·자사주 빼지 않은 가정)으로 계산');
   el.innerHTML=h+'<div class="tl">'+t('예상 PER',fper,'배',per>0?per.toFixed(1)+'배':null)+t('예상 PBR',fpbr,'배P',pbr>0?pbr.toFixed(2)+'배':null)+t('예상 ROE',froe,'%',n('c-roe')!=null?n('c-roe').toFixed(1)+'%':null)+'</div>'
    +'<p>'+msg.map(esc).join('<br>')+'</p>';
 }
-$('#ckF').addEventListener('input',function(){$('#ckEx').hidden=true;check()});
+$('#ckF').addEventListener('input',function(e){if(e.target.classList)e.target.classList.remove('auto');$('#ckEx').hidden=true;check()});
 $('#c-name').addEventListener('input',check);
 $('#ckF').addEventListener('submit',function(e){e.preventDefault()});
 $('#ckReset').addEventListener('click',function(){document.querySelectorAll('#ckF input,#c-name').forEach(function(i){i.value='';i.classList.remove('auto')});$('#sepPL').textContent=PL0;$('#sepBS').textContent=BS0;srcMsg('');$('#ckEx').hidden=true;check();$('#c-name').focus()});
@@ -523,7 +525,7 @@ function fill(d){
   fetch('mcap.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null}).then(function(j){var x=j&&j.m&&j.m[d.name];
    if(x&&$('#c-name').value===d.name){setv('c-mcap',x);MDATE=j.date;check()}}).catch(function(){});
   setv('c-nr',v.ni!=null&&v.op[0]>0&&v.ni>0?Math.max(30,Math.min(150,Math.round(v.ni/v.op[0]*100))):78);
-  $('#c-fop').value='';loadQ(d.code,d.name);
+  $('#c-fop').value='';$('#c-fpd').value='y';loadQ(d.code,d.name);
   $('#sepPL').textContent='손익·현금흐름 · 올해 = '+b.now+', 작년 = '+b.prev;
   $('#sepBS').textContent='재무상태표 · 올해 = '+b.bs_now+(b.bs_prev?', 작년 = '+b.bs_prev:' (작년 같은 시점 자료 없음)')+' 잔액';
   var f=b.filed||'',notes=[];
