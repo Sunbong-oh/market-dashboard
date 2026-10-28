@@ -254,8 +254,9 @@ CHECK = """
    <label for="c-pbr">PBR(배)<input id="c-pbr" inputmode="decimal" value=""></label>
    <label for="c-type">업종 성격<select id="c-type"><option value="gen">일반 제조·소비재</option><option value="cyc">경기민감 (반도체·화학·철강·해운)</option><option value="gro">성장주 (플랫폼·SaaS·바이오)</option><option value="ord">수주산업 (조선·건설·방산·전력기기)</option></select></label>
    <div class="sep">예상 PER·PBR (예상 영업이익을 넣으면 계산)</div>
-   <label for="c-fpd">넣는 단위<select id="c-fpd"><option value="y">연간 (내년 1년치)</option><option value="q">분기 (한 분기 × 4 로 연환산)</option></select></label>
+   <label for="c-fpd">넣는 단위<select id="c-fpd"><option value="y">내년 연간</option><option value="y2">내후년 연간</option><option value="q">분기 (한 분기 × 4 로 연환산)</option></select></label>
    <label for="c-fop"><span id="c-fop-l">내년 영업이익(예상)</span><input id="c-fop" inputmode="decimal" value="" placeholder="예: 증권사 컨센서스"></label>
+   <label class="full" for="c-fop1" id="c-fop1w" hidden><span id="c-fop1-l">내년 영업이익(예상)</span><input id="c-fop1" inputmode="decimal" value="" placeholder="비워 두면 위 숫자와 같다고 가정"></label>
    <label for="c-nr">순이익 ÷ 영업이익(%)<input id="c-nr" inputmode="decimal" value="78"></label>
    <label for="c-mcap">시가총액<input id="c-mcap" inputmode="decimal" value=""></label>
    <div class="fwd" id="ckFwd" hidden></div>
@@ -445,23 +446,28 @@ function loadQ(code,name){QS.cur=null;$('#ckQ').hidden=true;
   if(last&&last.o!=null&&!$('#c-fop').value){$('#c-fpd').value='q';setv('c-fop',Math.round(last.o))}
   check()})}
 function fwd(per,pbr){
-  var el=$('#ckFwd'),qtr=$('#c-fpd').value==='q',fin=n('c-fop'),fop=fin==null?null:fin*(qtr?4:1),nr=n('c-nr'),mc=n('c-mcap'),eq=n('c-eq');
-  $('#c-fop-l').textContent=qtr?'분기 영업이익(예상)':'내년 영업이익(예상)';
+  /* 넣는 단위: y = 내년 연간, y2 = 내후년 연간(그 사이 내년 이익도 자기자본에 쌓인다), q = 한 분기 × 4 */
+  var Y=new Date(Date.now()+9*36e5).getUTCFullYear(),u=$('#c-fpd').value,qtr=u==='q',two=u==='y2',yr=two?Y+2:Y+1;
+  $('#c-fpd').options[0].text=(Y+1)+'년 연간 (내년)';$('#c-fpd').options[1].text=(Y+2)+'년 연간 (내후년)';
+  var el=$('#ckFwd'),fin=n('c-fop'),fop=fin==null?null:fin*(qtr?4:1),nr=n('c-nr'),mc=n('c-mcap'),eq=n('c-eq');
+  $('#c-fop-l').textContent=qtr?'분기 영업이익(예상)':yr+'년 영업이익(예상)';$('#c-fop1w').hidden=!two;$('#c-fop1-l').textContent=(Y+1)+'년 영업이익(예상)';
   if(fop==null){el.hidden=true;return}el.hidden=false;
-  if(nr==null)nr=78;var ni=fop*nr/100,h='<h4>📈 '+(qtr?'분기 실적 기준(×4 연환산)':'내년')+' 예상 PER · PBR</h4>';
+  if(nr==null)nr=78;var ni=fop*nr/100,lab=qtr?'연환산':yr+'년',h='<h4>📈 '+(qtr?'분기 실적 기준(×4 연환산)':yr+'년')+' 예상 PER · PBR</h4>';
+  var o1=two?(n('c-fop1')!=null?n('c-fop1'):fop):0,ni1=o1*nr/100,eq0=eq?eq+ni1:eq;  /* 내후년이면 내년 이익만큼 자기자본이 먼저 늘어난 뒤 */
   if(!mc){el.innerHTML=h+'<p>시가총액을 넣어 주세요 (불러오기를 하면 네이버 증권 시가총액으로 채웁니다).</p>';return}
   /* '지금' 값도 같은 시가총액·자기자본으로: PER = 시가총액 ÷ 최근 보고서 순이익(연환산), PBR = 시가총액 ÷ 자기자본 */
   var qt=QS.cur&&QS.cur.name===$('#c-name').value&&QS.cur.ttm>0?QS.cur.ttm:null;
   var cur=qt?mc/qt:CUR&&CUR.name===$('#c-name').value&&CUR.ni>0?mc/(CUR.ni*12/CUR.mo):null;if(cur!=null)per=cur;if(eq>0)pbr=mc/eq;
-  var fper=ni>0?mc/ni:null,fpbr=eq?mc/(eq+ni):null,froe=eq?ni/(eq+ni/2)*100:null;
+  var fper=ni>0?mc/ni:null,fpbr=eq?mc/(eq0+ni):null,froe=eq?ni/(eq0+ni/2)*100:null;
   var t=function(lab,v,unit,now){return '<div><small>'+lab+'</small><b>'+(v==null?'–':v.toFixed(unit==='%'?1:unit==='배P'?2:1)+(unit==='배P'?'배':unit))+'</b><i>'+(now!=null?'지금 '+now:'&nbsp;')+'</i></div>'};
   var msg=[];
   if(ni<=0)msg.push('예상 순이익이 0 이하라 PER을 구할 수 없습니다(적자)');
-  else if(per>0&&fper!=null){var ch=(fper/per-1)*100;var wd=qtr?'연환산':'내년';msg.push('지금 PER '+per.toFixed(1)+'배 → '+wd+' '+fper.toFixed(1)+'배. '+(ch<-10?'이익이 늘어 지금 주가로도 '+wd+' 기준 '+Math.abs(ch).toFixed(0)+'% 더 싸 보인다. 그 이익이 실제로 이어질지가 관건':ch>10?wd+' 이익이 줄어 지금 주가가 '+wd+' 기준으론 더 비싸 보인다':'지금과 비슷한 수준'))}
-  msg.push('예상 순이익 '+fmtEok(ni)+' = '+(qtr?'분기 영업이익 '+fmtEok(fin)+' × 4 = 연환산 '+fmtEok(fop):'내년 영업이익 '+fmtEok(fop))+' × '+nr.toFixed(0)+'%(순이익 ÷ 영업이익, 가정)');
+  else if(per>0&&fper!=null){var ch=(fper/per-1)*100;var wd=lab;msg.push('지금 PER '+per.toFixed(1)+'배 → '+wd+' '+fper.toFixed(1)+'배. '+(ch<-10?'이익이 늘어 지금 주가로도 '+wd+' 기준 '+Math.abs(ch).toFixed(0)+'% 더 싸 보인다. 그 이익이 실제로 이어질지가 관건':ch>10?wd+' 이익이 줄어 지금 주가가 '+wd+' 기준으론 더 비싸 보인다':'지금과 비슷한 수준'))}
+  msg.push('예상 순이익 '+fmtEok(ni)+' = '+(qtr?'분기 영업이익 '+fmtEok(fin)+' × 4 = 연환산 '+fmtEok(fop):yr+'년 영업이익 '+fmtEok(fop))+' × '+nr.toFixed(0)+'%(순이익 ÷ 영업이익, 가정)');
   if($('#c-fop').classList.contains('auto'))msg.push('영업이익 칸은 이번 분기 실제 영업이익으로 채운 값입니다. 다음 분기 전망치나 연간 컨센서스(단위를 연간으로)로 바꿔 넣어 보세요');
   msg.push('시가총액 '+fmtEok(mc)+(MDATE&&$('#c-mcap').classList.contains('auto')?' (네이버 증권 '+MDATE+')':'')+' · 지금 PER = 시가총액 ÷ '+(qt?'최근 4분기 순이익 합':'최근 보고서 순이익(연환산)')+', 지금 PBR = 시가총액 ÷ 자기자본');
-  msg.push('예상 PBR은 1년 뒤 자기자본 = 지금 자기자본 + 예상 순이익(배당·자사주 빼지 않은 가정)으로 계산');
+  msg.push(two?'예상 PBR은 '+yr+'년 말 자기자본 = 지금 자기자본 + '+(Y+1)+'년 순이익 '+fmtEok(ni1)+(n('c-fop1')==null?'(같다고 가정)':'')+' + '+yr+'년 순이익으로 계산(배당·자사주 빼지 않은 가정)'
+   :'예상 PBR은 1년 뒤 자기자본 = 지금 자기자본 + 예상 순이익(배당·자사주 빼지 않은 가정)으로 계산');
   el.innerHTML=h+'<div class="tl">'+t('예상 PER',fper,'배',per>0?per.toFixed(1)+'배':null)+t('예상 PBR',fpbr,'배P',pbr>0?pbr.toFixed(2)+'배':null)+t('예상 ROE',froe,'%',n('c-roe')!=null?n('c-roe').toFixed(1)+'%':null)+'</div>'
    +'<p>'+msg.map(esc).join('<br>')+'</p>';
 }
