@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import sys
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from html import escape, unescape
 from pathlib import Path
 
@@ -1464,21 +1464,36 @@ def _strong_title(its):
     return "🚀 전일 미국시장 강세종목" if rgs == [""] else ("🚀 전일 강세종목 · " + " · ".join(escape(r) for r in rgs if r) if "" not in rgs else "🚀 전일 강세종목")
 
 
+def kr_until(it):
+    """한국시장 강세종목을 홈에서 내릴 시각: 올린 시각(posted, KST) 다음에 오는 첫 장 마감(평일 15:30).
+    posted 가 없으면 등록일 다음 평일 15:30 (일찍 내리지 않게)."""
+    if it.get("posted"):
+        t = datetime.strptime(it["posted"][:16], "%Y-%m-%d %H:%M")
+        d = t.date() if t.strftime("%H:%M") < "15:30" else t.date() + timedelta(days=1)
+    else:
+        d = datetime.strptime(it["date"], "%Y-%m-%d").date() + timedelta(days=1)
+    while d.weekday() >= 5:
+        d += timedelta(days=1)
+    return f"{d}T15:30:00+09:00"
+
+
 def strong_home(items):
     if not items:
         return ""
     day = items[0]["date"]
-    today = [it for it in items if it["date"] == day]
-    # 한국시장 종목(전일 국내장 강세)은 등록일 15:30 장 마감 뒤 홈에서 내린다 (/strong/ 목록에는 남는다).
+    now = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    # 그날 것 + 앞서 올린 한국시장 종목 중 아직 장 마감 전인 것 (다음 날 아침 미국 종목이 올라와도 15:30까지는 함께)
+    today = [it for it in items if it["date"] == day or ("한국" in (it.get("region") or "") and kr_until(it) > now)]
+    # 한국시장 종목(전일 국내장 강세)은 올린 뒤 첫 장 마감(15:30)이 지나면 홈에서 내린다 (/strong/ 목록에는 남는다).
     kr = [it for it in today if "한국" in (it.get("region") or "")]
     rest = [it for it in today if it not in kr]
-    kr_until = f"{day}T15:30:00+09:00"
-    tag = lambda html: html.replace("<a ", f'<a data-kr-until="{kr_until}" ', 1)
-    cards = "".join(tag(strong_card(it, "strong/" + it["file"])) if it in kr else strong_card(it, "strong/" + it["file"]) for it in today)
-    mk = strong_market(rest) + (f'<span data-kr-until="{kr_until}">{strong_market(kr)}</span>' if kr and strong_market(kr) else "")
+    tag = lambda html, u: html.replace("<a ", f'<a data-kr-until="{u}" ', 1)
+    cards = "".join(tag(strong_card(it, "strong/" + it["file"]), kr_until(it)) if it in kr else strong_card(it, "strong/" + it["file"]) for it in today)
+    mk = strong_market(rest) + (f'<span data-kr-until="{max(kr_until(it) for it in kr)}">{strong_market(kr)}</span>' if kr and strong_market(kr) else "")
     # 전일 미국장 강세종목이라 등록일 17:00(KST)까지는 홈 맨 위에 두고, 그 뒤로는 해외주식 리포트 아래(#strong-low)로 내린다.
     # 사이트를 다시 빌드하지 않아도 되게 보는 사람 브라우저 시각으로 옮긴다.
-    return (f'<section class="sec" id="strong" data-until="{day}T17:00:00+09:00"'
+    until = max([f"{day}T17:00:00+09:00"] + [kr_until(it) for it in kr])  # 한국 종목이 남아 있으면 그때까지 맨 위에
+    return (f'<section class="sec" id="strong" data-until="{until}"'
             + (f' data-title-after="{_strong_title(rest)}"' if kr and rest else "") + f'><style>{STRONG_CSS}</style>'
             f'<div class="sec-h st-h"><h2>{_strong_title(today)}</h2>{mk}'
             f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}'
@@ -1490,7 +1505,7 @@ STRONG_LOW_JS = """<div id="strong-low"></div><script>(function(){var s=document
  if(s&&l&&Date.now()>=Date.parse(s.dataset.until))l.appendChild(s);
  /* 한국시장 강세종목은 그날 15:30 장 마감 뒤 내린다. 남은 카드가 없으면 칸째로 */
  function kr(){if(!s)return;var gone=0;s.querySelectorAll('[data-kr-until]').forEach(function(e){if(Date.now()>=Date.parse(e.dataset.krUntil)){e.remove();gone=1}});
-  if(!gone)return;if(!s.querySelector('a.st'))s.remove();else if(s.dataset.titleAfter){var h=s.querySelector('h2');if(h)h.textContent=s.dataset.titleAfter}}
+  if(!gone)return;if(!s.querySelector('a.st'))s.remove();else if(s.dataset.titleAfter&&!s.querySelector('a.st[data-kr-until]')){var h=s.querySelector('h2');if(h)h.textContent=s.dataset.titleAfter}}
  kr();setInterval(kr,60000)})()</script>"""
 
 

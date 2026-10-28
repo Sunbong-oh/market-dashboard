@@ -169,6 +169,7 @@
  {
   "date": "2026-10-28",
   "ticker": "092870",
+  "posted": "2026-10-27 19:44",
   "exchange": "KOSDAQ",
   "region": "🇰🇷 한국시장",
   "currency": "₩",
@@ -232,6 +233,7 @@
  {
   "date": "2026-10-28",
   "ticker": "003160",
+  "posted": "2026-10-28 15:45",
   "exchange": "KOSPI",
   "region": "🇰🇷 한국시장",
   "currency": "₩",
@@ -269,6 +271,7 @@
  {
   "date": "2026-10-28",
   "ticker": "031980",
+  "posted": "2026-10-28 15:49",
   "exchange": "KOSDAQ",
   "region": "🇰🇷 한국시장",
   "currency": "₩",
