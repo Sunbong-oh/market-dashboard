@@ -960,7 +960,9 @@ def with_week_schedule(lines, day):
 
 def build_close():
     out = OUT / "close"
-    days = dated_dirs(CLOSE)
+    # 리포트가 있는 날만 (장마감 리포트가 빠진 날엔 15:46 선물 기록 futures_flow.json 만 있는 폴더가 생긴다 →
+    # 그 폴더를 '최신'으로 잡으면 홈 장마감·장중 실시간 수급 칸이 통째로 비었다: 2026-10-29~30)
+    days = [p for p in dated_dirs(CLOSE) if any(p.glob("*.html")) or (p / "본문_장마감수급.txt").exists()]
     first = None
     latest_html = None
     for p in days:
