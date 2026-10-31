@@ -1,0 +1,30 @@
+{
+ "run": "2026-10-31 09:48 KST",
+ "tickers": [
+  "SPY",
+  "QQQ",
+  "LLY",
+  "NVO",
+  "PANW",
+  "ULTA",
+  "SPCX",
+  "TSLA",
+  "LITE",
+  "NBIS",
+  "VRT"
+ ],
+ "ok": [
+  "SPY",
+  "QQQ",
+  "LLY",
+  "NVO",
+  "PANW",
+  "ULTA",
+  "SPCX",
+  "TSLA",
+  "LITE",
+  "NBIS",
+  "VRT"
+ ],
+ "fail": {}
+}
