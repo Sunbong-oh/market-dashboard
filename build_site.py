@@ -1479,24 +1479,31 @@ def kr_until(it):
     return f"{d}T15:30:00+09:00"
 
 
+def strong_gone(it):
+    """홈에서 내리는 시각: 한국시장 종목은 올린 뒤 첫 장 마감(kr_until), 나머지는 등록일이 끝나는 자정(그 뒤 새 리포트가 없으면 칸이 빈다)."""
+    if "한국" in (it.get("region") or ""):
+        return kr_until(it)
+    d = datetime.strptime(it["date"], "%Y-%m-%d").date() + timedelta(days=1)
+    return f"{d}T00:00:00+09:00"
+
+
 def strong_home(items):
-    if not items:
-        return ""
-    day = items[0]["date"]
     now = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%S+09:00")
-    # 그날 것 + 앞서 올린 한국시장 종목 중 아직 장 마감 전인 것 (다음 날 아침 미국 종목이 올라와도 15:30까지는 함께)
-    today = [it for it in items if it["date"] == day or ("한국" in (it.get("region") or "") and kr_until(it) > now)]
-    # 한국시장 종목(전일 국내장 강세)은 올린 뒤 첫 장 마감(15:30)이 지나면 홈에서 내린다 (/strong/ 목록에는 남는다).
+    # 아직 내릴 시각이 안 된 것만 (하루가 지나도 새 리포트가 없으면 칸째로 빠진다). 보는 사람 브라우저도 시각이 되면 뺀다.
+    today = [it for it in items if strong_gone(it) > now]
+    if not today:
+        return ""
+    day = max(it["date"] for it in today)
     kr = [it for it in today if "한국" in (it.get("region") or "")]
     rest = [it for it in today if it not in kr]
-    tag = lambda html, u: html.replace("<a ", f'<a data-kr-until="{u}" ', 1)
-    cards = "".join(tag(strong_card(it, "strong/" + it["file"]), kr_until(it)) if it in kr else strong_card(it, "strong/" + it["file"]) for it in today)
-    mk = strong_market(rest) + (f'<span data-kr-until="{max(kr_until(it) for it in kr)}">{strong_market(kr)}</span>' if kr and strong_market(kr) else "")
-    # 전일 미국장 강세종목이라 등록일 17:00(KST)까지는 홈 맨 위에 두고, 그 뒤로는 해외주식 리포트 아래(#strong-low)로 내린다.
-    # 사이트를 다시 빌드하지 않아도 되게 보는 사람 브라우저 시각으로 옮긴다.
-    until = max([f"{day}T17:00:00+09:00"] + [kr_until(it) for it in kr])  # 한국 종목이 남아 있으면 그때까지 맨 위에
+    tag = lambda html, u: html.replace("<a ", f'<a data-gone="{u}" ', 1)
+    cards = "".join(tag(strong_card(it, "strong/" + it["file"]), strong_gone(it)) for it in today)
+    span = lambda its: (f'<span data-gone="{max(strong_gone(it) for it in its)}">{strong_market(its)}</span>' if its and strong_market(its) else "")
+    mk = span(rest) + span(kr)
+    # 미국 종목은 등록일 17:00(KST)까지 홈 맨 위, 그 뒤 해외주식 리포트 아래(#strong-low)로. 한국 종목이 남아 있으면 그때까지 맨 위에.
+    until = max([f"{day}T17:00:00+09:00"] + [kr_until(it) for it in kr])
     return (f'<section class="sec" id="strong" data-until="{until}"'
-            + (f' data-title-after="{_strong_title(rest)}"' if kr and rest else "") + f'><style>{STRONG_CSS}</style>'
+            + (f' data-title-us="{_strong_title(rest)}" data-title-kr="{_strong_title(kr)}"' if kr and rest else "") + f'><style>{STRONG_CSS}</style>'
             f'<div class="sec-h st-h"><h2>{_strong_title(today)}</h2>{mk}'
             f'<a href="strong/">{escape(day[5:].replace("-", "/"))} · 전체</a></div>{cards}'
             + ('<div class="st-note" style="margin-top:6px">지수: 전일 종가 기준 등락(Yahoo Finance)</div>'
@@ -1505,10 +1512,13 @@ def strong_home(items):
 
 STRONG_LOW_JS = """<div id="strong-low"></div><script>(function(){var s=document.getElementById('strong'),l=document.getElementById('strong-low');
  if(s&&l&&Date.now()>=Date.parse(s.dataset.until))l.appendChild(s);
- /* 한국시장 강세종목은 그날 15:30 장 마감 뒤 내린다. 남은 카드가 없으면 칸째로 */
- function kr(){if(!s)return;var gone=0;s.querySelectorAll('[data-kr-until]').forEach(function(e){if(Date.now()>=Date.parse(e.dataset.krUntil)){e.remove();gone=1}});
-  if(!gone)return;if(!s.querySelector('a.st'))s.remove();else if(s.dataset.titleAfter&&!s.querySelector('a.st[data-kr-until]')){var h=s.querySelector('h2');if(h)h.textContent=s.dataset.titleAfter}}
- kr();setInterval(kr,60000)})()</script>"""
+ /* 내릴 시각(data-gone)이 지난 카드는 뺀다: 한국 종목은 올린 뒤 첫 15:30, 나머지는 등록일 자정. 남은 카드가 없으면 칸째로 */
+ function go(){if(!s||!s.parentNode)return;var gone=0;s.querySelectorAll('[data-gone]').forEach(function(e){if(Date.now()>=Date.parse(e.dataset.gone)){e.remove();gone=1}});
+  if(!gone)return;if(!s.querySelector('a.st')){s.remove();return}
+  if(s.dataset.titleUs){var h=s.querySelector('h2'),k=[].some.call(s.querySelectorAll('a.st .rgb'),function(e){return /한국/.test(e.textContent)}),
+   u=[].some.call(s.querySelectorAll('a.st'),function(e){var r=e.querySelector('.rgb');return !r||!/한국/.test(r.textContent)});
+   if(h&&k!==u)h.textContent=k?s.dataset.titleKr:s.dataset.titleUs}}
+ go();setInterval(go,60000)})()</script>"""
 
 
 # ---------- 맵 (업종별 등락 트리맵) ----------
