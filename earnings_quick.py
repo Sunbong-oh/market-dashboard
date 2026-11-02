@@ -112,10 +112,10 @@ class Quick:
         if self.items:
             self.save()
         for i in new:
-            lines = [f"⚡ 실적 발표 · {i['name']} ({i['first']} 공시)"]
+            lines = [f"⚡ 실적 발표 · 🟢 {i['name']} ({i['first']} 공시)"]
             if i["px"]:
                 p = i["px"][0]
-                lines.append(f"{p['s']} {p['p']} · 발표 전 종가 대비 {p['c']:+.1f}%")
+                lines.append(f"{p['s']} {p['p']} · 발표 전 종가 대비 {'🔴' if p['c'] > 0 else '🔵' if p['c'] < 0 else ''} {p['c']:+.1f}%")
             lines += [f"└ {a['t']} ({a['o']})" for a in i["news"][:-1][:2]]
             lines += ["", f"상세 분석 카드는 곧 홈페이지에: {SITE}"]
             text = "\n".join(lines)
