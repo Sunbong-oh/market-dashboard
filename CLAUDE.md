@@ -42,6 +42,7 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 수치는 회사 발표문(SEC 8-K) 포함 2곳 이상 교차 확인, 컨센서스와 비교. 콜 전이면 guidance 첫 줄 "컨퍼런스콜(HH:MM 한국시간) 후 업데이트".
 - 주가 반응은 `python earnings_px.py <카드>` 로 채운다(c = 발표 전 종가 대비, d1 = 발표 뒤 첫 정규장 종가).
 - 실적 발표 감지: `python earnings_sec.py --hours 30` (SEC 8-K Item 2.02 / 해외 6-K). 캘린더 날짜는 틀릴 수 있다.
+- 매시간 점검은 먼저 `python earnings_gate.py` 를 돌린다. `NO_WORK` 면 웹 검색·카드 작성 없이 '·' 만 남기고 끝낸다(토큰 절약). 할 일이 있으면 NEW/LIVE/CAL/CALL/D1 줄로 알려 준다.
 - main 에 올라가면 earnings-flash.yml 이 카드 이미지를 텔레그램으로 보낸다. 발표 후 12시간 지난 카드는 보내지 않는다.
 
 ## 텔레그램·메시지 규칙 (사용자 지시)
