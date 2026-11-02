@@ -1,0 +1,79 @@
+{
+  "day": "2026-11-03",
+  "time": "06:06",
+  "company": "팔란티어",
+  "period": "2026년 3분기",
+  "verdict": "매출·EPS 컨센서스 상회, 매출 +96% · 미국 상업 매출이 처음으로 정부 매출 추월 · 연간 가이던스 상향 · 그러나 시간외 약 3% 하락",
+  "rows": [
+    [
+      "매출",
+      "$23.1억",
+      "컨센서스 약 $21.8억 · 전년 +96%, 전분기 +20% · 분기 매출 첫 $20억 돌파",
+      "상회"
+    ],
+    [
+      "EPS(조정)",
+      "$0.44",
+      "컨센서스 약 $0.41 · GAAP $0.44",
+      "상회"
+    ],
+    [
+      "미국 상업 매출",
+      "$9.84억",
+      "전년 +148%, 전분기 +29% · 미국 정부 $9.53억(+96%) 처음 추월",
+      ""
+    ],
+    [
+      "조정 영업이익률",
+      "62%",
+      "GAAP 영업이익률 47% · '룰 오브 40' 158%",
+      ""
+    ],
+    [
+      "조정 잉여현금흐름",
+      "$12.2억",
+      "이익률 53% · 현금·국채 $104억",
+      ""
+    ]
+  ],
+  "guidance": [
+    "4분기 매출 $26.49~26.53억 · 조정 영업이익 $16.40~16.44억",
+    "연간 매출 $85.30~85.34억으로 상향(+91%) · 미국 상업 매출 $35.59억 이상(+143% 이상)",
+    "연간 조정 영업이익 $52.45~52.49억, 조정 잉여현금흐름 $48~50억으로 상향",
+    "수주(TCV) $29.2억(+6%) · 미국 상업 잔여계약가치 $65.2억(+79%)"
+  ],
+  "sym": [
+    [
+      "PLTR",
+      "팔란티어(미국 PLTR)"
+    ]
+  ],
+  "sources": [
+    [
+      "팔란티어 실적 보도자료 (SEC 8-K)",
+      "https://www.sec.gov/Archives/edgar/data/1321655/000132165526000045/a2026q3ex991pressrelease.htm"
+    ],
+    [
+      "MarketBeat: 3분기 실적·컨센서스",
+      "https://www.marketbeat.com/earnings/reports/2026-11-2-palantir-technologies-inc-stock/"
+    ],
+    [
+      "Alphastreet: 3분기 프리뷰(EPS $0.41)",
+      "https://news.alphastreet.com/palantir-technologies-pltr-q3-2026-preview-eps-est-0-41-reports-november-2/"
+    ],
+    [
+      "FinancialContent(StockStory): 3분기 결과",
+      "https://markets.financialcontent.com/stocks/article/stockstory-2026-11-2-palantir-technologies-nasdaqpltr-reports-bullish-q3-2026-full-year-sales-guidance-is-optimistic"
+    ]
+  ],
+  "px": [
+    {
+      "l": "팔란티어(미국 PLTR)",
+      "s": "애프터마켓",
+      "t": "11/03 08:10",
+      "p": "$172.98",
+      "c": -3.16,
+      "ref": "발표 전 종가"
+    }
+  ]
+}
