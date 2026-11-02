@@ -2389,7 +2389,7 @@ def earn_card(e, key):
     guide = "".join(f"<li>{escape(g)}</li>" for g in e.get("guidance") or [])
     src = " · ".join(f'<a href="{escape(u)}" target="_blank" rel="noopener">{escape(t)}</a>' for t, u in e.get("sources") or [])
     ts = f'{e["day"]}T{e.get("time") or "00:00"}:00+09:00'
-    return (f'<div class="earn" data-day="{escape(e["day"])}" data-ts="{escape(ts)}" data-key="{escape(key)}"><h2>📊 실적 속보 · {escape(e["company"])}'
+    return (f'<div class="earn" data-day="{escape(e["day"])}" data-ts="{escape(ts)}" data-key="{escape(key)}"><h2>📊 실적 속보 · <span class="cn">{escape(e["company"])}</span>'
             f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time", ""))} 발표</small></h2>'
             f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>{earn_px_html(e)}'
             + (f"<h3>향후 가이던스</h3><ul>{guide}</ul>" if guide else "")
