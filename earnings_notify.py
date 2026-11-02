@@ -44,7 +44,8 @@ def card_page(c, key, item=None):
     return (f'<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>{root}{b.EARN_CSS}'
             f'body{{margin:0;padding:10px;background:var(--bg);color:var(--text);width:{SHOT_W}px;box-sizing:border-box;word-break:keep-all;'
             f'font-family:"Noto Sans CJK KR","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif}}'
-            f'.earn{{margin:0}}.earn a{{text-decoration:none}}.brand{{font-size:11.5px;color:var(--muted);text-align:right;margin-top:6px}}'
+            f'.earn{{margin:0}}.earn a{{text-decoration:none}}.earn h2 .cn,.earn .pl{{color:#1f9d55}}'   # 텔레그램: 종목명 초록, 상승 빨강·하락 파랑(EARN_CSS)
+            f'.brand{{font-size:11.5px;color:var(--muted);text-align:right;margin-top:6px}}'
             f'</style></head><body>{card}<div class="brand">Brian\'s 투자노트 · sunbong-oh.github.io/market-dashboard</div></body></html>')
 
 
