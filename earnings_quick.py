@@ -67,6 +67,22 @@ class Quick:
             body["sha"] = self.sha
         self.sha = gh("PUT", f"{API}/contents/{PATH}", body)["content"]["sha"]
 
+    def refresh_px(self, skip=()):
+        """기존 항목의 주가 반응을 지금 값으로 (정규장·시간외 모두). 바뀐 게 있으면 True."""
+        changed = False
+        for i in self.items:
+            if i["key"] in skip or not i.get("sym"):
+                continue
+            try:
+                px = earnings_px.reaction(i["sym"], f"{i['name']}(미국 {i['sym']})",
+                                          datetime.fromisoformat(i["first_iso"]).timestamp())
+            except Exception:
+                px = None
+            if px and i.get("px") != [px]:
+                i["px"] = [px]
+                changed = True
+        return changed
+
     def check(self):
         """새 실적 공시 → 알림·저장. 기존 항목은 주가 반응만 새로 고친다."""
         new = []
@@ -98,17 +114,7 @@ class Quick:
             self.items.insert(0, item)
             if datetime.now(timezone.utc) - r["acc"] < timedelta(hours=2):
                 new.append(item)          # 늦게 본 공시(2시간 넘음)는 홈페이지에만 올리고 알림은 보내지 않는다
-        # 기존 항목 주가 반응 갱신
-        for i in self.items:
-            if i["key"] in {n["key"] for n in new} or not i.get("sym"):
-                continue
-            try:
-                px = earnings_px.reaction(i["sym"], f"{i['name']}(미국 {i['sym']})",
-                                          datetime.fromisoformat(i["first_iso"]).timestamp())
-                if px:
-                    i["px"] = [px]
-            except Exception:
-                pass
+        self.refresh_px(skip={n["key"] for n in new})
         if self.items:
             self.save()
         for i in new:
