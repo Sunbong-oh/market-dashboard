@@ -513,7 +513,7 @@ VISITS_JS = """<script>
  var PAGES=[{k:'',t:'투자노트 홈페이지',u:'../'},
             {k:'pen',t:'연금 계산기',u:'https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX'},
             {k:'life',t:'라이프 플랜',u:'https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt'},
-            {k:'ad-manbo',t:'광고 · 제주 만보농장',u:'https://www.band.us/@manbofarm',ad:1},
+            {k:'ad-jpool',t:'광고 · 제이풀 2호점',u:'https://m.place.naver.com/place/1196127004/home',ad:1},
             {k:'quiz',t:'오늘의 주식 퀴즈',u:'../#quiz',ad:1,lab:'참여',note:'퀴즈를 푼 사람 수 (기기당 하루 한 번)'},
             {k:'game',t:'놀이터 게임',u:'../play/',ad:1,lab:'플레이',note:'놀이터를 열고 게임을 시작한 횟수'}];
  function kst(off){var d=new Date(Date.now()+9*36e5-(off||0)*864e5);return d.toISOString().slice(0,10)}
@@ -1815,9 +1815,11 @@ TOOLS = (("연금 계산기", "💰", "퇴직연금·개인연금을 연금으�
          ("놀이터", "🎮", "⏱ 60초 챌린지 · 시가총액 · 차트 · 차트 다음은? · 업종 · 주가 · 1년 수익률 · 실적 대결 — 게임 9가지와 등급·오늘의 미션!"))  # 전략 검증(lab/)은 2026-10-27 멈춤 — 돌파매매 전략으로 바꿔 다시 연다
 
 
-# 홈 왼쪽 날개 광고 (제주 만보농장). 본문(1080px) 왼쪽 빈 공간에만 작게 띄우고, 공간이 없는 화면(휴대폰·좁은 창)에서는 숨긴다.
-# 누르면 새 탭으로 밴드가 열리고, 클릭 수는 방문자 현황(c-ad-manbo)에서 본다.
-AD_URL = "https://www.band.us/@manbofarm"
+# 홈 왼쪽 날개 광고 (제이풀 2호점 · 제주 어린이 전문 수영장). 본문(1080px) 왼쪽 빈 공간에만 작게 띄우고, 공간이 없는 화면(휴대폰·좁은 창)에서는 숨긴다.
+# 누르면 새 탭으로 네이버 플레이스가 열리고, 클릭 수는 방문자 현황(c-ad-jpool)에서 본다.
+# 업체를 바꿀 때: AD_URL · AD_NAME · AD_SUB · AD_IMG(assets/, 300×427 비율 세로) · data-ad 키(아래 AD_KEY, 방문자 현황 칸 k:'ad-<키>'도 같이)를 바꾼다.
+AD_URL = "https://m.place.naver.com/place/1196127004/home"
+AD_KEY, AD_NAME, AD_SUB, AD_IMG = "jpool", "제이풀 2호점", "제주 어린이 전문 수영장 · 제주시 연화남길 22", "assets/ad-jpool.webp"
 AD_CSS = """.wing{display:none;word-break:keep-all}
 @media (min-width:1440px){
 .wing{display:block;position:fixed;top:120px;width:150px;z-index:5;text-decoration:none;color:inherit;background:var(--card);
@@ -1861,17 +1863,17 @@ AD_CSS = """.wing{display:none;word-break:keep-all}
 
 def ad_home():
     """홈 왼쪽 날개 배너 (포스터)."""
-    a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo" aria-label="제주 만보농장 황금향 특가 (광고)"'
-    foot = '<span class="wg"><i>광고</i><b>밴드 주문 ›</b></span>'
-    return (f'<a class="wing l" {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="제주 만보농장 황금향 비상품 특별 이벤트 포스터">'
-            f'<span class="wt">🍊 제주 만보농장</span><span class="wp">황금향 비상품 특가</span>{foot}</a>')
+    a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="{AD_KEY}" aria-label="{AD_NAME} · {AD_SUB} (광고)"'
+    foot = '<span class="wg"><i>광고</i><b>네이버 플레이스 ›</b></span>'
+    return (f'<a class="wing l" {a}><img src="{AD_IMG}" width="300" height="427" loading="lazy" alt="{AD_NAME} 광고 사진">'
+            f'<span class="wt">🏊 {AD_NAME}</span><span class="wp">제주 어린이 전문 수영장</span>{foot}</a>')
 
 
 def ad_strip():
     """휴대폰·좁은 화면: 홈 맨 위 한 줄 광고 띠 (내용을 가리지 않아 닫기 버튼은 두지 않는다). 넓은 화면에선 숨기고 왼쪽 날개를 쓴다."""
-    a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="manbo" aria-label="제주 만보농장 황금향 특가 (광고)"'
-    return (f'<style>{AD_CSS}</style><div class="wing-m" id="wingm"><a {a}><img src="assets/ad-manbo.webp" width="300" height="427" loading="lazy" alt="">'
-            '<span class="t"><b>🍊 제주 만보농장</b><span>황금향 5kg <strong>3만원</strong> · 10kg <strong>5만5천원</strong></span><i>광고 · 밴드 주문 ›</i></span></a>'
+    a = f'href="{AD_URL}" target="_blank" rel="noopener sponsored" data-ad="{AD_KEY}" aria-label="{AD_NAME} · {AD_SUB} (광고)"'
+    return (f'<style>{AD_CSS}</style><div class="wing-m" id="wingm"><a {a}><img src="{AD_IMG}" width="300" height="427" loading="lazy" alt="">'
+            f'<span class="t"><b>🏊 {AD_NAME}</b><span>제주 어린이 전문 수영장 · <strong>연화남길 22</strong></span><i>광고 · 네이버 플레이스 ›</i></span></a>'
             '</div>')
 
 

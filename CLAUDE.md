@@ -36,6 +36,12 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - site.yml 자동 실행 경로에 memo/ 가 없으므로, 메모만 바꾼 커밋은 `trigger-site/` 에 파일 하나를 같이 넣어 홈페이지를 다시 만든다.
 - 첫 글: 2026-10-27 "한국만 약한가, 메모리가 약한가"(빌더 /mnt/project-files/kr-weak/, make.sh).
 
+## 홈 광고 (PC 왼쪽 날개 · 휴대폰 상단 띠)
+- 지금: 제이풀 2호점(제주 어린이 전문 수영장) → 네이버 플레이스 https://m.place.naver.com/place/1196127004/home. 2026-11-03 제주 만보농장에서 교체.
+- 코드: build_site.py `AD_URL`·`AD_KEY`·`AD_NAME`·`AD_SUB`·`AD_IMG` 와 `ad_home()`(PC)·`ad_strip()`(휴대폰). 이미지는 `assets/ad-<키>.webp`(300×427 비율 세로, 2배 600×854).
+- 업체를 바꿀 때: 위 값들 + 이미지 교체, 방문자 현황 PAGES 의 광고 칸(`k:'ad-<키>'`, 클릭 수 c-ad-<키>)도 같은 키로. 옛 이미지는 지운다.
+- 광고 일만 할 때는 이 세션 말고 새 세션에서 하면 토큰이 적게 든다.
+
 ## 실적 속보 카드 (earnings_flash/)
 - 파일 `earnings_flash/<YYYYMMDD(발표 KST 날짜)>-<한글 회사명>.json`. 형식은 기존 카드(메타·테슬라·넷플릭스)와 같게:
   day, time(KST), company, period, verdict, rows[[항목, 값, 비교, 판정]], guidance[], sym[[야후심볼, 표시 이름]], sources[[제목, URL]], px.
