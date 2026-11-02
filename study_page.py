@@ -61,6 +61,9 @@ CSS = """
 .st textarea{min-height:60px;resize:vertical}
 .ck .sep{grid-column:1/-1;font-size:13px;font-weight:800;color:var(--text);border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
 .ck>.nm{grid-column:1/-1;gap:6px}
+.ck>.qp,.ck>.fp{grid-column:1/-1}.ck .qp .qs{border:0;padding:0;margin:0}.ck .sep.top{border-top:0;padding-top:0;margin-top:0}
+@media (min-width:760px){.ck>.fp .f{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.qs tr.est td{color:var(--muted);font-style:italic}
 .ck .nmin{display:flex;flex-direction:column;gap:6px}
 .ck .nm label{font-size:13px;font-weight:700;color:var(--text)}
 .ck .nm label{display:block}
@@ -169,7 +172,7 @@ CSS = """
 .sheet label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;font-weight:700;color:var(--muted)}
 .sheet .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .sheet .note{font-size:12.5px;color:var(--muted)}
-@media (max-width:720px){.ck{grid-template-columns:minmax(0,1fr)}.ck>.panel[aria-live]{order:0}.ck>.panel:not(.nm):not([aria-live]){order:1}.ind .bd{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:720px){.ck{grid-template-columns:minmax(0,1fr)}.ck>.panel[aria-live]{order:0}.ck>.panel:not(.nm):not([aria-live]):not(.qp):not(.fp){order:1}.ind .bd{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:340px){.ck .f,.sheet .two{grid-template-columns:minmax(0,1fr)}}
 @media (prefers-reduced-motion:reduce){.ind .cv{transition:none}}
 """
@@ -221,11 +224,21 @@ HOW = """
 CHECK = """
 <div class="st-p" role="tabpanel" id="p-check" aria-labelledby="t-check" hidden>
 <p class="st-lede">종목명을 넣고 <b>불러오기</b>를 누르면 DART에 낸 가장 최근 분기 보고서 숫자가 채워지고, 지뢰 다섯 가지를 신호등으로 보여 줍니다. 숫자는 직접 고쳐 넣어도 됩니다. 금융업(은행·보험·증권)은 구조가 달라 이 체크가 맞지 않습니다. 단위는 <b>억원</b>.</p>
-<div class="ck">
+<div class="ck" id="ckAll">
  <div class="panel nm">  <div class="nmin"><label for="c-name">종목명 · 회사명이나 종목코드를 넣으면 최근 분기 숫자를 불러옵니다</label>
    <div class="nmrow"><input id="c-name" value="예시 기업" list="c-list" autocomplete="off" enterkeyhint="search"><button class="sb" type="button" id="ckLoad">불러오기</button></div>
    <datalist id="c-list"></datalist><div class="pre" id="ckPre"></div><div class="src" id="ckSrc" aria-live="polite"></div></div>
  </div>
+ <div class="panel qp" id="ckQp" hidden><div class="qs" id="ckQ" hidden></div></div>
+ <div class="panel fp"><form class="f" id="ckF2" autocomplete="off">
+   <div class="sep top">예상 PER·PBR (예상 영업이익을 넣으면 계산)</div>
+   <label for="c-fpd">넣는 단위<select id="c-fpd"><option value="y0">올해 연간</option><option value="y">내년 연간</option><option value="y2">내후년 연간</option><option value="q">분기 (한 분기 × 4 로 연환산)</option></select></label>
+   <label for="c-fop"><span id="c-fop-l">내년 영업이익(예상)</span><input id="c-fop" inputmode="decimal" value="" placeholder="예: 증권사 컨센서스"></label>
+   <label class="full" for="c-fop1" id="c-fop1w" hidden><span id="c-fop1-l">내년 영업이익(예상)</span><input id="c-fop1" inputmode="decimal" value="" placeholder="비워 두면 위 숫자와 같다고 가정"></label>
+   <label for="c-nr">순이익 ÷ 영업이익(%)<input id="c-nr" inputmode="decimal" value="78"></label>
+   <label for="c-mcap">시가총액<input id="c-mcap" inputmode="decimal" value=""></label>
+   <div class="fwd" id="ckFwd" hidden></div>
+  </form></div>
  <div class="panel">
   <div class="ex" id="ckEx">처음 보이는 숫자는 사용법을 보여 주는 가상의 예시입니다. 종목 숫자로 바꿔 넣으세요.</div>
   <form class="f" id="ckF" autocomplete="off">
@@ -253,19 +266,11 @@ CHECK = """
    <label for="c-per">PER(배)<input id="c-per" inputmode="decimal" value="9"></label>
    <label for="c-pbr">PBR(배)<input id="c-pbr" inputmode="decimal" value=""></label>
    <label for="c-type">업종 성격<select id="c-type"><option value="gen">일반 제조·소비재</option><option value="cyc">경기민감 (반도체·화학·철강·해운)</option><option value="gro">성장주 (플랫폼·SaaS·바이오)</option><option value="ord">수주산업 (조선·건설·방산·전력기기)</option></select></label>
-   <div class="sep">예상 PER·PBR (예상 영업이익을 넣으면 계산)</div>
-   <label for="c-fpd">넣는 단위<select id="c-fpd"><option value="y">내년 연간</option><option value="y2">내후년 연간</option><option value="q">분기 (한 분기 × 4 로 연환산)</option></select></label>
-   <label for="c-fop"><span id="c-fop-l">내년 영업이익(예상)</span><input id="c-fop" inputmode="decimal" value="" placeholder="예: 증권사 컨센서스"></label>
-   <label class="full" for="c-fop1" id="c-fop1w" hidden><span id="c-fop1-l">내년 영업이익(예상)</span><input id="c-fop1" inputmode="decimal" value="" placeholder="비워 두면 위 숫자와 같다고 가정"></label>
-   <label for="c-nr">순이익 ÷ 영업이익(%)<input id="c-nr" inputmode="decimal" value="78"></label>
-   <label for="c-mcap">시가총액<input id="c-mcap" inputmode="decimal" value=""></label>
-   <div class="fwd" id="ckFwd" hidden></div>
   </form>
  </div>
  <div class="panel" aria-live="polite">
   <div class="verdict" id="ckV"></div>
   <div id="ckS"></div>
-  <div class="qs" id="ckQ" hidden></div>
   <div class="row-btn"><button class="sb" type="button" id="ckSave">이 결과 저장</button><button class="sb gh" type="button" id="ckReset">빈칸으로 시작</button><span class="msg" id="ckMsg"></span></div>
   <div class="saved" id="ckList"></div>
  </div>
@@ -403,32 +408,35 @@ function quarters(qj,pre){/* [{k, r(매출), o(영업이익), n(순이익), p(�
  var M={},cons={};((qj&&qj.q)||[]).forEach(function(x){if(x[4])cons[x[0]]={r:x[1],o:x[2],n:x[3]};else M[x[0]]={k:x[0],r:x[1],o:x[2],n:x[3]}});
  if(pre&&pre.q){var put=function(k,i,src){if(!M[k]||src)M[k]={k:k,r:pre.sales[i],o:pre.op[i],n:pre.net[i],p:!!src}};
   put(pre.q,0,1);put(qkey(pre.q,-1),1);put(qkey(pre.q,-4),2);if(cons[pre.q])M[pre.q].c=cons[pre.q]}
+ var ks=Object.keys(M).sort(),lastK=ks[ks.length-1]||'';
+ Object.keys(cons).forEach(function(k){if(k>lastK)M[k]={k:k,r:cons[k].r,o:cons[k].o,n:cons[k].n,e:true}});  /* 아직 발표 전 분기: 네이버 컨센서스(예상) */
  return Object.keys(M).sort().map(function(k){return M[k]}).filter(function(x){return x.r!=null||x.o!=null})}
 function gr(a,b){if(a==null||b==null)return null;if(b<=0)return a>0?'흑전':a<0?'적지':null;if(a<0)return '적전';return (a/b-1)*100}
 function qsvg(Q,mode){var rows=Q.map(function(x,i){var b=mode==='qoq'?Q[i-1]:Q.filter(function(y){return y.k===qkey(x.k,-4)})[0];
-  return {k:x.k,p:x.p,r:b?gr(x.r,b.r):null,o:b?gr(x.o,b.o):null}}).filter(function(x){return x.r!=null||x.o!=null});
+  return {k:x.k,p:x.p,e:x.e,r:b?gr(x.r,b.r):null,o:b?gr(x.o,b.o):null}}).filter(function(x){return x.r!=null||x.o!=null});
  if(!rows.length)return {svg:'<p>'+(mode==='yoy'?'1년 전 같은 분기 숫자가 없어 전년 동기 대비를 그릴 수 없습니다.':'증가율을 그릴 분기가 부족합니다.')+'</p>',rows:rows};
  var nums=[];rows.forEach(function(x){[x.r,x.o].forEach(function(v){if(typeof v==='number')nums.push(v)})});
  var cap=function(v){return Math.max(-150,Math.min(300,v))},hi=Math.max(10,Math.max.apply(null,nums.map(cap).concat([0]))),lo=Math.min(0,Math.min.apply(null,nums.map(cap).concat([0])));
  var W=340,H=190,T=22,B=H-30,y=function(v){return T+(hi-cap(v))/(hi-lo)*(B-T)},y0=y(0),n=rows.length,gw=W/n,bw=Math.min(26,gw*0.32);
  var o='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="분기 매출액·영업이익 증가율"><line x1="0" x2="'+W+'" y1="'+y0+'" y2="'+y0+'" stroke="var(--line)" stroke-width="1.5"/>';
  rows.forEach(function(x,i){var cx=gw*i+gw/2;[[x.r,'#F2A900',-1],[x.o,'#3D3A35',1]].forEach(function(s){var v=s[0],bx=cx+(s[2]<0?-bw-1:1);
-   if(typeof v==='number'){var yy=y(v),top=Math.min(yy,y0),h=Math.max(1,Math.abs(yy-y0));o+='<rect x="'+bx.toFixed(1)+'" y="'+top.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="'+s[1]+'"/>';
+   if(typeof v==='number'){var yy=y(v),top=Math.min(yy,y0),h=Math.max(1,Math.abs(yy-y0));o+='<rect x="'+bx.toFixed(1)+'" y="'+top.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="'+s[1]+'"'+(x.e?' opacity=".35" stroke="'+s[1]+'" stroke-dasharray="3 2"':'')+'/>';
     o+='<text x="'+(bx+bw/2).toFixed(1)+'" y="'+(v>=0?top-4:top+h+11).toFixed(1)+'" text-anchor="middle" style="fill:'+(v>=0?'var(--up)':'var(--down)')+'">'+(Math.abs(v)>=100?Math.round(v):v.toFixed(1))+(Math.abs(v)>300?'↑':'')+'</text>'}
    else if(v)o+='<text x="'+(bx+bw/2).toFixed(1)+'" y="'+(y0-4)+'" text-anchor="middle">'+v+'</text>'});
-  o+='<text x="'+cx.toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle">'+x.k.slice(2).replace('.','.')+'</text>'+(x.p?'<text x="'+cx.toFixed(1)+'" y="'+(H-1)+'" text-anchor="middle" style="fill:#e03131">잠정</text>':'')});
+  o+='<text x="'+cx.toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle">'+x.k.slice(2).replace('.','.')+'</text>'+(x.p?'<text x="'+cx.toFixed(1)+'" y="'+(H-1)+'" text-anchor="middle" style="fill:#e03131">잠정</text>':x.e?'<text x="'+cx.toFixed(1)+'" y="'+(H-1)+'" text-anchor="middle">예상</text>':'')});
  return {svg:o+'</svg>',rows:rows}}
 function eok2(v){if(v==null)return '–';var a=Math.abs(v);return a>=10000?(v/10000).toLocaleString('ko-KR',{maximumFractionDigits:a>=100000?0:1})+'조':Math.round(v).toLocaleString('ko-KR')+'억'}
-function renderQ(){var el=$('#ckQ'),S=QS.cur;if(!S||S.name!==$('#c-name').value){el.hidden=true;return}
+function renderQ(){renderQ0();$('#ckQp').hidden=$('#ckQ').hidden}
+function renderQ0(){var el=$('#ckQ'),S=QS.cur;if(!S||S.name!==$('#c-name').value){el.hidden=true;return}
  var Q=quarters(S.qj,S.pre);if(!Q.length){el.hidden=true;return}el.hidden=false;
- var g=qsvg(Q,QS.mode),last=Q[Q.length-1],pre=S.pre&&S.pre.q===last.k?S.pre:null;
+ var g=qsvg(Q,QS.mode),last=Q.filter(function(x){return !x.e}).pop()||Q[Q.length-1],pre=S.pre&&S.pre.q===last.k?S.pre:null;
  var h='<h4>📊 분기 실적 · '+esc(S.name)+'</h4>'+(pre?'<p style="margin:0 0 4px">📢 <b style="color:var(--text)">'+esc(pre.day)+' 잠정실적 반영</b> ('+esc(pre.consol?'연결':'별도')+', <a href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo='+esc(pre.rcp)+'" target="_blank" rel="noopener">DART 공시</a>)'
    +(last.c&&last.c.o?' · 영업이익 컨센서스 '+eok2(last.c.o)+' 대비 <b style="color:'+(last.o>=last.c.o?'var(--up)':'var(--down)')+'">'+((last.o/last.c.o-1)*100>0?'+':'')+((last.o/last.c.o-1)*100).toFixed(1)+'%</b>':'')+'</p>':'')
   +'<div class="tg"><button type="button" data-qm="qoq"'+(QS.mode==='qoq'?' class="on"':'')+'>전분기 대비</button><button type="button" data-qm="yoy"'+(QS.mode==='yoy'?' class="on"':'')+'>전년 동기 대비</button></div>'
   +'<div class="lg"><span><i style="background:#F2A900"></i>매출액 증가율(%)</span><span><i style="background:#3D3A35"></i>영업이익 증가율(%)</span></div>'+g.svg
-  +'<table><tr><th>분기</th><th>매출액</th><th>영업이익</th><th>이익률</th></tr>'+Q.slice().reverse().map(function(x){return '<tr'+(x.p?' class="pre"':'')+'><td>'+esc(x.k)+(x.p?' 잠정':'')+'</td><td>'+eok2(x.r)+'</td><td>'+eok2(x.o)+'</td><td>'+(x.r>0&&x.o!=null?(x.o/x.r*100).toFixed(1)+'%':'–')+'</td></tr>'}).join('')+'</table>';
+  +'<table><tr><th>분기</th><th>매출액</th><th>영업이익</th><th>이익률</th></tr>'+Q.slice().reverse().map(function(x){return '<tr'+(x.p?' class="pre"':x.e?' class="est"':'')+'><td>'+esc(x.k)+(x.p?' 잠정':x.e?' 예상':'')+'</td><td>'+eok2(x.r)+'</td><td>'+eok2(x.o)+'</td><td>'+(x.r>0&&x.o!=null?(x.o/x.r*100).toFixed(1)+'%':'–')+'</td></tr>'}).join('')+'</table>';
  /* 실적 발표 기준 PER·PBR·ROE: 시가총액 ÷ (최근 4분기 순이익 합 / 이번 분기 순이익 × 4), 자기자본은 최근 정기보고서 */
- var mc=n('c-mcap'),eq=n('c-eq'),act=Q.filter(function(x){return x.n!=null}),l4=act.slice(-4),ttm=l4.length===4?l4.reduce(function(s,x){return s+x.n},0):null,run=act.length?act[act.length-1].n*4:null;
+ var mc=n('c-mcap'),eq=n('c-eq'),act=Q.filter(function(x){return x.n!=null&&!x.e}),l4=act.slice(-4),ttm=l4.length===4?l4.reduce(function(s,x){return s+x.n},0):null,run=act.length?act[act.length-1].n*4:null;
  var ac=((S.qj&&S.qj.a)||[]).filter(function(x){return x[4]&&x[3]})[0];
  var f=function(v,d){return v==null||!isFinite(v)?'–':v.toFixed(d)},t=function(lab,v){return '<div><small>'+lab+'</small><b>'+v+'</b></div>'};
  if(mc){h+='<div class="vt">'+t('PER · 최근 4분기',ttm>0?f(mc/ttm,1)+'배':'–')+t('PER · 이번 분기×4',run>0?f(mc/run,1)+'배':'–')+t('PBR',eq>0?f(mc/eq,2)+'배':'–')+t('ROE · 최근 4분기',eq>0&&ttm!=null?f(ttm/eq*100,1)+'%':'–')+'</div>';
@@ -439,16 +447,19 @@ function renderQ(){var el=$('#ckQ'),S=QS.cur;if(!S||S.name!==$('#c-name').value)
 $('#ckQ').addEventListener('click',function(e){var b=e.target.closest('[data-qm]');if(!b)return;QS.mode=b.dataset.qm;renderQ()});
 function loadQ(code,name){QS.cur=null;$('#ckQ').hidden=true;
  Promise.all([fetch('q/'+code+'.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null}),prelims()]).then(function(a){
-  QS.cur={name:name,qj:a[0],pre:a[1][code]||null};var Q=quarters(a[0],QS.cur.pre),last=Q[Q.length-1];
+  QS.cur={name:name,qj:a[0],pre:a[1][code]||null};var Qa=quarters(a[0],QS.cur.pre),Q=Qa.filter(function(x){return !x.e}),last=Q[Q.length-1];
   var l4=Q.filter(function(x){return x.n!=null}).slice(-4);QS.cur.ttm=l4.length===4?l4.reduce(function(s,x){return s+x.n},0):null;
-  if(last&&last.o!=null&&last.n!=null&&last.o>0&&last.n>0)setv('c-nr',Math.max(30,Math.min(150,Math.round(l4.reduce(function(s,x){return s+x.n},0)/Q.slice(-l4.length).reduce(function(s,x){return s+(x.o||0)},0)*100))));
-  /* 예상 PER 칸이 비어 있으면 이번 분기 영업이익을 '분기' 단위로 넣어 둔다 (×4 연환산 가정, 직접 고치면 된다) */
-  if(last&&last.o!=null&&!$('#c-fop').value){$('#c-fpd').value='q';setv('c-fop',Math.round(last.o))}
+  if(!QS.fill&&last&&last.o!=null&&last.n!=null&&last.o>0&&last.n>0)setv('c-nr',Math.max(30,Math.min(150,Math.round(l4.reduce(function(s,x){return s+x.n},0)/Q.slice(-l4.length).reduce(function(s,x){return s+(x.o||0)},0)*100))));
+  /* 예상 PER 칸이 비어 있으면: 네이버 연간 컨센서스(예상치)가 있으면 그 영업이익·순이익 비율을, 없으면 이번 분기 영업이익을 분기 단위로 */
+  var Y=new Date(Date.now()+9*36e5).getUTCFullYear(),ac=((a[0]&&a[0].a)||[]).filter(function(x){return x[4]&&x[2]>0}).pop();
+  if(!$('#c-fop').value&&ac&&+ac[0].slice(0,4)>=Y&&+ac[0].slice(0,4)<=Y+2){var cy=+ac[0].slice(0,4);$('#c-fpd').value=cy===Y?'y0':cy===Y+1?'y':'y2';setv('c-fop',Math.round(ac[2]));
+   if(ac[3]>0)setv('c-nr',Math.max(30,Math.min(150,Math.round(ac[3]/ac[2]*100))));QS.fill=ac[0]+'E 영업이익 '+fmtEok(ac[2])+(ac[3]?' · 순이익 '+fmtEok(ac[3]):'')}
+  else if(last&&last.o!=null&&!$('#c-fop').value){QS.fill='';$('#c-fpd').value='q';setv('c-fop',Math.round(last.o))}
   check()})}
 function fwd(per,pbr){
   /* 넣는 단위: y = 내년 연간, y2 = 내후년 연간(그 사이 내년 이익도 자기자본에 쌓인다), q = 한 분기 × 4 */
-  var Y=new Date(Date.now()+9*36e5).getUTCFullYear(),u=$('#c-fpd').value,qtr=u==='q',two=u==='y2',yr=two?Y+2:Y+1;
-  $('#c-fpd').options[0].text=(Y+1)+'년 연간 (내년)';$('#c-fpd').options[1].text=(Y+2)+'년 연간 (내후년)';
+  var Y=new Date(Date.now()+9*36e5).getUTCFullYear(),u=$('#c-fpd').value,qtr=u==='q',two=u==='y2',yr=two?Y+2:u==='y0'?Y:Y+1;
+  $('#c-fpd').options[0].text=Y+'년 연간 (올해)';$('#c-fpd').options[1].text=(Y+1)+'년 연간 (내년)';$('#c-fpd').options[2].text=(Y+2)+'년 연간 (내후년)';
   var el=$('#ckFwd'),fin=n('c-fop'),fop=fin==null?null:fin*(qtr?4:1),nr=n('c-nr'),mc=n('c-mcap'),eq=n('c-eq');
   $('#c-fop-l').textContent=qtr?'분기 영업이익(예상)':yr+'년 영업이익(예상)';$('#c-fop1w').hidden=!two;$('#c-fop1-l').textContent=(Y+1)+'년 영업이익(예상)';
   if(fop==null){el.hidden=true;return}el.hidden=false;
@@ -464,23 +475,23 @@ function fwd(per,pbr){
   if(ni<=0)msg.push('예상 순이익이 0 이하라 PER을 구할 수 없습니다(적자)');
   else if(per>0&&fper!=null){var ch=(fper/per-1)*100;var wd=lab;msg.push('지금 PER '+per.toFixed(1)+'배 → '+wd+' '+fper.toFixed(1)+'배. '+(ch<-10?'이익이 늘어 지금 주가로도 '+wd+' 기준 '+Math.abs(ch).toFixed(0)+'% 더 싸 보인다. 그 이익이 실제로 이어질지가 관건':ch>10?wd+' 이익이 줄어 지금 주가가 '+wd+' 기준으론 더 비싸 보인다':'지금과 비슷한 수준'))}
   msg.push('예상 순이익 '+fmtEok(ni)+' = '+(qtr?'분기 영업이익 '+fmtEok(fin)+' × 4 = 연환산 '+fmtEok(fop):yr+'년 영업이익 '+fmtEok(fop))+' × '+nr.toFixed(0)+'%(순이익 ÷ 영업이익, 가정)');
-  if($('#c-fop').classList.contains('auto'))msg.push('영업이익 칸은 이번 분기 실제 영업이익으로 채운 값입니다. 다음 분기 전망치나 연간 컨센서스(단위를 연간으로)로 바꿔 넣어 보세요');
+  if($('#c-fop').classList.contains('auto'))msg.push(QS.fill?'영업이익·순이익 비율 칸은 네이버 증권 컨센서스(증권사 예상치 평균) '+QS.fill+'로 채운 값입니다':'영업이익 칸은 이번 분기 실제 영업이익으로 채운 값입니다(네이버 컨센서스 없음). 증권사 전망치로 바꿔 넣어 보세요');
   msg.push('시가총액 '+fmtEok(mc)+(MDATE&&$('#c-mcap').classList.contains('auto')?' (네이버 증권 '+MDATE+')':'')+' · 지금 PER = 시가총액 ÷ '+(qt?'최근 4분기 순이익 합':'최근 보고서 순이익(연환산)')+', 지금 PBR = 시가총액 ÷ 자기자본');
   msg.push(two?'예상 PBR은 '+yr+'년 말 자기자본 = 지금 자기자본 + '+(Y+1)+'년 순이익 '+fmtEok(ni1)+(n('c-fop1')==null?'(같다고 가정)':'')+' + '+yr+'년 순이익으로 계산(배당·자사주 빼지 않은 가정)'
    :'예상 PBR은 1년 뒤 자기자본 = 지금 자기자본 + 예상 순이익(배당·자사주 빼지 않은 가정)으로 계산');
   el.innerHTML=h+'<div class="tl">'+t('예상 PER',fper,'배',per>0?per.toFixed(1)+'배':null)+t('예상 PBR',fpbr,'배P',pbr>0?pbr.toFixed(2)+'배':null)+t('예상 ROE',froe,'%',n('c-roe')!=null?n('c-roe').toFixed(1)+'%':null)+'</div>'
    +'<p>'+msg.map(esc).join('<br>')+'</p>';
 }
-$('#ckF').addEventListener('input',function(e){if(e.target.classList)e.target.classList.remove('auto');$('#ckEx').hidden=true;check()});
+$('#ckAll').addEventListener('input',function(e){if(e.target.id==='c-name')return;if(e.target.classList)e.target.classList.remove('auto');$('#ckEx').hidden=true;check()});
 $('#c-name').addEventListener('input',check);
-$('#ckF').addEventListener('submit',function(e){e.preventDefault()});
-$('#ckReset').addEventListener('click',function(){document.querySelectorAll('#ckF input,#c-name').forEach(function(i){i.value='';i.classList.remove('auto')});$('#sepPL').textContent=PL0;$('#sepBS').textContent=BS0;srcMsg('');$('#ckEx').hidden=true;check();$('#c-name').focus()});
+$('#ckF').addEventListener('submit',function(e){e.preventDefault()});$('#ckF2').addEventListener('submit',function(e){e.preventDefault()});
+$('#ckReset').addEventListener('click',function(){document.querySelectorAll('#ckAll form input,#c-name').forEach(function(i){i.value='';i.classList.remove('auto')});$('#sepPL').textContent=PL0;$('#sepBS').textContent=BS0;srcMsg('');$('#ckEx').hidden=true;check();$('#c-name').focus()});
 function ckList(){
   var L=lsGet('st-checks');
   $('#ckList').innerHTML=L.length?'<b style="font-size:14px">저장한 체크 (이 기기)</b>'+L.map(function(x,i){return '<div class="it"><span class="dot '+x.v+'">'+LV[x.v]+'</span><b>'+esc(x.name)+'</b><span class="when">'+esc(x.when)+'</span><button class="sb gh sm" type="button" data-load="'+i+'">불러오기</button><button class="sb del sm" type="button" data-rm="'+i+'">지우기</button></div>'}).join(''):'';
 }
 $('#ckSave').addEventListener('click',function(){
-  var r=check(),vals={};document.querySelectorAll('#ckF input,#ckF select,#c-name').forEach(function(i){vals[i.id]=i.value});
+  var r=check(),vals={};document.querySelectorAll('#ckAll form input,#ckAll form select,#c-name').forEach(function(i){vals[i.id]=i.value});
   var L=lsGet('st-checks'),d=new Date();L.unshift({name:vals['c-name']||'이름 없음',v:r.v[0],when:d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2),vals:vals});
   $('#ckMsg').textContent=lsSet('st-checks',L.slice(0,50))?'저장했습니다 (이 기기에만)':'이 브라우저는 저장을 막고 있습니다';ckList();
 });
@@ -531,7 +542,7 @@ function fill(d){
   fetch('mcap.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null}).then(function(j){var x=j&&j.m&&j.m[d.name];
    if(x&&$('#c-name').value===d.name){setv('c-mcap',x);MDATE=j.date;check()}}).catch(function(){});
   setv('c-nr',v.ni!=null&&v.op[0]>0&&v.ni>0?Math.max(30,Math.min(150,Math.round(v.ni/v.op[0]*100))):78);
-  $('#c-fop').value='';$('#c-fpd').value='y';loadQ(d.code,d.name);
+  $('#c-fop').value='';$('#c-fpd').value='y';QS.fill='';loadQ(d.code,d.name);
   $('#sepPL').textContent='손익·현금흐름 · 올해 = '+b.now+', 작년 = '+b.prev;
   $('#sepBS').textContent='재무상태표 · 올해 = '+b.bs_now+(b.bs_prev?', 작년 = '+b.bs_prev:' (작년 같은 시점 자료 없음)')+' 잔액';
   var f=b.filed||'',notes=[];
@@ -549,7 +560,7 @@ $('#ckLoad').addEventListener('click',loadCo);
 $('#c-name').addEventListener('focus',finIndex,{once:true});
 $('#c-name').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();loadCo()}});
 $('#c-name').addEventListener('change',function(){if(FIN&&FIN.list.length){var c=findCo(this.value);if(c&&!Array.isArray(c[0]))loadCo()}});
-$('#ckF').addEventListener('input',function(e){if(e.target.classList)e.target.classList.remove('auto')});
+
 check();ckList();
 
 /* ---- 업종 ---- */
