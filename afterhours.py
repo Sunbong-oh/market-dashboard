@@ -138,7 +138,7 @@ class Watch:
             nm = BIGTECH.get(sym) or self.names.get(sym, sym)
             cap = self.caps.get(sym)
             again = " (추가 변동)" if sym in self.alerted else ""
-            lines.append(f"{'🔺' if pct > 0 else '🔻'} {nm}({sym}) {pct:+.1f}% ${px:,.2f}"
+            lines.append(f"🟢 {nm}({sym}) {'🔴' if pct > 0 else '🔵'} {pct:+.1f}% ${px:,.2f}"
                          + (f" · 시총 ${cap / 1e9:,.0f}B" if cap else "") + again)
             lines += [f"   └ {r}" for r in reasons.get(sym) or ["관련 뉴스 아직 없음"]]
             self.alerted[sym] = pct
