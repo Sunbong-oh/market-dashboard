@@ -166,6 +166,15 @@ def main() -> None:
         if not in_window(now):
             time.sleep(60)
             continue
+        if now.minute % 10 == 0:  # ⚡ 실적 1차 속보 카드의 주가 반응: 시간외 감시는 장 전·후에만 돌아 정규장 동안 멈춰 있었다
+            try:
+                import earnings_quick
+                q = earnings_quick.Quick()
+                if q.items and q.refresh_px():
+                    q.save()
+                    print(now.strftime("%H:%M"), "실적 속보 카드 주가 갱신", flush=True)
+            except Exception as e:
+                print("  실적 속보 카드 주가 갱신 실패:", type(e).__name__, e, flush=True)
         data = {k: v for k, v in ((s, quote(s)) for s in SYMS) if v}
         if now.minute % 5 == 0 or hl is None:  # 헤드라인은 5분마다
             hl = headline(now) or hl
