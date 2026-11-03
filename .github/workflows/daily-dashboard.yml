@@ -18,6 +18,14 @@ on:
         description: 텔레그램으로도 보내기 (끄면 웹사이트용으로만 만든다)
         type: boolean
         default: true
+      auto:
+        description: (clock.py 용) 아침 예약처럼 '이미 보냄' 검사를 한다
+        type: boolean
+        default: false
+      podcast_only:
+        description: (clock.py 용) 음성 브리핑만 다시 만든다
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # 웹사이트용 archive/daily/ 저장
@@ -38,7 +46,9 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
+          # clock.py 가 auto=true 로 부른 실행은 아침 예약(schedule)과 똑같이 검사한다
+          EVENT: ${{ (github.event_name == 'workflow_dispatch' && inputs.auto) && 'schedule' || github.event_name }}
+          PODCAST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.podcast_only }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           send=1; mode=full; why="manual run"
@@ -49,7 +59,7 @@ jobs:
             # 그 사이 실행 중 '실제로 발송 단계를 마친' 것만 센다. 발송하지 않고 끝난 실행(다른 브랜치 push 등)까지
             # 세면 진짜 아침 트리거가 '이미 보냄'으로 막힌다(2026-10-21 아침 누락).
             ids=$(gh api "repos/${{ github.repository }}/actions/workflows/daily-dashboard.yml/runs?created=>$ws&per_page=50" \
-                --jq ".workflow_runs[] | select(.event==\"schedule\" or .event==\"push\") | select(.id != ${{ github.run_id }}) | .id")
+                --jq ".workflow_runs[] | select(.event==\"schedule\" or .event==\"push\" or .event==\"workflow_dispatch\") | select(.id != ${{ github.run_id }}) | .id")
             n=0
             for id in $ids; do
               c=$(gh api "repos/${{ github.repository }}/actions/runs/$id/jobs" \
@@ -76,6 +86,7 @@ jobs:
               esac
             fi
           fi
+          if [ "$PODCAST_ONLY" = "true" ]; then send=1; mode=podcast; why="podcast-only rerun (clock)"; fi
           echo "send=$send mode=$mode ($why)"
           echo "send=$send" >> "$GITHUB_OUTPUT"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
