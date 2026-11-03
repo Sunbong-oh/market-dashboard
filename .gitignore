@@ -18,6 +18,7 @@
 !/earnings_flash/
 !/econ_values.py
 !/us_live.py
+!/clock.py
 !/briefing.py
 !/briefing_notes/
 !/earnings_notify.py

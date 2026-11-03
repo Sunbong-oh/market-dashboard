@@ -158,6 +158,11 @@ def main() -> None:
             (ROOT / "out" / "relay").write_text("1")
             print("다음 실행으로 넘김", flush=True)
             return
+        try:
+            import clock  # 정시 알람(데일리·음성 점검·장마감·시세·시간외 감시 깨우기)
+            clock.tick(now)
+        except Exception as e:
+            print("  정시 알람 실패:", type(e).__name__, e, flush=True)
         for job in (update_us_reports, kick_site):
             try:
                 job(now)
