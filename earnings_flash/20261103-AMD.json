@@ -49,10 +49,10 @@
     ]
   ],
   "guidance": [
-    "컨퍼런스콜(07:00 한국시간) 후 업데이트",
-    "4분기 매출 약 $170억(±3%) — 시장 기대 약 $162.3억 상회 · 전년 대비 +66%, 전분기 대비 +27%",
-    "4분기 조정 매출총이익률 약 55%(3분기 56%보다 낮음)",
-    "Helios 랙 시스템·'Venice'(6세대 EPYC) 생산 확대로 4분기 성장 가속 전망 · World Labs, Taalas 인수 발표"
+    "4분기 매출 약 $170억(±3%) — 시장 기대 약 $162.3억 상회 · 전년 +66%, 전분기 +27%",
+    "4분기 데이터센터 매출 전분기 대비 약 +50%, 데이터센터 AI(GPU) 매출이 서버 CPU를 처음 넘을 전망 · 클라이언트·게이밍 −20% 이상",
+    "4분기 조정 매출총이익률 약 55%, 조정 영업비용 약 $37.5억 · Helios 랙 배치 크게 늘어날 것",
+    "2027년 매출 +80% 이상, 데이터센터 비중 80% 이상, 서버 매출 2배 전망(콜 발언)"
   ],
   "sym": [
     [
@@ -72,15 +72,23 @@
     [
       "StockTitan: AMD 3분기 실적",
       "https://www.stocktitan.net/news/AMD/amd-reports-third-quarter-2026-financial-7j6jzo29buqw.html"
+    ],
+    [
+      "Investing.com: AMD 3분기 컨퍼런스콜 내용",
+      "https://www.investing.com/news/transcripts/earnings-call-transcript-amd-tops-q3-2026-estimates-as-stock-jumps-after-hours-93CH-4996894"
+    ],
+    [
+      "CNBC: AMD 3분기 실적",
+      "https://www.cnbc.com/2026/11/03/amd-amd-q3-earnings-report-2026-.html"
     ]
   ],
   "px": [
     {
       "l": "AMD(미국 AMD)",
       "s": "애프터마켓",
-      "t": "11/04 06:27",
-      "p": "$518.27",
-      "c": 6.98,
+      "t": "11/04 08:54",
+      "p": "$517.46",
+      "c": 6.81,
       "ref": "발표 전 종가"
     }
   ]

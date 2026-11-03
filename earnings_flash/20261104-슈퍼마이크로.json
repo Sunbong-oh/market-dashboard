@@ -37,9 +37,10 @@
     ]
   ],
   "guidance": [
-    "컨퍼런스콜(07:00 한국시간) 후 업데이트",
-    "2분기(10~12월) 매출 $195~215억 · 조정 EPS $1.66~1.90(GAAP $1.59~1.83)",
-    "2027회계연도 매출 $720~820억으로 상향(기존 $650~720억)"
+    "2분기(10~12월) 매출 $195~215억 · 매출총이익률 12~12.5% · 조정 EPS $1.66~1.90",
+    "2027회계연도 매출 $720~820억으로 상향(기존 $650~720억, 1분기에 몰린 약 $23억 지연 매출 제외) · 연간 매출총이익률 11.8~12.2%(하반기가 상반기보다 낮음)",
+    "최대 고객 1곳이 1분기 매출의 44%(지난해 28%) · AI 매출 비중 71%, 연간 70~80% 전망",
+    "현금 회수 기간 149일 → 97일로 단축 · 순차입금 $17억(전분기 $12억)"
   ],
   "sym": [
     [
@@ -63,15 +64,23 @@
     [
       "Crypto Briefing: 연간 가이던스 상향(기존 $650~720억)",
       "https://cryptobriefing.com/super-micro-q1-earnings-raises-guidance/"
+    ],
+    [
+      "Investing.com: 슈퍼마이크로 1분기 컨퍼런스콜 내용",
+      "https://www.investing.com/news/transcripts/earnings-call-transcript-supermicro-beats-q1-2026-estimates-raises-outlook-93CH-4996898"
+    ],
+    [
+      "Proactive: 슈퍼마이크로 실적·가이던스",
+      "https://www.proactiveinvestors.com/companies/news/1101179/super-micro-shares-jump-as-revenue-surges-and-full-year-outlook-tops-estimates-1101179.html"
     ]
   ],
   "px": [
     {
       "l": "슈퍼마이크로(미국 SMCI)",
       "s": "애프터마켓",
-      "t": "11/04 06:53",
-      "p": "$33.98",
-      "c": 7.94,
+      "t": "11/04 08:54",
+      "p": "$34.35",
+      "c": 9.1,
       "ref": "발표 전 종가"
     }
   ]
