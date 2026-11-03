@@ -2296,7 +2296,7 @@ EARN_CSS = """
 .earn h3{font-size:14.5px;margin:12px 0 4px}.earn ul{margin:0;padding-left:18px;line-height:1.55;font-size:14px}
 .earn .src{font-size:12px;color:var(--muted);margin-top:8px}.earn .src a{color:var(--muted)}
 #earn-live{order:-2}.earn.auto{border-left-color:#e03131}.earn .cal{font-size:13px;color:var(--muted);margin:2px 0 6px}
-.earn .cons{font-size:14.5px;font-weight:800;margin:3px 0}.earn.auto ul{margin-top:6px}.earn.auto li{margin:3px 0}
+.earn .cons{font-size:14.5px;font-weight:800;margin:3px 0}.earn .cons .cs{font-weight:900}.earn .cons .sp{color:var(--up)}.earn .cons .sh{color:var(--down)}.earn.auto ul{margin-top:6px}.earn.auto li{margin:3px 0}
 .earn.auto li a{color:var(--text);text-decoration:none;font-weight:600}.earn.auto li span{font-size:12px;color:var(--muted)}
 .earn .px{background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0}.earn .pxh{font-size:13.5px;font-weight:800;margin-bottom:3px}
 .earn .pxr{font-size:13.5px;line-height:1.75}.earn .pl{font-weight:700}.earn .ps,.earn .pr{font-size:12px;color:var(--muted)}
@@ -2344,6 +2344,8 @@ EARN_LIVE_SRC = (("https://api.github.com/repos/Sunbong-oh/kb-market-report/cont
 EARN_LIVE_JS = r"""<script>
 (function(){var SRC=%s,box=document.getElementById('earn-live');if(!box)return;
  function rp(u){var m=/\/surge-reports\/reports\/(\d{4}-\d{2}-\d{2}\/\w+)\.pdf/.exec(u||'');return m?'reports/view.html?f='+m[1]:u}
+ function tag(s){return s.replace(/\[(어닝 서프라이즈|어닝 쇼크|컨센 부합)\]/g,function(m,t){  /* 컨센 대비 판정: 서프라이즈 빨강 · 쇼크 파랑 · 부합 굵게만 */
+   return '<b class="cs'+(t==='어닝 서프라이즈'?' sp':t==='어닝 쇼크'?' sh':'')+'">['+t+']</b>'})}
  function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function pc(v){return v==null?'':'<b class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+Number(v).toFixed(2)+'%%</b>'}
  function px(i){if(!(i.px||[]).length)return '';return '<div class="px"><div class="pxh">📈 실적 발표 후 주가 반응</div>'+i.px.map(function(r){
@@ -2359,7 +2361,7 @@ EARN_LIVE_JS = r"""<script>
   document.querySelectorAll('#earn .earn.auto,#earn-old .earn.auto').forEach(function(c){c.remove()});  /* 다시 그리기 전에 옮겨 둔 자동 카드 정리 */
   box.innerHTML=its.map(function(i){return '<div class="earn auto" data-ts="'+e(ts(i))+'"><h2>'+e(i.icon||'⚡')+' '+e(i.head||'실적 발표')+' · '+e(i.name)+'<small>'+e(i.first)+' 감지 · 자동</small></h2>'+
    (i.item&&i.item!==i.name?'<div class="cal">'+e(i.note||'캘린더')+': '+e(i.item)+'</div>':'')+
-   (i.cons||[]).map(function(c){return '<div class="cons">▶ '+e(c)+'</div>'}).join('')+
+   (i.cons||[]).map(function(c){return '<div class="cons">▶ '+tag(e(c))+'</div>'}).join('')+
    (i.report?'<div class="rptw"><a class="rpt" href="'+e(rp(i.report))+'" target="_blank" rel="noopener">📑 실시간 작성된 종목 보고서</a><span class="rpt-tap">&lt;-- 터치!!</span></div>':'')+px(i)+
    '<ul>'+(i.news||[]).map(function(a){return '<li><a href="'+e(a.u)+'" target="_blank" rel="noopener">'+e(a.t)+'</a> <span>'+e(a.o)+' '+e(a.dt)+'</span></li>'}).join('')+'</ul></div>'}).join('');
   if(window.earnPlace)earnPlace();else box.hidden=!its.length}
