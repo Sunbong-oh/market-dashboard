@@ -1427,6 +1427,19 @@ html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
  *{break-before:auto!important;page-break-before:auto!important}
  .page,.sec,section{break-after:auto!important;page-break-after:auto!important;min-height:0!important;height:auto!important;box-shadow:none!important;margin-bottom:6mm!important}
  svg,.chart,figure,.keydata,.photos,.mixbar,.legend,tr{break-inside:avoid} h2,h3,.figt{break-after:avoid}}
+/* 한국 종목 리포트(설명 칸 td.l 이 있는 표): 휴대폰 폭에서는 칸을 세로로 쌓아 한 줄씩 읽게 한다(가운데 칸만 좁게 늘어지던 문제) */
+@media screen and (max-width:720px){
+ .page table:has(td.l),.page table:has(td.l) tbody{display:block}
+ .page table:has(td.l) tr:has(th){display:none}
+ .page table:has(td.l) tr{display:block;padding:7px 0;border-bottom:1px solid #E4DED2}
+ .page table:has(td.l) td{display:block;border:0;padding:2px 2px;text-align:left!important;white-space:normal}
+ .page table:has(td.l) td:first-child{font-weight:700}
+ .page table:has(td.l) td:not(:first-child):not(.l){display:inline-block;margin-right:12px}
+ .page .tw{overflow-x:auto}
+ .page .foot span,.page td,.page p{overflow-wrap:anywhere;min-width:0}
+ body:has(section.page){padding-left:6px;padding-right:6px}
+ .page .inner{padding:14px 10px 6px}.page .band{padding:7px 10px}.page .foot{margin:12px 10px 0}
+ .page table th,.page table td{padding:5px 3px;white-space:normal;word-break:keep-all;font-size:12px}.page .fw table td,.page .fw table th{font-size:12.5px}}
 </style><a class="st-close st-top" href="./" onclick="event.preventDefault();if(history.length>1){history.back()}else{window.close();setTimeout(function(){location.href='./'},200)}">✕ 닫기</a><a class="st-close" href="./" onclick="event.preventDefault();if(history.length>1){history.back()}else{window.close();setTimeout(function(){location.href='./'},200)}">✕ 닫기</a><script>(function(){var t=document.querySelector('.st-close.st-top'),b=document.querySelector('.st-close-bar');
 var n=document.querySelector('nav');
 function f(){var nb=n?Math.max(0,n.getBoundingClientRect().bottom):0,r=b?b.getBoundingClientRect().bottom:0;t.style.top=(nb+10)+'px';t.classList.toggle('on',r<nb)}addEventListener('scroll',f,{passive:true});f()})()</script>"""
