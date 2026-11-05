@@ -1494,11 +1494,11 @@ def kr_until(it):
 
 
 def strong_gone(it):
-    """홈에서 내리는 시각: 한국시장 종목은 올린 뒤 첫 장 마감(kr_until), 나머지는 등록일이 끝나는 자정(그 뒤 새 리포트가 없으면 칸이 빈다)."""
+    """홈에서 내리는 시각: 한국시장 종목은 올린 뒤 첫 장 마감(kr_until), 나머지(미국·중국 등)는 등록일 22:30 KST
+    (그날 밤 미국장이 열리기 전에 '전일' 리포트를 내린다. 그 뒤 새 리포트가 없으면 칸이 빈다)."""
     if "한국" in (it.get("region") or ""):
         return kr_until(it)
-    d = datetime.strptime(it["date"], "%Y-%m-%d").date() + timedelta(days=1)
-    return f"{d}T00:00:00+09:00"
+    return f"{it['date']}T22:30:00+09:00"
 
 
 def strong_home(items):
