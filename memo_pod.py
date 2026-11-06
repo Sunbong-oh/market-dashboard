@@ -182,6 +182,8 @@ def write_feed(pod: Path, eps: list[dict]) -> None:
   <description>홈페이지 Brian's memo(시장 점검·생각거리)를 음성으로 읽어 드립니다. 개인적인 생각 정리이며 투자 권유가 아닙니다.</description>
   <itunes:author>market-dashboard</itunes:author>
   <itunes:explicit>false</itunes:explicit>
+  <itunes:image href="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/main/assets/pod-memo.png"/>
+  <image><url>https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/main/assets/pod-memo.png</url><title>{escape(SHOW_TITLE)}</title><link>https://sunbong-oh.github.io/market-dashboard/</link></image>
   <itunes:block>Yes</itunes:block>
   <lastBuildDate>{format_datetime(now)}</lastBuildDate>{items}
  </channel>
