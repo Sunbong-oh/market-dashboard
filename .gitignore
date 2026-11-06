@@ -20,6 +20,7 @@
 !/us_live.py
 !/clock.py
 !/briefing.py
+!/memo_pod.py
 !/briefing_notes/
 !/earnings_notify.py
 !/earnings_px.py
