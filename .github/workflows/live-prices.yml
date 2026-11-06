@@ -89,6 +89,24 @@ jobs:
           LIVE: "1"
           CLOSE_REPO: ${{ github.workspace }}/_close
         run: python build_site.py
+      # site.yml 과 같은 덧붙이기. 빠지면 밤마다 이 배포가 /podcast/feed.xml·/study/fin/ 을 지워
+      # 팟캐스트 앱이 404 를 냈다(2026-11-06 출근길 피드 '파일이 삭제된 것 같습니다').
+      - name: 재무제표 공부 자료 붙이기 (study-fin 브랜치 -> /study/fin/)
+        if: steps.wait.outputs.go == 'true'
+        continue-on-error: true
+        run: |
+          git fetch --depth 1 origin study-fin
+          mkdir -p _site/study
+          git archive FETCH_HEAD fin | tar -x -C _site/study
+          git show FETCH_HEAD:index.json > _site/study/fin/index.json
+          git archive FETCH_HEAD q | tar -x -C _site/study || echo "분기 실적(q/) 아직 없음"
+      - name: 출근길 음성 브리핑 붙이기 (podcast 브랜치 -> /podcast/feed.xml)
+        if: steps.wait.outputs.go == 'true'
+        continue-on-error: true
+        run: |
+          git fetch --depth 1 origin podcast
+          mkdir -p _site/podcast
+          git archive FETCH_HEAD | tar -x -C _site/podcast
       - uses: actions/configure-pages@v5
         if: steps.wait.outputs.go == 'true'
       - uses: actions/upload-pages-artifact@v3
