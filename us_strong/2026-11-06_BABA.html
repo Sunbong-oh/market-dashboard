@@ -1,0 +1,399 @@
+<title>알리바바 리포트</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 세로로 이어지는 A4 리서치 지면, 표지 우측 KEY DATA 패널, 지면마다 상단 노란 띠와 하단 출처·쪽번호 */
+:root {
+  --kb: #F2A900; --kb-soft: #FBE7B0; --ink: #3D3A35; --ink-2: #6B665D;
+  --paper: #FFFFFF; --ground: #FAF8F3; --rule: #E6E0D2; --tint: #F4EFE3;
+  --good: #2F7D4F; --warn: #B7791F; --bad: #B23A3A;
+  --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: light;
+}
+body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px; }
+.page { max-width: 920px; margin: 0 auto 28px; background: var(--paper); box-shadow: 0 1px 3px rgba(61,58,53,.12); display: flex; flex-direction: column; }
+.ph { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 6px solid var(--kb); padding: 12px 32px 10px; border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+.ph b { color: var(--ink); font-weight: 700; }
+.pb { padding: 24px 32px 28px; display: flex; flex-direction: column; gap: 22px; flex: 1; }
+.pf { display: flex; justify-content: space-between; gap: 16px; padding: 10px 32px 14px; border-top: 1px solid var(--rule); font-size: 11px; color: var(--ink-2); }
+.pf .pn { font-weight: 700; color: var(--ink); white-space: nowrap; }
+h1 { font-size: 30px; line-height: 1.3; font-weight: 900; margin: 0; text-wrap: balance; letter-spacing: -0.5px; }
+h2 { font-size: 19px; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; text-wrap: balance; }
+h2::before { content: ""; width: 5px; height: 20px; background: var(--kb); flex: none; }
+h3 { font-size: 15px; margin: 0 0 6px; font-weight: 700; }
+p { margin: 0; }
+.lead { font-size: 15px; font-weight: 500; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--ink-2); font-weight: 700; }
+.sec { display: flex; flex-direction: column; gap: 12px; }
+.cover { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 24px; }
+.keydata { background: var(--ink); color: #FAF8F3; padding: 18px 18px 14px; align-self: start; }
+.keydata h3 { color: var(--kb); font-size: 13px; letter-spacing: .12em; margin-bottom: 10px; }
+.keydata dl { margin: 0; display: grid; grid-template-columns: auto auto; row-gap: 7px; column-gap: 10px; font-size: 12.5px; }
+.keydata dt { color: #CFC8B8; }
+.keydata dd { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.keydata .krw { display: block; font-size: 11px; font-weight: 500; color: #E9D9A8; }
+.keydata dd.up, .pricebar .up { color: #E0483E; }
+.pricebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; background: var(--tint); padding: 8px 12px; font-size: 12.5px; color: var(--ink-2); }
+.pricebar b { font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pricebar b.up { font-size: 15px; color: #C8372D; }
+.keydata .src { margin-top: 12px; font-size: 10.5px; color: #CFC8B8; line-height: 1.5; }
+.typebox { background: var(--tint); border-left: 5px solid var(--kb); padding: 12px 16px; }
+.typebox b { font-size: 16px; }
+ul.pts { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+ul.pts li { padding-left: 18px; position: relative; }
+ul.pts li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 7px; height: 7px; background: var(--kb); }
+.grid2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+.box { border: 1px solid var(--rule); padding: 14px 16px; }
+.box .big { font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.box .cap { font-size: 12px; color: var(--ink-2); }
+.tw { overflow-x: auto; }
+table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+table.t th, table.t td { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+table.t thead th { background: var(--ink); color: #FAF8F3; font-weight: 500; white-space: nowrap; }
+table.t tbody th { font-weight: 500; white-space: nowrap; background: var(--tint); }
+table.num td { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.num thead th { text-align: right; } table.num thead th:first-child { text-align: left; }
+table.sm { font-size: 11.5px; } table.sm th, table.sm td { padding: 5px 6px; }
+td.est, th.est { background: #FFF7E0; } thead th.est { background: #8A6A1E; } th.est span { font-size: 10px; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .ax { font-size: 11px; fill: var(--ink-2); font-family: var(--sans); }
+.chart .xl { font-size: 11.5px; fill: var(--ink); font-family: var(--sans); font-weight: 500; }
+.chart .bv { font-size: 10.5px; fill: var(--ink); font-family: var(--sans); font-weight: 700; }
+.chart .mv { font-size: 10.5px; fill: var(--ink); font-family: var(--sans); }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 10px; display: inline-block; }
+.photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.photos.p3 { grid-template-columns: repeat(3, 1fr); }
+.photos figure { margin: 0; background: #fff; border: 1px solid var(--rule); }
+.photos img { width: 100%; aspect-ratio: 5/4; object-fit: cover; display: block; }
+.photos figcaption { font-size: 11.5px; padding: 6px 8px; line-height: 1.45; color: var(--ink-2); }
+.photos figcaption b { color: var(--ink); display: block; font-size: 12px; }
+@media (max-width: 640px) { .photos, .photos.p3 { grid-template-columns: repeat(2, 1fr); } }
+.figt { font-size: 13px; font-weight: 700; }
+.note { font-size: 11.5px; color: var(--ink-2); }
+.mixrow { display: grid; grid-template-columns: 70px minmax(0,1fr); align-items: center; gap: 10px; }
+.mixlab { font-size: 12px; font-weight: 700; }
+.mixbar { display: flex; height: 24px; }
+.mixbar i { font-style: normal; font-size: 11px; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.c0 { background: #F2A900; } .c1 { background: #3D3A35; } .c2 { background: #C98B00; } .c3 { background: #8C877C; } .c4 { background: #D9C79A; } .c5 { background: #BDB6A6; }
+.mixbar .c0, .mixbar .c4, .mixbar .c5 { color: var(--ink); }
+.legend i { width: 12px; height: 12px; display: inline-block; }
+.struct { display: grid; grid-template-columns: minmax(0,1.25fr) minmax(0,1fr); gap: 14px; }
+.core { background: var(--ink); color: #FAF8F3; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.core h3 { color: var(--kb); }
+.core .kv { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.core .kv div { background: rgba(250,248,243,.08); padding: 8px; }
+.core .kv b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.core .kv span { font-size: 11px; color: #CFC8B8; }
+.newb { display: flex; flex-direction: column; gap: 8px; }
+.newb div { border: 1px solid var(--rule); padding: 8px 12px; font-size: 12.5px; }
+.newb b { display: block; font-size: 13px; }
+.newb .end { background: var(--tint); }
+.pill { display: inline-block; padding: 1px 9px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.ok { background: #E3F1E8; color: var(--good); } .chk { background: #FCF0D6; color: var(--warn); } .ng { background: #F6E1E1; color: var(--bad); }
+.disc { font-size: 11.5px; color: var(--ink-2); line-height: 1.7; display: flex; flex-direction: column; gap: 8px; }
+.callout { background: #FFF7E0; border: 1px solid var(--kb-soft); padding: 12px 16px; font-size: 13px; }
+@media (max-width: 720px) {
+  .cover, .grid2, .struct { grid-template-columns: minmax(0,1fr); }
+  .grid3 { grid-template-columns: minmax(0,1fr); }
+  .ph, .pb, .pf { padding-left: 16px; padding-right: 16px; }
+  h1 { font-size: 24px; }
+  .pf { flex-direction: column; gap: 4px; }
+}
+
+.chg-up { color: #C8372D; font-weight: 700; } .chg-dn { color: #2B5FB3; font-weight: 700; }
+table.t td.neg { color: #2B5FB3; }
+.pricebar b.dn { font-size: 15px; color: #2B5FB3; }
+.mixwrap { display: flex; flex-direction: column; gap: 6px; }
+</style>
+
+<!-- 1. 표지 -->
+<section class="page">
+  <div class="ph"><span><b>해외주식 Company Note</b> · 미국(ADR) · 전자상거래·클라우드</span><span>2026년 11월 6일</span></div>
+  <div class="pb">
+    <div class="cover">
+      <div class="sec">
+        <span class="eyebrow">ALIBABA GROUP HOLDING (BABA.US · NYSE ADR)</span>
+        <h1>알리바바: 나스닥이 5.5% 폭락한 날 홀로 +2.6%, 중국 기술주 상대 강세로 이틀 연속 반등 (장중 +5.6%에서 되돌림)</h1>
+        <div class="pricebar"><span>작성 시점 주가</span><b>$108.07</b><b class="up">▲ $2.78 (+2.64%)</b><span>11/05 종가, 전일 $105.29 · 시가 $110.98 · 고가 $111.17 · 저가 $104.75 · 거래량 9.77백만 주(KB 집계) · 시가총액 약 364.5조 원 · 환율 1,355.6원/달러</span></div>
+        <p class="note">기준일 2026-11-06 (KST) · 회계연도 종료월: 3월 · 최근 실적 FY2027 1분기(2026년 4~6월), 6-K 실적 발표문 · 20-F/6-K 제출 외국 발행사라 분기 데이터는 6-K 기준</p>
+        <div class="sec" style="gap:8px">
+          <h2>주가 강세 요약</h2>
+          <ul class="pts">
+            <li><b>폭락장 속 역행.</b> 11/5 미국 3대 지수는 2025년 4월 이후 최악의 하루였다(나스닥 −5.52%, S&amp;P 500 −4.36%, 다우 −3.44%). 민주당의 의회 장악 뒤 데이터센터 투자가 둔화될 수 있다는 우려로 AI 반도체주 매도가 시장 전체로 번졌다(StockTitan·CNBC 인용). 같은 날 나스닥 골든드래건 중국 지수는 +0.43%, 항셍지수는 +3.67%(알리바바·텐센트가 주도), BABA는 +2.64%였다.</li>
+            <li><b>이틀 연속 반등, 그러나 장중 되돌림.</b> 11/3 $100.36 → 11/4 $105.29(+4.91%) → 11/5 $108.07(+2.64%)로 2거래일 +7.7%. 11/5은 시가 $110.98(+5.4%)로 갭 상승한 뒤 장중 $104.75(전일 대비 −0.5%)까지 밀렸다가 올라 마감했다. 종가는 장중 고점($111.17) 대비 −2.8%로, 미국장 전체 매도 압력이 상단을 눌렀다.</li>
+            <li><b>재료는 공시가 아니라 상대 강세·정책 기대.</b> 11/5에 회사의 새 공시(6-K)는 확인하지 못했다. 금융 사이트 BigGo는 시장 분석가들이 중국 주식의 상대 강세를 "중국 기술 정책의 명확하고 안정적인 방향에 대한 기대"로 설명한다고 전했다(2차 출처). 미국 AI 인프라 매도를 피한 자금이 중국 ADR로 옮겨 갔다는 해석은 <b>가정</b>이며 확인된 사실이 아니다. 11/2에는 "애플이 중국 아이폰 AI에 알리바바 Qwen을 채택"했다는 보도 제목이 있었으나(24/7 Wall St, heygotrade 경유) 본문은 확인하지 못했다.</li>
+            <li><b>추세는 아직 회복 전.</b> 52주 고점 $181.10(1/22 장중) 대비 −40.3%, 저점 $91.99(6/26 장중) 대비 +17.5%로 52주 범위의 18% 위치다. 종가는 20일선($105.1) 위지만 60일선($111.0)·120일선($113.8) 아래이고 20&lt;60&lt;120 역배열이다. 1년 수익률 −34.4%, 3개월 −15.9%.</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="keydata">
+        <h3>KEY DATA</h3>
+        <dl>
+          <dt>주가 (11/05 종가)</dt><dd>$108.07</dd>
+          <dt>전일 대비</dt><dd class="up">▲ $2.78 (+2.64%)</dd>
+          <dt>52주 최고 / 최저 (장중)</dt><dd>$181.10 / $91.99</dd>
+          <dt>수익률 1주 / 3개월 / 1년</dt><dd>+8.6% / −15.9% / −34.4%</dd>
+          <dt>20 / 60 / 120일 이평</dt><dd>105.1 / 111.0 / 113.8</dd>
+          <dt>시가총액</dt><dd>$268,851mn<small class='krw'>약 364.5조 원</small></dd>
+          <dt>ADS 환산 주식수 (KB)</dt><dd>2,488mn</dd>
+          <dt>현금성+단기투자 − 차입금 (6/30, 산출)</dt><dd>RMB 31,037mn<small class='krw'>약 $4,574mn</small></dd>
+          <dt>현금·단기·기타 유동투자 (6/30)</dt><dd>RMB 474,505mn</dd>
+          <dt>PER GAAP (TTM, 산출)</dt><dd>24.7x</dd>
+          <dt>PER Non-GAAP (TTM, 산출)</dt><dd>35.6x</dd>
+          <dt>PER (KB 현재가 응답)</dt><dd>23.4x</dd>
+          <dt>EV/Sales (TTM, 산출)</dt><dd>1.7x</dd>
+          <dt>EV/EBITDA (FQ1×4, 가정)</dt><dd>11.5x</dd>
+          <dt>FCF 수익률 (TTM, 회사 정의)</dt><dd>−4.0%</dd>
+          <dt>가이던스</dt><dd>실적 발표문에 수치 없음</dd>
+        </dl>
+        <p class="src">주가·52주·이평·수익률: KB증권 Open API 일봉·현재가(2026-11-05 종가, 조회 2026-11-06 09:11 KST), GitHub Actions 경유(kb-px). 수익률은 일봉 종가 기준(3개월 = 2026-08-05, 1년 = 2025-11-05 종가 대비). 재무: 6-K 2026.6월 분기·FY2026 실적 발표문(SEC EDGAR), RMB→USD 6.7851(6-K 2026.6.30 기준)을 모든 기간에 같게 적용(가정). TTM = FY2026 − FQ1 FY26 + FQ1 FY27, 산출값. EV = 시가총액 − 순현금(현금성+단기투자−차입금·채권, 좁은 정의), EV/EBITDA는 FQ1 조정 EBITDA 39,143×4로 연환산한 가정이라 계절성·변동성이 크다. 원화 환산 1,355.6원/달러(KB 현재가 응답).</p>
+      </aside>
+    </div>
+    <div class="sec">
+      <p class="figt">그림 1. BABA 1년 주가 (일봉 종가, USD) · 20일·60일·120일 이동평균</p>
+      <svg viewBox="0 0 760 340" class="chart" role="img" aria-label="BABA 1년 일봉 종가와 20·60·120일 이동평균"><line x1="52" x2="682" y1="300.0" y2="300.0" stroke="#E6E0D2"/><text x="44" y="304.0" text-anchor="end" class="ax">80</text><line x1="52" x2="682" y1="253.7" y2="253.7" stroke="#E6E0D2"/><text x="44" y="257.7" text-anchor="end" class="ax">100</text><line x1="52" x2="682" y1="207.3" y2="207.3" stroke="#E6E0D2"/><text x="44" y="211.3" text-anchor="end" class="ax">120</text><line x1="52" x2="682" y1="161.0" y2="161.0" stroke="#E6E0D2"/><text x="44" y="165.0" text-anchor="end" class="ax">140</text><line x1="52" x2="682" y1="114.7" y2="114.7" stroke="#E6E0D2"/><text x="44" y="118.7" text-anchor="end" class="ax">160</text><line x1="52" x2="682" y1="68.3" y2="68.3" stroke="#E6E0D2"/><text x="44" y="72.3" text-anchor="end" class="ax">180</text><line x1="52" x2="682" y1="22.0" y2="22.0" stroke="#E6E0D2"/><text x="44" y="26.0" text-anchor="end" class="ax">200</text><path d="M52.0,103.5 L54.5,97.0 L57.0,100.0 L59.5,101.0 L62.0,112.8 L64.5,119.5 L67.1,115.0 L69.6,129.0 L72.1,120.0 L74.6,115.3 L77.1,117.2 L79.6,130.2 L82.1,131.0 L84.6,113.0 L87.1,121.6 L89.6,120.2 L92.2,120.9 L94.7,104.8 L97.2,112.0 L99.7,119.1 L102.2,120.6 L104.7,118.6 L107.2,119.0 L109.7,124.0 L112.2,117.4 L114.7,121.8 L117.3,124.7 L119.8,137.6 L122.3,139.5 L124.8,144.6 L127.3,144.0 L129.8,138.3 L132.3,135.6 L134.8,135.0 L137.3,137.7 L139.8,132.6 L142.4,141.3 L144.9,143.9 L147.4,145.8 L149.9,124.5 L152.4,123.3 L154.9,135.7 L157.4,145.4 L159.9,127.5 L162.4,135.6 L164.9,100.0 L167.5,98.4 L170.0,91.7 L172.5,89.3 L175.0,102.2 L177.5,109.1 L180.0,94.6 L182.5,74.9 L185.0,84.0 L187.5,88.3 L190.0,85.2 L192.6,78.4 L195.1,81.7 L197.6,92.5 L200.1,95.2 L202.6,106.2 L205.1,116.7 L207.6,119.9 L210.1,108.9 L212.6,107.7 L215.1,99.6 L217.7,104.7 L220.2,117.6 L222.7,124.6 L225.2,125.3 L227.7,124.5 L230.2,127.9 L232.7,127.5 L235.2,131.4 L237.7,130.6 L240.2,132.6 L242.8,142.4 L245.3,151.5 L247.8,155.1 L250.3,171.2 L252.8,176.6 L255.3,183.4 L257.8,182.3 L260.3,178.1 L262.8,168.3 L265.3,169.6 L267.9,174.4 L270.4,172.1 L272.9,168.6 L275.4,168.9 L277.9,173.9 L280.4,196.0 L282.9,201.8 L285.4,193.3 L287.9,194.6 L290.4,184.5 L293.0,194.8 L295.5,201.1 L298.0,202.7 L300.5,194.7 L303.0,198.7 L305.5,202.6 L308.0,202.0 L310.5,208.0 L313.0,195.0 L315.5,189.5 L318.1,190.4 L320.6,188.8 L323.1,181.0 L325.6,176.6 L328.1,164.3 L330.6,158.7 L333.1,160.6 L335.6,171.7 L338.1,169.3 L340.6,180.2 L343.2,170.7 L345.7,178.3 L348.2,182.2 L350.7,183.2 L353.2,179.8 L355.7,180.7 L358.2,176.6 L360.7,178.9 L363.2,157.7 L365.7,158.7 L368.3,160.9 L370.8,167.3 L373.3,173.1 L375.8,147.5 L378.3,158.4 L380.8,178.2 L383.3,176.6 L385.8,171.1 L388.3,173.8 L390.8,180.8 L393.4,184.2 L395.9,185.4 L398.4,189.4 L400.9,193.1 L403.4,197.6 L405.9,194.8 L408.4,182.3 L410.9,190.6 L413.4,193.5 L415.9,204.9 L418.5,207.2 L421.0,208.0 L423.5,218.0 L426.0,224.3 L428.5,224.0 L431.0,224.6 L433.5,228.3 L436.0,236.4 L438.5,237.2 L441.0,242.2 L443.6,247.6 L446.1,254.1 L448.6,265.1 L451.1,265.7 L453.6,264.1 L456.1,263.0 L458.6,258.3 L461.1,262.6 L463.6,258.5 L466.1,258.0 L468.7,232.9 L471.2,227.9 L473.7,225.1 L476.2,225.1 L478.7,225.1 L481.2,212.7 L483.7,213.1 L486.2,219.0 L488.7,206.5 L491.2,212.0 L493.8,215.3 L496.3,221.1 L498.8,225.5 L501.3,218.9 L503.8,218.5 L506.3,218.8 L508.8,215.9 L511.3,202.1 L513.8,190.4 L516.3,186.5 L518.9,187.6 L521.4,191.6 L523.9,187.9 L526.4,178.8 L528.9,189.1 L531.4,195.2 L533.9,202.3 L536.4,198.5 L538.9,196.4 L541.4,188.5 L544.0,186.7 L546.5,182.9 L549.0,208.9 L551.5,210.9 L554.0,208.6 L556.5,207.7 L559.0,215.9 L561.5,209.9 L564.0,221.2 L566.5,223.9 L569.1,226.3 L571.6,226.3 L574.1,223.0 L576.6,224.3 L579.1,231.9 L581.6,233.8 L584.1,232.1 L586.6,232.3 L589.1,232.0 L591.6,236.8 L594.2,233.9 L596.7,223.0 L599.2,217.2 L601.7,215.9 L604.2,228.6 L606.7,229.0 L609.2,231.1 L611.7,233.4 L614.2,235.7 L616.7,236.2 L619.3,236.4 L621.8,240.1 L624.3,228.6 L626.8,232.2 L629.3,237.4 L631.8,240.5 L634.3,227.3 L636.8,228.7 L639.3,228.5 L641.8,227.8 L644.4,227.9 L646.9,232.6 L649.4,233.8 L651.9,233.7 L654.4,243.5 L656.9,249.5 L659.4,254.5 L661.9,253.1 L664.4,253.1 L666.9,251.4 L669.5,254.7 L672.0,258.2 L674.5,250.2 L677.0,252.8 L679.5,241.4 L682.0,235.0 L682.0,300.0 L52.0,300.0 Z" fill="#F2A900" opacity=".16"/><path d="M52.0,168.4 L54.5,167.6 L57.0,166.7 L59.5,165.9 L62.0,165.2 L64.5,164.5 L67.1,163.8 L69.6,163.1 L72.1,162.3 L74.6,161.5 L77.1,160.6 L79.6,159.9 L82.1,159.1 L84.6,158.3 L87.1,157.6 L89.6,156.9 L92.2,156.2 L94.7,155.4 L97.2,154.6 L99.7,153.8 L102.2,152.9 L104.7,152.1 L107.2,151.3 L109.7,150.5 L112.2,149.6 L114.7,148.7 L117.3,148.0 L119.8,147.3 L122.3,146.6 L124.8,146.0 L127.3,145.3 L129.8,144.6 L132.3,143.9 L134.8,143.0 L137.3,142.2 L139.8,141.3 L142.4,140.5 L144.9,139.7 L147.4,138.9 L149.9,138.0 L152.4,137.2 L154.9,136.6 L157.4,136.0 L159.9,135.3 L162.4,134.7 L164.9,133.9 L167.5,133.0 L170.0,132.1 L172.5,131.1 L175.0,130.2 L177.5,129.4 L180.0,128.4 L182.5,127.3 L185.0,126.3 L187.5,125.2 L190.0,124.1 L192.6,123.1 L195.1,122.0 L197.6,121.1 L200.1,120.1 L202.6,119.3 L205.1,118.7 L207.6,118.0 L210.1,117.2 L212.6,116.4 L215.1,115.5 L217.7,114.7 L220.2,113.9 L222.7,113.3 L225.2,112.7 L227.7,112.0 L230.2,111.4 L232.7,110.8 L235.2,110.4 L237.7,110.1 L240.2,109.8 L242.8,109.5 L245.3,109.3 L247.8,109.3 L250.3,109.5 L252.8,109.7 L255.3,110.2 L257.8,110.7 L260.3,111.2 L262.8,111.7 L265.3,112.2 L267.9,112.8 L270.4,113.3 L272.9,113.8 L275.4,114.4 L277.9,115.2 L280.4,116.1 L282.9,117.1 L285.4,118.1 L287.9,119.2 L290.4,120.2 L293.0,121.4 L295.5,122.7 L298.0,123.9 L300.5,125.0 L303.0,126.1 L305.5,127.1 L308.0,127.8 L310.5,128.7 L313.0,129.5 L315.5,130.2 L318.1,130.9 L320.6,131.7 L323.1,132.5 L325.6,133.2 L328.1,133.7 L330.6,134.3 L333.1,134.9 L335.6,135.8 L338.1,136.6 L340.6,137.5 L343.2,138.2 L345.7,139.0 L348.2,139.7 L350.7,140.3 L353.2,141.0 L355.7,141.7 L358.2,142.3 L360.7,143.0 L363.2,143.3 L365.7,143.7 L368.3,144.0 L370.8,144.4 L373.3,144.8 L375.8,145.1 L378.3,145.4 L380.8,145.8 L383.3,146.2 L385.8,146.7 L388.3,147.1 L390.8,147.6 L393.4,148.1 L395.9,148.8 L398.4,149.5 L400.9,150.1 L403.4,150.7 L405.9,151.3 L408.4,151.9 L410.9,152.4 L413.4,153.1 L415.9,153.8 L418.5,154.4 L421.0,155.0 L423.5,155.7 L426.0,156.4 L428.5,157.0 L431.0,157.7 L433.5,158.5 L436.0,159.4 L438.5,160.2 L441.0,161.1 L443.6,162.0 L446.1,162.9 L448.6,163.9 L451.1,165.1 L453.6,166.2 L456.1,167.3 L458.6,168.2 L461.1,169.4 L463.6,170.4 L466.1,171.7 L468.7,172.8 L471.2,174.0 L473.7,175.1 L476.2,176.1 L478.7,177.1 L481.2,178.1 L483.7,179.2 L486.2,180.3 L488.7,181.3 L491.2,182.4 L493.8,183.5 L496.3,184.7 L498.8,185.8 L501.3,186.8 L503.8,187.8 L506.3,188.6 L508.8,189.4 L511.3,190.2 L513.8,190.9 L516.3,191.6 L518.9,192.3 L521.4,192.9 L523.9,193.4 L526.4,193.9 L528.9,194.4 L531.4,195.0 L533.9,195.6 L536.4,196.2 L538.9,196.7 L541.4,197.2 L544.0,197.6 L546.5,197.8 L549.0,198.3 L551.5,198.6 L554.0,198.9 L556.5,199.1 L559.0,199.3 L561.5,199.6 L564.0,200.1 L566.5,200.5 L569.1,200.9 L571.6,201.4 L574.1,201.8 L576.6,202.3 L579.1,202.8 L581.6,203.1 L584.1,203.4 L586.6,203.7 L589.1,204.0 L591.6,204.4 L594.2,204.8 L596.7,204.9 L599.2,205.1 L601.7,205.2 L604.2,205.5 L606.7,205.7 L609.2,205.9 L611.7,206.2 L614.2,206.5 L616.7,206.9 L619.3,207.3 L621.8,207.7 L624.3,208.1 L626.8,208.6 L629.3,209.2 L631.8,209.9 L634.3,210.4 L636.8,210.9 L639.3,211.4 L641.8,211.8 L644.4,212.2 L646.9,212.7 L649.4,213.1 L651.9,213.6 L654.4,214.1 L656.9,214.7 L659.4,215.3 L661.9,215.9 L664.4,216.7 L666.9,217.5 L669.5,218.3 L672.0,219.0 L674.5,219.7 L677.0,220.6 L679.5,221.2 L682.0,221.7" fill="none" stroke="#B5AFA2" stroke-width="1.5" stroke-dasharray="6 4"/><path d="M52.0,122.3 L54.5,120.7 L57.0,119.0 L59.5,117.3 L62.0,115.7 L64.5,114.3 L67.1,112.7 L69.6,111.3 L72.1,110.0 L74.6,108.6 L77.1,107.3 L79.6,106.1 L82.1,104.8 L84.6,103.8 L87.1,103.1 L89.6,102.3 L92.2,101.3 L94.7,100.1 L97.2,99.4 L99.7,99.0 L102.2,98.4 L104.7,98.3 L107.2,98.2 L109.7,98.3 L112.2,98.4 L114.7,98.8 L117.3,99.0 L119.8,99.5 L122.3,100.1 L124.8,100.7 L127.3,101.8 L129.8,102.8 L132.3,103.6 L134.8,104.8 L137.3,105.9 L139.8,107.0 L142.4,108.6 L144.9,110.2 L147.4,111.8 L149.9,112.7 L152.4,113.7 L154.9,114.6 L157.4,115.1 L159.9,115.5 L162.4,116.0 L164.9,116.0 L167.5,115.9 L170.0,115.8 L172.5,115.9 L175.0,115.9 L177.5,116.1 L180.0,116.2 L182.5,116.1 L185.0,116.3 L187.5,116.6 L190.0,116.8 L192.6,116.8 L195.1,116.6 L197.6,116.5 L200.1,116.4 L202.6,116.4 L205.1,116.8 L207.6,117.1 L210.1,117.2 L212.6,117.1 L215.1,116.8 L217.7,116.6 L220.2,116.4 L222.7,116.5 L225.2,116.7 L227.7,116.8 L230.2,116.8 L232.7,116.7 L235.2,117.0 L237.7,117.2 L240.2,117.4 L242.8,117.7 L245.3,118.5 L247.8,119.2 L250.3,120.1 L252.8,121.0 L255.3,122.1 L257.8,123.2 L260.3,124.1 L262.8,124.9 L265.3,125.7 L267.9,126.5 L270.4,127.1 L272.9,127.6 L275.4,128.0 L277.9,128.5 L280.4,129.5 L282.9,130.6 L285.4,131.5 L287.9,132.5 L290.4,133.3 L293.0,134.2 L295.5,135.2 L298.0,136.1 L300.5,137.3 L303.0,138.6 L305.5,139.7 L308.0,140.6 L310.5,142.0 L313.0,143.0 L315.5,144.4 L318.1,146.0 L320.6,147.6 L323.1,149.1 L325.6,150.4 L328.1,151.3 L330.6,152.3 L333.1,153.8 L335.6,155.2 L338.1,156.6 L340.6,158.2 L343.2,159.7 L345.7,161.3 L348.2,162.8 L350.7,164.3 L353.2,165.5 L355.7,166.6 L358.2,167.5 L360.7,168.7 L363.2,169.5 L365.7,170.5 L368.3,171.4 L370.8,172.3 L373.3,173.1 L375.8,173.5 L378.3,174.0 L380.8,174.9 L383.3,175.7 L385.8,176.3 L388.3,177.1 L390.8,177.9 L393.4,178.6 L395.9,179.1 L398.4,179.7 L400.9,180.1 L403.4,180.4 L405.9,180.6 L408.4,180.6 L410.9,180.8 L413.4,181.2 L415.9,181.8 L418.5,182.4 L421.0,183.0 L423.5,183.8 L426.0,184.7 L428.5,185.5 L431.0,186.0 L433.5,186.5 L436.0,187.2 L438.5,187.9 L441.0,188.8 L443.6,189.7 L446.1,190.6 L448.6,191.6 L451.1,192.8 L453.6,193.9 L456.1,194.9 L458.6,195.9 L461.1,196.8 L463.6,197.8 L466.1,199.0 L468.7,199.7 L471.2,200.3 L473.7,201.1 L476.2,201.9 L478.7,202.9 L481.2,203.8 L483.7,204.7 L486.2,205.5 L488.7,206.1 L491.2,206.6 L493.8,207.4 L496.3,208.1 L498.8,208.8 L501.3,209.4 L503.8,210.0 L506.3,210.7 L508.8,211.3 L511.3,211.7 L513.8,212.3 L516.3,212.7 L518.9,213.2 L521.4,213.6 L523.9,213.8 L526.4,214.3 L528.9,214.8 L531.4,215.1 L533.9,215.6 L536.4,216.0 L538.9,216.4 L541.4,216.5 L544.0,216.6 L546.5,216.5 L549.0,216.8 L551.5,217.1 L554.0,217.3 L556.5,217.5 L559.0,218.1 L561.5,218.4 L564.0,218.9 L566.5,219.2 L569.1,219.5 L571.6,219.8 L574.1,219.9 L576.6,219.9 L579.1,220.0 L581.6,220.2 L584.1,220.3 L586.6,220.2 L589.1,220.1 L591.6,220.0 L594.2,219.8 L596.7,219.3 L599.2,218.5 L601.7,217.6 L604.2,217.0 L606.7,216.5 L609.2,216.0 L611.7,215.5 L614.2,215.2 L616.7,214.8 L619.3,214.9 L621.8,215.1 L624.3,215.1 L626.8,215.2 L629.3,215.4 L631.8,215.9 L634.3,216.1 L636.8,216.3 L639.3,216.7 L641.8,216.9 L644.4,217.1 L646.9,217.3 L649.4,217.5 L651.9,217.7 L654.4,218.1 L656.9,218.6 L659.4,219.3 L661.9,220.1 L664.4,221.2 L666.9,222.3 L669.5,223.4 L672.0,224.5 L674.5,225.5 L677.0,226.8 L679.5,227.6 L682.0,228.3" fill="none" stroke="#8C877C" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M52.0,92.6 L54.5,93.3 L57.0,92.5 L59.5,92.6 L62.0,92.8 L64.5,93.7 L67.1,94.4 L69.6,95.9 L72.1,97.7 L74.6,98.5 L77.1,99.3 L79.6,101.5 L82.1,104.0 L84.6,106.2 L87.1,108.5 L89.6,111.0 L92.2,113.0 L94.7,113.7 L97.2,114.5 L99.7,115.2 L102.2,116.0 L104.7,117.1 L107.2,118.1 L109.7,119.2 L112.2,119.4 L114.7,119.5 L117.3,120.0 L119.8,120.5 L122.3,121.4 L124.8,122.9 L127.3,124.2 L129.8,124.6 L132.3,124.9 L134.8,126.0 L137.3,126.8 L139.8,127.4 L142.4,128.4 L144.9,130.4 L147.4,132.1 L149.9,132.3 L152.4,132.5 L154.9,133.3 L157.4,134.6 L159.9,134.8 L162.4,135.7 L164.9,134.6 L167.5,133.3 L170.0,131.0 L172.5,128.5 L175.0,126.4 L177.5,124.7 L180.0,122.5 L182.5,119.4 L185.0,116.9 L187.5,114.4 L190.0,112.0 L192.6,108.9 L195.1,105.8 L197.6,103.1 L200.1,101.7 L202.6,100.8 L205.1,99.8 L207.6,98.6 L210.1,97.6 L212.6,96.2 L215.1,96.2 L217.7,96.5 L220.2,97.8 L222.7,99.6 L225.2,100.7 L227.7,101.5 L230.2,103.2 L232.7,105.8 L235.2,108.2 L237.7,110.3 L240.2,112.7 L242.8,115.9 L245.3,119.4 L247.8,122.5 L250.3,126.3 L252.8,129.8 L255.3,133.1 L257.8,136.3 L260.3,139.7 L262.8,142.7 L265.3,146.2 L267.9,149.7 L270.4,152.5 L272.9,154.7 L275.4,156.8 L277.9,159.3 L280.4,162.7 L282.9,166.4 L285.4,169.5 L287.9,172.7 L290.4,175.3 L293.0,177.9 L295.5,180.4 L298.0,182.8 L300.5,184.0 L303.0,185.1 L305.5,186.1 L308.0,187.0 L310.5,188.5 L313.0,189.9 L315.5,190.9 L318.1,191.7 L320.6,192.5 L323.1,193.1 L325.6,193.5 L328.1,193.0 L330.6,191.1 L333.1,189.1 L335.6,188.0 L338.1,186.7 L340.6,186.5 L343.2,185.3 L345.7,184.2 L348.2,183.2 L350.7,182.6 L353.2,181.6 L355.7,180.5 L358.2,179.3 L360.7,177.8 L363.2,176.0 L365.7,174.4 L368.3,172.9 L370.8,171.9 L373.3,171.5 L375.8,170.0 L378.3,169.7 L380.8,170.7 L383.3,171.5 L385.8,171.5 L388.3,171.7 L390.8,171.7 L393.4,172.4 L395.9,172.7 L398.4,173.1 L400.9,173.6 L403.4,174.5 L405.9,175.2 L408.4,175.5 L410.9,176.1 L413.4,177.9 L415.9,180.2 L418.5,182.5 L421.0,184.5 L423.5,186.8 L426.0,190.6 L428.5,193.9 L431.0,196.2 L433.5,198.8 L436.0,202.1 L438.5,205.2 L441.0,208.3 L443.6,211.5 L446.1,214.9 L448.6,218.7 L451.1,222.3 L453.6,225.6 L456.1,229.1 L458.6,232.9 L461.1,236.5 L463.6,239.7 L466.1,242.4 L468.7,243.6 L471.2,244.6 L473.7,245.0 L476.2,245.0 L478.7,245.1 L481.2,244.5 L483.7,243.7 L486.2,242.9 L488.7,241.3 L491.2,239.8 L493.8,238.2 L496.3,236.6 L498.8,234.6 L501.3,232.2 L503.8,230.0 L506.3,227.8 L508.8,225.6 L511.3,222.6 L513.8,219.2 L516.3,215.6 L518.9,213.4 L521.4,211.5 L523.9,209.7 L526.4,207.4 L528.9,205.6 L531.4,204.7 L533.9,204.2 L536.4,203.1 L538.9,202.6 L541.4,201.4 L544.0,200.0 L546.5,198.1 L549.0,197.3 L551.5,196.9 L554.0,196.4 L556.5,195.8 L559.0,195.8 L561.5,196.2 L564.0,197.8 L566.5,199.6 L569.1,201.6 L571.6,203.3 L574.1,205.1 L576.6,207.3 L579.1,209.5 L581.6,211.4 L584.1,212.9 L586.6,214.6 L589.1,216.4 L591.6,218.8 L594.2,221.1 L596.7,223.1 L599.2,223.6 L601.7,223.8 L604.2,224.8 L606.7,225.9 L609.2,226.6 L611.7,227.8 L614.2,228.5 L616.7,229.1 L619.3,229.7 L621.8,230.3 L624.3,230.6 L626.8,231.0 L629.3,231.3 L631.8,231.6 L634.3,231.4 L636.8,231.2 L639.3,231.0 L641.8,230.6 L644.4,230.3 L646.9,230.8 L649.4,231.6 L651.9,232.5 L654.4,233.2 L656.9,234.2 L659.4,235.4 L661.9,236.4 L664.4,237.3 L666.9,238.0 L669.5,238.9 L672.0,239.9 L674.5,240.9 L677.0,242.0 L679.5,242.2 L682.0,241.9" fill="none" stroke="#C98A00" stroke-width="1.5"/><path d="M52.0,103.5 L54.5,97.0 L57.0,100.0 L59.5,101.0 L62.0,112.8 L64.5,119.5 L67.1,115.0 L69.6,129.0 L72.1,120.0 L74.6,115.3 L77.1,117.2 L79.6,130.2 L82.1,131.0 L84.6,113.0 L87.1,121.6 L89.6,120.2 L92.2,120.9 L94.7,104.8 L97.2,112.0 L99.7,119.1 L102.2,120.6 L104.7,118.6 L107.2,119.0 L109.7,124.0 L112.2,117.4 L114.7,121.8 L117.3,124.7 L119.8,137.6 L122.3,139.5 L124.8,144.6 L127.3,144.0 L129.8,138.3 L132.3,135.6 L134.8,135.0 L137.3,137.7 L139.8,132.6 L142.4,141.3 L144.9,143.9 L147.4,145.8 L149.9,124.5 L152.4,123.3 L154.9,135.7 L157.4,145.4 L159.9,127.5 L162.4,135.6 L164.9,100.0 L167.5,98.4 L170.0,91.7 L172.5,89.3 L175.0,102.2 L177.5,109.1 L180.0,94.6 L182.5,74.9 L185.0,84.0 L187.5,88.3 L190.0,85.2 L192.6,78.4 L195.1,81.7 L197.6,92.5 L200.1,95.2 L202.6,106.2 L205.1,116.7 L207.6,119.9 L210.1,108.9 L212.6,107.7 L215.1,99.6 L217.7,104.7 L220.2,117.6 L222.7,124.6 L225.2,125.3 L227.7,124.5 L230.2,127.9 L232.7,127.5 L235.2,131.4 L237.7,130.6 L240.2,132.6 L242.8,142.4 L245.3,151.5 L247.8,155.1 L250.3,171.2 L252.8,176.6 L255.3,183.4 L257.8,182.3 L260.3,178.1 L262.8,168.3 L265.3,169.6 L267.9,174.4 L270.4,172.1 L272.9,168.6 L275.4,168.9 L277.9,173.9 L280.4,196.0 L282.9,201.8 L285.4,193.3 L287.9,194.6 L290.4,184.5 L293.0,194.8 L295.5,201.1 L298.0,202.7 L300.5,194.7 L303.0,198.7 L305.5,202.6 L308.0,202.0 L310.5,208.0 L313.0,195.0 L315.5,189.5 L318.1,190.4 L320.6,188.8 L323.1,181.0 L325.6,176.6 L328.1,164.3 L330.6,158.7 L333.1,160.6 L335.6,171.7 L338.1,169.3 L340.6,180.2 L343.2,170.7 L345.7,178.3 L348.2,182.2 L350.7,183.2 L353.2,179.8 L355.7,180.7 L358.2,176.6 L360.7,178.9 L363.2,157.7 L365.7,158.7 L368.3,160.9 L370.8,167.3 L373.3,173.1 L375.8,147.5 L378.3,158.4 L380.8,178.2 L383.3,176.6 L385.8,171.1 L388.3,173.8 L390.8,180.8 L393.4,184.2 L395.9,185.4 L398.4,189.4 L400.9,193.1 L403.4,197.6 L405.9,194.8 L408.4,182.3 L410.9,190.6 L413.4,193.5 L415.9,204.9 L418.5,207.2 L421.0,208.0 L423.5,218.0 L426.0,224.3 L428.5,224.0 L431.0,224.6 L433.5,228.3 L436.0,236.4 L438.5,237.2 L441.0,242.2 L443.6,247.6 L446.1,254.1 L448.6,265.1 L451.1,265.7 L453.6,264.1 L456.1,263.0 L458.6,258.3 L461.1,262.6 L463.6,258.5 L466.1,258.0 L468.7,232.9 L471.2,227.9 L473.7,225.1 L476.2,225.1 L478.7,225.1 L481.2,212.7 L483.7,213.1 L486.2,219.0 L488.7,206.5 L491.2,212.0 L493.8,215.3 L496.3,221.1 L498.8,225.5 L501.3,218.9 L503.8,218.5 L506.3,218.8 L508.8,215.9 L511.3,202.1 L513.8,190.4 L516.3,186.5 L518.9,187.6 L521.4,191.6 L523.9,187.9 L526.4,178.8 L528.9,189.1 L531.4,195.2 L533.9,202.3 L536.4,198.5 L538.9,196.4 L541.4,188.5 L544.0,186.7 L546.5,182.9 L549.0,208.9 L551.5,210.9 L554.0,208.6 L556.5,207.7 L559.0,215.9 L561.5,209.9 L564.0,221.2 L566.5,223.9 L569.1,226.3 L571.6,226.3 L574.1,223.0 L576.6,224.3 L579.1,231.9 L581.6,233.8 L584.1,232.1 L586.6,232.3 L589.1,232.0 L591.6,236.8 L594.2,233.9 L596.7,223.0 L599.2,217.2 L601.7,215.9 L604.2,228.6 L606.7,229.0 L609.2,231.1 L611.7,233.4 L614.2,235.7 L616.7,236.2 L619.3,236.4 L621.8,240.1 L624.3,228.6 L626.8,232.2 L629.3,237.4 L631.8,240.5 L634.3,227.3 L636.8,228.7 L639.3,228.5 L641.8,227.8 L644.4,227.9 L646.9,232.6 L649.4,233.8 L651.9,233.7 L654.4,243.5 L656.9,249.5 L659.4,254.5 L661.9,253.1 L664.4,253.1 L666.9,251.4 L669.5,254.7 L672.0,258.2 L674.5,250.2 L677.0,252.8 L679.5,241.4 L682.0,235.0" fill="none" stroke="#3D3A35" stroke-width="1.8"/><circle cx="182.5" cy="74.9" r="4" fill="#B23A3A"/><text x="190.5" y="68.9" class="mv">종가 최고 $177.18 (1/22)</text><circle cx="451.1" cy="265.7" r="4" fill="#2F7D4F"/><text x="443.1" y="281.7" text-anchor="end" class="mv">종가 최저 $94.81 (6/26)</text><line x1="373.3" x2="373.3" y1="112" y2="169.1" stroke="#6B665D" stroke-dasharray="2 2"/><text x="373.3" y="106" text-anchor="middle" class="mv">5/12 3월 분기 실적 발표</text><circle cx="682.0" cy="235.0" r="5" fill="#F2A900" stroke="#3D3A35" stroke-width="2"/><text x="691.0" y="239.0" text-anchor="start" class="bv">$108.07</text><text x="52.0" y="318" text-anchor="middle" class="xl">25.11</text><text x="149.9" y="318" text-anchor="middle" class="xl">26.01</text><text x="247.8" y="318" text-anchor="middle" class="xl">26.03</text><text x="358.2" y="318" text-anchor="middle" class="xl">26.05</text><text x="458.6" y="318" text-anchor="middle" class="xl">26.07</text><text x="566.5" y="318" text-anchor="middle" class="xl">26.09</text><text x="677.0" y="318" text-anchor="middle" class="xl">26.11</text><line x1="60" x2="78" y1="334" y2="334" stroke="#3D3A35" stroke-width="2"/><text x="82" y="338" class="ax">종가</text><line x1="130" x2="148" y1="334" y2="334" stroke="#C98A00" stroke-width="2"/><text x="152" y="338" class="ax">20일</text><line x1="200" x2="218" y1="334" y2="334" stroke="#8C877C" stroke-width="2" stroke-dasharray="4 3"/><text x="222" y="338" class="ax">60일</text><line x1="270" x2="288" y1="334" y2="334" stroke="#B5AFA2" stroke-width="2" stroke-dasharray="6 4"/><text x="292" y="338" class="ax">120일</text><line x1="52" x2="682" y1="300" y2="300" stroke="#3D3A35"/><text x="52" y="14" class="ax">(USD)</text></svg>
+      <p class="note">2025-11-05 ~ 2026-11-05 일봉 종가 252거래일(KB증권 Open API 해외 통합차트 GSC10060, 수정주가). 52주 고저($181.10 / $91.99)는 장중 기준이라 그림의 종가 최고·최저와 다르다. 5/12 표시는 3월 분기(FY2026) 실적 발표일(회사 보도자료 기준)이며 발표 시각은 확인하지 못했다. 11/5 거래량은 KB 집계 9.77백만 주로, 2차 기사의 장중 값(18.9백만 주)과 차이가 있어 확인 필요.</p>
+    </div>
+  </div>
+  <div class="pf"><span>자료: KB증권 Open API 일봉·현재가(2026-11-05 종가, 조회 2026-11-06 09:11 KST), 6-K 2026.6월 분기·FY2026 실적(SEC EDGAR), 아주경제·StockTitan(CNBC 인용)·BigGo 2026-11-06 게재 기사(지수·중국 ADR)</span><span class="pn">1</span></div>
+</section>
+
+<!-- 2. 투자 요약 -->
+<section class="page">
+  <div class="ph"><span><b>Alibaba</b> · 투자 요약</span><span>2026년 11월 6일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>한눈에 보는 알리바바</h2>
+      <div class="typebox"><span class="eyebrow">종목 유형</span><br><b>설비 집약 산업</b> <span class="note">(주 유형 · 1순위 EV/EBITDA, 보조 EV/Sales) / 보조 유형: 고성장 기술주(AI Cloud 외부 매출 +45%)</span>
+        <p style="margin-top:6px">2026년 6월 분기 CAPEX 67,678mn이 영업현금흐름 22,945mn의 2.95배(매출 대비 25.2%)이고, 영업이익은 −57%, FY2026 영업이익은 −64%로 이익 변동성이 크다. AI 인프라 투자 국면의 설비 집약 기업으로 분류하되, 클라우드 성장 때문에 경계에 있다. 1순위 지표인 EV/EBITDA는 연간·TTM 조정 EBITDA를 확보하지 못해 <b>데이터 없음</b>이며, 분기값 연환산(가정)만 참고로 둔다.</p></div>
+    </div>
+    <div class="grid3">
+      <div class="box"><div class="big">+9%</div><div class="cap">매출 RMB 268,953mn (2026.6월 분기, 전년 동기 대비)</div></div>
+      <div class="box"><div class="big">−57%</div><div class="cap">영업이익 RMB 15,161mn · 이익률 5.6%(전년 14.1%)</div></div>
+      <div class="box"><div class="big">+45%</div><div class="cap">AI Cloud and Compute 매출 RMB 48,437mn</div></div>
+      <div class="box"><div class="big">+75%</div><div class="cap">CAPEX RMB 67,678mn (전년 38,676mn)</div></div>
+      <div class="box"><div class="big">−44,670</div><div class="cap">FCF RMB mn (전년 −18,815mn, 회사 정의)</div></div>
+      <div class="box"><div class="big">−46,319</div><div class="cap">현금·단기·기타 유동투자 분기 감소액 RMB mn (산출: 520,824 → 474,505)</div></div>
+    </div>
+    <div class="sec">
+      <h2>11/05 미국장과 BABA</h2>
+      <div class="tw"><table class="t num"><thead><tr><th>지수·종목</th><th>11/05 등락</th><th>종가·수준</th><th>출처</th></tr></thead><tbody>
+        <tr><th>나스닥 종합</th><td class="neg">−5.52%</td><td>24,315.00</td><td>아주경제, StockTitan(CNBC 인용)</td></tr>
+        <tr><th>S&amp;P 500</th><td class="neg">−4.36%</td><td>7,353.73</td><td>아주경제, StockTitan</td></tr>
+        <tr><th>다우존스</th><td class="neg">−3.44%</td><td>51,523.06</td><td>아주경제, BigGo</td></tr>
+        <tr><th>나스닥 골든드래건 중국</th><td>+0.43%</td><td>5,747.08</td><td>BigGo</td></tr>
+        <tr><th>항셍지수 (홍콩, 11/5)</th><td>+3.67%</td><td>24,796.98</td><td>cappnotes</td></tr>
+        <tr><th><b>BABA</b></th><td><b>+2.64%</b></td><td>$108.07</td><td>KB증권 Open API</td></tr></tbody></table></div>
+      <p class="note">BigGo는 BABA를 +2.67%로 적었으나 KB 종가 기준 전일 $105.29 → $108.07은 +2.64%이다. 이 리포트는 KB 값을 쓴다. 지수는 모두 2차 출처이며 Yahoo 직접 조회는 이 환경에서 되지 않았다.</p>
+    </div>
+    <div class="sec">
+      <h2>최근 주가와 사건</h2>
+      <div class="tw"><table class="t"><thead><tr><th>날짜</th><th>사건</th><th>주가 (KB 종가)</th></tr></thead><tbody>
+        <tr><th>2026-01-22</th><td>52주 고점 (장중 $181.10)</td><td>종가 $177.18</td></tr>
+        <tr><th>2026-05-12</th><td>3월 분기·FY2026 실적 발표(보도자료 기준일, 발표 시각 미확인)</td><td>5/11 $137.30 → 5/12 $134.78(-1.8%) → 5/13 $145.81(+8.2%)</td></tr>
+        <tr><th>2026-06-26</th><td>52주 저점 (장중 $91.99)</td><td>종가 $94.81</td></tr>
+        <tr><th>2026-11-02</th><td>"애플, 중국 아이폰 AI에 Qwen 채택" 보도 제목(본문 미확인)</td><td>$98.04 → $101.50 (+3.5%)</td></tr>
+        <tr><th>2026-11-04</th><td>미국 대형 기술주 급등일(마이크로소프트 리포트 11/5 참조), BABA +4.91%</td><td>$100.36 → $105.29</td></tr>
+        <tr><th>2026-11-05</th><td>미국 3대 지수 급락, BABA는 상승</td><td>$105.29 → $108.07 (+2.64%)</td></tr></tbody></table></div>
+      <p class="note">2026.6월 분기 실적(6-K)의 발표일은 이 자료에서 확인하지 못했다.</p>
+    </div>
+  </div>
+  <div class="pf"><span>자료: KB증권 Open API 일봉·현재가(2026-11-05 종가, 조회 2026-11-06 09:11 KST), 6-K 2026.6월 분기(SEC EDGAR), 아주경제·StockTitan·BigGo·cappnotes 2026-11-06, heygotrade(11/4)</span><span class="pn">2</span></div>
+</section>
+
+<!-- 3. 사업구조 -->
+<section class="page">
+  <div class="ph"><span><b>Alibaba</b> · 사업구조</span><span>2026년 11월 6일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>무엇을 파는 회사인가 (2026년 6월 분기 세그먼트)</h2>
+      <p>중국·해외 전자상거래(Alibaba E-commerce Group)가 매출 대부분을 만들고, 클라우드와 AI 모델·응용(Qwen 등)이 성장 축이다. 이번 분기부터 기존 Cloud Intelligence Group이 T-Head와 합쳐져 <b>AI Cloud and Compute Services</b>로 개편됐고, 전년 수치도 새 구조로 다시 적었다.</p>
+      <div class="tw"><table class="t num"><thead><tr><th>세그먼트 매출 (RMB mn)</th><th>2025.6월 분기</th><th>2026.6월 분기</th><th>YoY</th></tr></thead><tbody>
+        <tr><th>Alibaba E-commerce Group</th><td>198,812</td><td>205,862</td><td>+4%</td></tr>
+        <tr><th>&nbsp;&nbsp;· China E-commerce</th><td>120,874</td><td>110,900</td><td class="neg">−8%</td></tr>
+        <tr><th>&nbsp;&nbsp;· China Quick Commerce</th><td>36,725</td><td>53,295</td><td>+45%</td></tr>
+        <tr><th>&nbsp;&nbsp;· International E-commerce</th><td>28,177</td><td>27,761</td><td class="neg">−1%</td></tr>
+        <tr><th>&nbsp;&nbsp;· Global Wholesale</th><td>13,036</td><td>13,906</td><td>+7%</td></tr>
+        <tr><th>AI Cloud and Compute Services</th><td>33,418</td><td>48,437</td><td>+45%</td></tr>
+        <tr><th>AI Labs and Applications</th><td>2,882</td><td>3,338</td><td>+16%</td></tr>
+        <tr><th>All others</th><td>28,629</td><td>28,803</td><td>+1%</td></tr>
+        <tr><th>연결 매출</th><td>247,652</td><td>268,953</td><td>+9%</td></tr></tbody></table></div>
+      <p class="note">네 세그먼트 합계는 286,440mn으로 연결 매출(268,953mn)보다 17,487mn 크다(산출). 내부거래 제거 등 조정 항목으로 보이나 원문 조정 내역은 확인하지 못했다. China E-commerce 고객관리매출(CMR)은 −7%이고, 신규 사업개발 프로그램의 contra revenue 영향을 뺀 같은 기준으로는 +1%이다.</p>
+    </div>
+    <div class="sec">
+      <h2>세그먼트별 Adjusted EBITA — 클라우드는 개선, AI 투자 비용이 이익을 눌렀다</h2>
+      <p class="figt">그림 2. 세그먼트별 Adjusted EBITA (RMB mn)</p>
+      <svg viewBox="0 0 760 340" class="chart" role="img" aria-label="세그먼트별 Adjusted EBITA 전년 동기 비교"><line x1="60" x2="740" y1="246.0" y2="246.0" stroke="#E6E0D2"/><text x="54" y="250.0" text-anchor="end" class="ax">-10,000</text><line x1="60" x2="740" y1="206.0" y2="206.0" stroke="#E6E0D2"/><text x="54" y="210.0" text-anchor="end" class="ax">0</text><line x1="60" x2="740" y1="166.0" y2="166.0" stroke="#E6E0D2"/><text x="54" y="170.0" text-anchor="end" class="ax">10,000</text><line x1="60" x2="740" y1="126.0" y2="126.0" stroke="#E6E0D2"/><text x="54" y="130.0" text-anchor="end" class="ax">20,000</text><line x1="60" x2="740" y1="86.0" y2="86.0" stroke="#E6E0D2"/><text x="54" y="90.0" text-anchor="end" class="ax">30,000</text><line x1="60" x2="740" y1="46.0" y2="46.0" stroke="#E6E0D2"/><text x="54" y="50.0" text-anchor="end" class="ax">40,000</text><rect x="90" y="46.0" width="44" height="160.0" fill="#BDB6A6"/><text x="112" y="41.0" text-anchor="middle" class="bv">39,988</text><rect x="142" y="47.0" width="44" height="159.0" fill="#F2A900"/><text x="164" y="42.0" text-anchor="middle" class="bv">39,749</text><text x="138" y="300" text-anchor="middle" class="xl">E-commerce</text><rect x="250" y="196.3" width="44" height="9.7" fill="#BDB6A6"/><text x="272" y="191.3" text-anchor="middle" class="bv">2,419</text><rect x="302" y="183.5" width="44" height="22.5" fill="#F2A900"/><text x="324" y="178.5" text-anchor="middle" class="bv">5,628</text><text x="298" y="300" text-anchor="middle" class="xl">AI Cloud·Compute</text><rect x="410" y="206.0" width="44" height="12.9" fill="#BDB6A6"/><text x="432" y="231.9" text-anchor="middle" class="bv">-3,224</text><rect x="462" y="206.0" width="44" height="55.4" fill="#F2A900"/><text x="484" y="274.4" text-anchor="middle" class="bv">-13,861</text><text x="458" y="300" text-anchor="middle" class="xl">AI Labs·Apps</text><rect x="570" y="203.3" width="44" height="2.7" fill="#BDB6A6"/><text x="592" y="198.3" text-anchor="middle" class="bv">687</text><rect x="622" y="206.0" width="44" height="13.4" fill="#F2A900"/><text x="644" y="232.4" text-anchor="middle" class="bv">-3,343</text><text x="618" y="300" text-anchor="middle" class="xl">All others</text><line x1="60" x2="740" y1="206.0" y2="206.0" stroke="#3D3A35"/><rect x="60" y="322" width="14" height="10" fill="#BDB6A6"/><text x="80" y="331" class="ax">2025년 6월 분기</text><rect x="190" y="322" width="14" height="10" fill="#F2A900"/><text x="210" y="331" class="ax">2026년 6월 분기</text><text x="60" y="14" class="ax">(RMB 백만)</text></svg>
+      <ul class="pts">
+        <li><b>AI Cloud and Compute</b>: Adj. EBITA 2,419 → 5,628(+133%). 외부 고객 클라우드 매출 성장률은 +45%로 가속, AI 관련 제품 매출은 12,376mn으로 12분기 연속 세 자릿수 성장.</li>
+        <li><b>AI Labs and Applications</b>: −3,224 → −13,861로 적자 확대. 회사는 Adj. EBITA 감소가 "주로 기술 투자 때문"이라고 설명한다. All others도 +687 → −3,343으로 적자 전환.</li>
+        <li><b>E-commerce Group</b>: 매출 +4%에도 Adj. EBITA 39,988 → 39,749(−1%)로 정체. 퀵커머스 매출이 +45% 늘었으나 세그먼트별 손익은 이 자료에 없다.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pf"><span>자료: 6-K 2026.6월 분기 실적 발표문(Ex.99.1, SEC EDGAR)</span><span class="pn">3</span></div>
+</section>
+
+<!-- 4. 실적 추이 -->
+<section class="page">
+  <div class="ph"><span><b>Alibaba</b> · 실적 추이</span><span>2026년 11월 6일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>분기·연간 실적 (RMB mn, 회계연도 3월 종료)</h2>
+      <div class="tw"><table class="t num sm"><thead><tr><th>항목</th><th>FY2025</th><th>FY2026</th><th>YoY</th><th>FQ1 FY26<br>(2025.6월)</th><th>FQ1 FY27<br>(2026.6월)</th><th>YoY</th></tr></thead><tbody>
+        <tr><th>매출</th><td>996,347</td><td>1,023,670</td><td>+3%</td><td>247,652</td><td>268,953</td><td>+9%</td></tr>
+        <tr><th>영업이익</th><td>140,905</td><td>50,150</td><td class="neg">−64%</td><td>34,988</td><td>15,161</td><td class="neg">−57%</td></tr>
+        <tr><th>영업이익률 (산출)</th><td>14.1%</td><td>4.9%</td><td></td><td>14.1%</td><td>5.6%</td><td></td></tr>
+        <tr><th>GAAP 순이익</th><td>125,976</td><td>102,127</td><td class="neg">−19%</td><td>42,382</td><td>10,444</td><td class="neg">−75%</td></tr>
+        <tr><th>Non-GAAP 순이익</th><td>158,122</td><td>60,658</td><td class="neg">−62%</td><td>33,510</td><td>20,715</td><td class="neg">−38%</td></tr>
+        <tr><th>희석 EPADS GAAP (RMB)</th><td>53.59</td><td>44.00</td><td class="neg">−18%</td><td>17.98</td><td>3.71</td><td class="neg">−79%</td></tr>
+        <tr><th>희석 EPADS Non-GAAP (RMB)</th><td>65.41</td><td>26.80</td><td class="neg">−59%</td><td>14.75</td><td>8.52</td><td class="neg">−42%</td></tr>
+        <tr><th>영업현금흐름</th><td>163,509</td><td>76,213</td><td class="neg">−53%</td><td>20,672</td><td>22,945</td><td>+11%</td></tr>
+        <tr><th>CAPEX</th><td>데이터 없음</td><td>126,063</td><td></td><td>38,676</td><td>67,678</td><td>+75%</td></tr>
+        <tr><th>FCF (회사 정의)</th><td>73,870</td><td class="neg">−46,609</td><td></td><td class="neg">−18,815</td><td class="neg">−44,670</td><td></td></tr></tbody></table></div>
+      <p class="note">FY2025 CAPEX는 이번 확인 범위에서 얻지 못했다. 10년 영업이익·마진 추이와 13개 분기 추이는 SEC companyfacts 전체 조회를 하지 못해 <b>데이터 없음</b>이며, 위 비교 구간만 6-K 발표문 값으로 적었다. FCF는 회사가 정의한 Non-GAAP FCF라 영업현금흐름 − CAPEX와 일부 다르다(FY2026: 76,213 − 126,063 = −49,850 vs 회사 −46,609).</p>
+    </div>
+    <div class="sec">
+      <h2>3월 분기(FQ4) 단독 — 영업이익은 적자, 순이익은 늘었다</h2>
+      <div class="tw"><table class="t num sm"><thead><tr><th>항목 (RMB mn)</th><th>FQ4 FY25 (2025.3월)</th><th>FQ4 FY26 (2026.3월)</th><th>YoY</th></tr></thead><tbody>
+        <tr><th>매출</th><td>236,454</td><td>243,380</td><td>+3%</td></tr>
+        <tr><th>영업이익</th><td>28,465</td><td class="neg">−848</td><td>적자 전환</td></tr>
+        <tr><th>GAAP 순이익</th><td>11,973</td><td>23,502</td><td>+96%</td></tr>
+        <tr><th>Non-GAAP 순이익</th><td>29,847</td><td>86</td><td class="neg">−100%</td></tr>
+        <tr><th>희석 EPADS GAAP / Non-GAAP (RMB)</th><td>5.17 / 12.52</td><td>10.36 / 0.62</td><td>+101% / −95%</td></tr></tbody></table></div>
+      <p class="note">영업이익이 적자인데 GAAP 순이익이 +96%였던 이유(투자 평가손익 등)는 이 자료로 확인하지 못했다. GAAP과 Non-GAAP이 정반대로 움직인 분기라 어느 이익을 기준으로 보느냐에 따라 결론이 달라진다. 6-K 발표문 수치(산출값 아님).</p>
+    </div>
+    <div class="sec">
+      <h2>현금과 차입 (RMB mn)</h2>
+      <div class="tw"><table class="t num sm"><thead><tr><th>항목</th><th>2026.3.31</th><th>2026.6.30</th></tr></thead><tbody>
+        <tr><th>현금 및 현금성자산</th><td>131,530</td><td>142,914</td></tr>
+        <tr><th>단기투자</th><td>155,310</td><td>154,653</td></tr>
+        <tr><th>현금·단기투자·기타 유동투자 합계</th><td>520,824</td><td>474,505</td></tr>
+        <tr><th>은행차입금 (유동+비유동)</th><td>75,674</td><td>86,621</td></tr>
+        <tr><th>비유동 무담보 선순위채</th><td>117,485</td><td>115,716</td></tr>
+        <tr><th>비유동 전환사채</th><td>55,861</td><td>54,905</td></tr>
+        <tr><th>비유동 교환사채</th><td>10,976</td><td>9,288</td></tr>
+        <tr><th>차입금·채권 합계 (산출)</th><td>259,996</td><td>266,530</td></tr>
+        <tr><th>순현금 — 현금성+단기투자 − 합계 (산출)</th><td>26,844</td><td>31,037</td></tr>
+        <tr><th>순현금 — 현금·투자 합계 − 차입금 (산출, 넓은 정의)</th><td>260,828</td><td>207,975</td></tr></tbody></table></div>
+      <p class="note">순현금은 정의에 따라 크게 달라진다(좁은 정의 31,037 vs 넓은 정의 207,975). 넓은 정의에는 기타 유동투자(회사 보유 투자자산)가 들어가므로 현금처럼 쓸 수 있는지는 별도 확인이 필요하다. 3월 말 은행차입 75,674는 6-K 값 28,224+47,450의 합. 자사주 매입은 6월 분기 1,340만 주(약 170만 ADS), US$162 million.</p>
+    </div>
+  </div>
+  <div class="pf"><span>자료: 6-K 2026.3월 분기·FY2026 실적, 6-K 2026.6월 분기 실적(SEC EDGAR)</span><span class="pn">4</span></div>
+</section>
+
+<!-- 5. 밸류에이션 -->
+<section class="page">
+  <div class="ph"><span><b>Alibaba</b> · 밸류에이션</span><span>2026년 11월 6일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>① 종목 유형과 ② 1순위 지표 — EV/EBITDA</h2>
+      <div class="tw"><table class="t num"><thead><tr><th>항목</th><th>값</th><th>산식·비고</th></tr></thead><tbody>
+        <tr><th>시가총액</th><td>$268,851mn</td><td>KB 현재가 응답 (11/05 종가 기준 15분 지연 시세)</td></tr>
+        <tr><th>순현금 (좁은 / 넓은 정의)</th><td>$4,574mn / $30,652mn</td><td>RMB 31,037 / 207,975 ÷ 6.7851 (산출)</td></tr>
+        <tr><th>EV (좁은 / 넓은)</th><td>$264,277mn / $238,199mn</td><td>시가총액 − 순현금 (산출). 소수지분·지분법 투자·리스부채는 반영하지 않음</td></tr>
+        <tr><th>TTM 조정 EBITDA</th><td>데이터 없음</td><td>FY2026 연간 조정 EBITDA를 확보하지 못함</td></tr>
+        <tr><th>EV/EBITDA (FQ1×4, <b>가정</b>)</th><td>11.5x / 10.3x</td><td>FQ1 FY27 조정 EBITDA 39,143(전년 45,735, −14%) ×4 = RMB 156,572 = $23,076mn. 분기 변동·계절성이 커서 참고값일 뿐</td></tr>
+        <tr><th>EV/Sales (TTM, 보조)</th><td>1.7x / 1.5x</td><td>TTM 매출 RMB 1,044,971mn = $154,010mn (산출)</td></tr></tbody></table></div>
+      <div class="callout"><b>해석 함정 체크.</b> 위 EV/EBITDA가 낮아 보여도 분기 EBITDA 자체가 −14% 줄고 있고, CAPEX가 EBITDA를 넘어서는 국면(분기 CAPEX 67,678 vs 조정 EBITDA 39,143)이라 감가상각이 앞으로 커지면 현재 EBITDA가 이익의 질을 과대 반영할 수 있다. 이익 전망이 내려가는 구간의 낮은 멀티플은 "더 싸질 수 있음"이므로 저평가로 판단하지 않는다.</div>
+    </div>
+    <div class="sec">
+      <h2>설비투자와 현금흐름</h2>
+      <p>FQ1 FY27 CAPEX 67,678mn은 매출의 25.2%, 영업현금흐름의 2.95배다. FY2026 연간 CAPEX는 126,063mn이었고 이번 분기 한 번에 그 54%가 쓰였다(산출: 67,678 ÷ 126,063). TTM FCF는 −72,464mn(회사 정의 FCF로 산출: −46,609 + 18,815 − 44,670), 시가총액 대비 −4.0%로, 잉여현금이 아니라 현금 소진 구간이다. 클라우드 매출 +45%와 Adj. EBITA +133%가 이 투자를 정당화하는지가 핵심이다.</p>
+    </div>
+    <div class="sec">
+      <h2>③ 보조 지표 (후행 기준)</h2>
+      <div class="tw"><table class="t num"><thead><tr><th>지표</th><th>값</th><th>산식·비고</th></tr></thead><tbody>
+        <tr><th>TTM 희석 EPADS (GAAP)</th><td>RMB 29.73</td><td>44.00 − 17.98 + 3.71 (산출)</td></tr>
+        <tr><th>TTM 희석 EPADS (Non-GAAP)</th><td>RMB 20.57</td><td>26.80 − 14.75 + 8.52 (산출)</td></tr>
+        <tr><th>PER GAAP (후행)</th><td>24.7x</td><td>$108.07 × 6.7851 = RMB 733.3 ÷ 29.73. 후행 기준</td></tr>
+        <tr><th>PER Non-GAAP (후행)</th><td>35.6x</td><td>733.3 ÷ 20.57. 후행 기준. 이익이 줄어 배수가 높아진 것</td></tr>
+        <tr><th>PER (KB 현재가 응답)</th><td>23.4x</td><td>EPS $4.5037 기준. 환율 적용 차이로 위 24.7x와 다름</td></tr>
+        <tr><th>TTM 영업이익 / 이익률</th><td>RMB 30,323 / 2.9%</td><td>50,150 − 34,988 + 15,161 (산출)</td></tr>
+        <tr><th>TTM GAAP 순이익 / Non-GAAP 순이익</th><td>RMB 70,189 / 47,863</td><td>산출. FY2026 대비 각각 −31% / −21%</td></tr>
+        <tr><th>PEG · 12MF PER·ROE·P/B · PBR</th><td>데이터 없음</td><td>3년 이익성장률·선행 컨센서스·자기자본 미확보. 위스퍼 넘버를 장기 성장률로 쓰지 않음</td></tr></tbody></table></div>
+      <p class="note">GAAP 후행 PER 24.7x는 투자 평가손익(영업외 투자이익 FQ1 9,004mn, −48% YoY)이 들어간 이익 기준이라 영업 성과를 넘게 반영할 수 있다. 환율은 모든 기간에 6.7851을 같게 적용한 가정이다.</p>
+    </div>
+  </div>
+  <div class="pf"><span>자료: 6-K 2026.6월 분기·FY2026(SEC EDGAR), KB증권 Open API 일봉·현재가(2026-11-05 종가, 조회 2026-11-06 09:11 KST)</span><span class="pn">5</span></div>
+</section>
+
+<!-- 6. 기대치·품질·위치 -->
+<section class="page">
+  <div class="ph"><span><b>Alibaba</b> · 실적 기대치·품질·가격 위치</span><span>2026년 11월 6일</span></div>
+  <div class="pb">
+    <div class="sec">
+      <h2>④ 실적 기대치 점검 (발표 13일 전)</h2>
+      <div class="tw"><table class="t"><thead><tr><th>항목</th><th>내용</th></tr></thead><tbody>
+        <tr><th>다음 발표</th><td>2026-11-19(목) 장 시작 전(미 동부 05:30 표기) — Earnings Whispers 조회 2026-11-06. 캘린더 날짜는 바뀔 수 있다</td></tr>
+        <tr><th>컨센서스 EPS</th><td>$1.42 (페이지에 "GAAP"으로 표기)</td></tr>
+        <tr><th>위스퍼·Grade·Score</th><td>위스퍼 넘버는 공개 사이트라 제외. Grade·Score는 로그인 잠금으로 <b>데이터 없음</b></td></tr>
+        <tr><th>직전 분기 환산 비교</th><td>FQ1 FY27 희석 EPADS GAAP RMB 3.71(≈ $0.55), Non-GAAP RMB 8.52(≈ $1.26) — 6.7851 환산(가정)</td></tr></tbody></table></div>
+      <div class="callout"><span class="pill chk">확인 필요</span> 컨센서스 $1.42를 위안으로 환산하면 약 RMB 9.6/ADS로, 직전 분기 GAAP(3.71)보다 훨씬 높고 Non-GAAP(8.52)에 가깝다. 표기된 "GAAP"과 실제 기준이 다를 수 있어, 발표 후 실제 EPS는 같은 기준끼리만 비교해야 한다.</div>
+    </div>
+    <div class="sec">
+      <h2>⑤ 실적 품질 체크 (FQ1 FY27, 2026년 6월 분기)</h2>
+      <div class="tw"><table class="t"><thead><tr><th>항목</th><th>판정</th><th>근거</th><th>출처</th></tr></thead><tbody>
+        <tr><th>1. 이익 기준<br>GAAP vs Non-GAAP</th><td><span class="pill chk">확인 필요</span></td><td>GAAP 순이익 10,444 vs Non-GAAP 20,715(−38% YoY). 영업권·투자 손상 등 9,202을 더하고 투자 처분·재평가 이익 5,364를 뺀 조정</td><td>6-K 2026.6월 분기 Ex.99.1 조정표</td></tr>
+        <tr><th>2. 이익 vs 현금</th><td><span class="pill ng">문제 있음</span></td><td>영업현금흐름은 +11%로 늘었으나 CAPEX 67,678(+75%)로 FCF −44,670, 현금·투자 합계 분기 −46,319. AI 클라우드 인프라 투자가 원인</td><td>6-K 현금흐름·재무상태표</td></tr>
+        <tr><th>3. 회계 추정 변경</th><td><span class="pill chk">확인 필요</span></td><td>발표문에 변경 언급 없음. 서버 내용연수 등은 20-F 주석을 보지 않아 판단 보류</td><td>6-K 2026.6월 분기 (20-F 주석 미검토)</td></tr>
+        <tr><th>4. 일회성</th><td><span class="pill chk">확인 필요</span></td><td>영업권 손상 4,458(All others), EU DSA 과징금 충당 EUR 550 million(G&amp;A 반영), 영업외 투자이익 9,004(−48% YoY). 3월 분기는 영업적자(−848)에도 GAAP 순이익 +96%였으나 원인은 확인하지 못함</td><td>6-K 2026.6월·3월 분기 Ex.99.1</td></tr>
+        <tr><th>5. 주석의 약정</th><td><span class="pill chk">확인 필요</span></td><td>전환사채 54,905·교환사채 9,288(합 64,193), 선순위채 115,716. 리스·보증·우발부채 주석은 발표문에 없어 <b>데이터 없음</b></td><td>6-K 재무상태표 (20-F 주석 미검토)</td></tr></tbody></table></div>
+      <p class="note">판정은 공시 문장 기준이며 회계 감사 의견이 아니다. 이익 vs 현금은 순이익과 FCF가 같은 방향이 아니라 '문제 있음'으로 판정했다(원인이 의도된 성장 투자인지는 판단 영역).</p>
+    </div>
+    <div class="sec">
+      <h2>⑥ 가격과 섹터 위치</h2>
+      <div class="tw"><table class="t num sm"><thead><tr><th>항목</th><th>값</th><th>항목</th><th>값</th></tr></thead><tbody>
+        <tr><th>현재가 (11/05 종가)</th><td>$108.07</td><th>52주 고/저 (장중)</th><td>$181.10 / $91.99</td></tr>
+        <tr><th>20일 이평</th><td>$105.1 (+2.8%)</td><th>60일 이평</th><td>$111.0 (−2.6%)</td></tr>
+        <tr><th>120일 이평</th><td>$113.8 (−5.0%)</td><th>52주 범위 내 위치</th><td>18% (0=저점, 100=고점)</td></tr>
+        <tr><th>고점 대비</th><td>−40.3%</td><th>저점 대비</th><td>+17.5%</td></tr></tbody></table></div>
+      <p>종가는 20일선 위, 60일·120일선 아래이고 20 &lt; 60 &lt; 120 역배열이다. 2거래일 반등으로 단기선은 회복했지만 중기선 아래라 추세 전환으로 보기엔 이르다. 조회: 2026-11-06 09:11 KST (KB증권 Open API).</p>
+      <div class="callout"><b>섹터 위치(체크리스트 판단과 대조).</b> 프로젝트 체크리스트의 섹터 표는 경기소비재를 "안정적인 ROE 상승세로 매수 유효"로 적었다(작성 시점 의견). 알리바바에 대해 현재 12MF ROE·12MF P/B는 컨센서스가 필요해 <b>데이터 없음</b>이라 다시 확인하지 못했다. 후행 기준으로는 TTM GAAP 순이익이 FY2026보다 31% 적고 FQ1 순이익이 −75%라 ROE가 상승세로 보이지 않아(자기자본 미확보로 수치는 데이터 없음) 체크리스트 판단과 다를 수 있다.</div>
+    </div>
+  </div>
+  <div class="pf"><span>자료: 6-K 2026.6월·3월 분기(SEC EDGAR), Earnings Whispers(2026-11-06 조회), KB증권 Open API 일봉·현재가(2026-11-05 종가, 조회 2026-11-06 09:11 KST)</span><span class="pn">6</span></div>
+</section>
+
+<!-- 7. 결론 -->
+<section class="page">
+  <div class="ph"><span><b>Alibaba</b> · 투자 포인트·리스크·고지</span><span>2026년 11월 6일</span></div>
+  <div class="pb">
+    <div class="grid2">
+      <div class="sec">
+        <h2>투자 포인트 3</h2>
+        <ul class="pts">
+          <li><b>클라우드 수익화 확인.</b> AI Cloud and Compute 매출 +45%, Adj. EBITA 2,419 → 5,628(+133%). AI 관련 제품 매출은 12분기 연속 세 자릿수 성장.</li>
+          <li><b>폭락장에서도 버틴 상대 강세.</b> 11/5 나스닥 −5.52%에도 +2.64%, 11/3 이후 2거래일 +7.7%. 미국 AI 인프라 정책 변수와 거리가 있는 중국 기술주로 시장 관심이 옮겨 갈 수 있다는 해석이 가능하다(가정).</li>
+          <li><b>재무 완충.</b> 좁은 정의로도 순현금 RMB 31,037mn, 넓은 정의로는 207,975mn. 6월 분기 자사주 매입 US$162 million.</li>
+        </ul>
+      </div>
+      <div class="sec">
+        <h2>리스크 3</h2>
+        <ul class="pts">
+          <li><b>현금 소진.</b> CAPEX가 영업현금흐름의 2.95배, TTM FCF −72,464mn. 현금·투자 합계는 한 분기에 46,319mn 줄었다.</li>
+          <li><b>이익의 질.</b> 영업이익 −57%, AI Labs·All others 적자, 영업외 투자이익 의존. 3월 분기는 영업적자에도 GAAP 순이익이 늘었다.</li>
+          <li><b>핵심 사업 둔화·규제.</b> China E-commerce 매출 −8%, EU DSA 과징금 충당 EUR 550 million. 장중 +5.6%가 +2.6%로 줄었듯 미국장 변동성 전염도 상존한다.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="sec">
+      <h2>다음 이벤트</h2>
+      <div class="tw"><table class="t"><thead><tr><th>시기</th><th>이벤트</th><th>확인 포인트</th></tr></thead><tbody>
+        <tr><th>2026-11-19 (목) 장 시작 전</th><td>9월 분기(FQ2 FY27) 실적 발표 (Earnings Whispers 표기)</td><td>컨센서스 EPS $1.42(기준 확인), 클라우드 성장률·마진, CAPEX·FCF, 영업이익 회복 여부, 가이던스</td></tr>
+        <tr><th>발표 직후</th><td>컨퍼런스콜</td><td>AI 투자 규모 방향, EU DSA 과징금 후속, 퀵커머스 손익</td></tr>
+        <tr><th>2026-12 ~</th><td>미국 데이터센터·AI 규제 동향</td><td>글로벌 AI 인프라 투자 심리가 중국 기술주에 미치는 영향</td></tr></tbody></table></div>
+    </div>
+    <div class="callout"><b>판단 근거 요약.</b> 11/5 상승(+2.64%)은 미국 AI 매도장 속 중국 기술주 상대 강세의 성격이 크고, 회사 신규 공시는 확인되지 않았다. 클라우드(+45%)는 분명히 좋아졌으나 영업이익 −57%, FCF −44,670, 후행 Non-GAAP PER 35.6x가 함께 있어 "싸졌다"고 판단할 근거는 약하다. 가격은 52주 범위의 18% 위치에서 단기선만 회복했고, 11/19 실적에서 이익 회복이 확인되는지가 다음 분기점이다. 위 내용은 매수·매도 권유가 아니라 판단 근거의 정리다.</div>
+    <div class="disc">
+      <p>본 자료는 투자 판단의 참고용으로 작성된 분석 자료이며, 특정 종목의 매수·매도를 권유하지 않습니다. 투자 결정과 그 결과에 대한 책임은 투자자 본인에게 있습니다.</p>
+      <p>재무 수치는 SEC EDGAR에 공시된 회사 자료(6-K 실적 발표문)를 기준으로 했으며, 알리바바는 20-F/6-K 제출 외국 발행사라 분기 데이터는 발표문에서 확인되는 기간만 사용했습니다. '산출값'으로 표기한 TTM·순현금·EV·EV/Sales·PER 등은 공시 수치로 계산한 값이고 '가정'은 분석자의 가정(RMB→USD 6.7851 일괄 적용, EV/EBITDA 분기 연환산 등)입니다. 주가는 KB증권 Open API 해외주식 시세(15분 지연 가능)를 사용했고 원화 환산은 대략치입니다. 지수·중국 ADR 지수·항셍지수·주가 상승 배경은 언론·금융 사이트에 게재된 2차 출처이며 회사 확인 사항이 아닙니다. 컨센서스 EPS는 Earnings Whispers 표기를 그대로 옮긴 것이며 위스퍼 넘버는 공개 사이트라 싣지 않았습니다. 12MF 지표·PEG·10년/13분기 추이·20-F 주석은 확보하지 못해 '데이터 없음'으로 표기했습니다. 색·레이아웃은 KB 리서치 스타일을 따랐으나 KB증권의 공식 보고서가 아닙니다.</p>
+    </div>
+  </div>
+  <div class="pf"><span>자료: 6-K(SEC EDGAR), KB증권 Open API, Earnings Whispers, 아주경제·StockTitan·BigGo·cappnotes 게재 기사(11/5~11/6)</span><span class="pn">7</span></div>
+</section>
