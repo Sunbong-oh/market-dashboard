@@ -632,6 +632,8 @@ def update_feed(pod, mp3, text, now, kbps):
   <description>평일 아침 7시, 나스닥·주요 지표·AI 기업 급등락·전일 강세종목·52주 신고가를 음성으로 짚어 드립니다. 투자 판단의 참고용입니다.</description>
   <itunes:author>market-dashboard</itunes:author>
   <itunes:explicit>false</itunes:explicit>
+  <itunes:image href="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/main/assets/pod-morning.png"/>
+  <image><url>https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/main/assets/pod-morning.png</url><title>{SHOW_TITLE}</title><link>https://sunbong-oh.github.io/market-dashboard/</link></image>
   <itunes:block>Yes</itunes:block>
   <lastBuildDate>{format_datetime(now)}</lastBuildDate>{items}
  </channel>
