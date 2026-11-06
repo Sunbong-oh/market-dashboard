@@ -23,6 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
+import briefing  # noqa: E402
 from briefing import HOST, PAUSE, mp3_seconds, speakable, synth  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
@@ -106,6 +107,58 @@ def script(html: str, item: dict) -> tuple[str, str]:
     return text, desc
 
 
+# ---------- 음성 (조각마다 다시 시도) ----------
+async def _piece(text: str, rate: str) -> bytes:
+    """한 조각을 읽는다. 실패하면 잠깐 쉬고 3번까지 다시, 그래도 안 되면 문장으로 쪼개 읽고 안 되는 문장만 건너뛴다.
+    (긴 메모는 조각이 많아 중간에 NoAudioReceived 가 한 번만 나도 briefing.synth 는 처음부터 다시 했다 → 2026-11-06 두 편 실패)"""
+    import asyncio
+    import edge_tts
+    for i in range(3):
+        try:
+            buf = bytearray()
+            async for ch in edge_tts.Communicate(text, briefing.VOICE, rate=rate, pitch=briefing.PITCH).stream():
+                if ch["type"] == "audio":
+                    buf += ch["data"]
+            if buf:
+                return bytes(buf)
+        except Exception as e:
+            print(f"  조각 실패({i + 1}/3): {type(e).__name__} {text[:40]!r}", file=sys.stderr)
+        await asyncio.sleep(5 * (i + 1))
+    sents = re.split(r"(?<=[.?!])\s+", text)
+    if len(sents) <= 1:
+        print(f"  건너뜀(읽을 수 없음): {text[:80]!r}", file=sys.stderr)
+        return b""
+    return b"".join([await _piece(x, rate) for x in sents if x.strip()])
+
+
+def synth_robust(text: str, path: Path) -> int | None:
+    import asyncio
+    if not briefing.load_env("ELEVENLABS_API_KEY"):  # 내 목소리가 없으면 기본 음성을 조각마다 다시 시도하며 만든다
+        for a, b in briefing.NAME_SPLIT.items():
+            text = text.replace(a, b)
+        for pat, b in briefing.SOUND:
+            text = re.sub(pat, b, text)
+        silence = briefing.SILENCE.read_bytes() if briefing.SILENCE.exists() else b""
+
+        async def run() -> bytes:
+            buf = bytearray()
+            for piece in re.split(f"({PAUSE}+)", text):
+                if piece.startswith(PAUSE):
+                    if buf:
+                        buf += silence * len(piece)
+                    continue
+                if re.search(r"[0-9A-Za-z가-힣]", piece):
+                    buf += await _piece(piece.strip(), briefing.RATE)
+            return bytes(buf)
+
+        path.write_bytes(asyncio.run(run()))
+        if path.stat().st_size > 10000:
+            print(f"음성: 기본 음성({briefing.VOICE})")
+            return briefing.EDGE_KBPS
+        return None
+    return synth(text, path)
+
+
 # ---------- 피드 ----------
 def write_feed(pod: Path, eps: list[dict]) -> None:
     now = datetime.now(KST)
@@ -171,7 +224,7 @@ def main() -> int:
             continue
         name = f"{f.rsplit('.', 1)[0]}-{digest}.mp3"
         tmp = pod / "_tmp.mp3"
-        kbps = synth(text, tmp)
+        kbps = synth_robust(text, tmp)
         if not kbps:
             print("음성 생성 실패:", f)
             continue
