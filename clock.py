@@ -79,6 +79,16 @@ def sent_daily_today(now_kst: datetime) -> bool:
     return False
 
 
+def podcast_feed(at: datetime) -> str:
+    """오늘 회차가 있는지 볼 피드. 홈페이지(/podcast/feed.xml)는 site.yml 이 다시 만들어야 바뀌어서
+    07:20에 아직 옛 피드일 때가 있다(2026-11-06: 07:03에 만든 회차를 못 보고 07:21에 다시 만듦)
+    → podcast 브랜치의 feed.xml 을 직접 읽고, 못 읽으면 홈페이지 피드를 본다."""
+    r = gh("api", f"repos/{REPO}/contents/feed.xml?ref=podcast", "-H", "Accept: application/vnd.github.raw")
+    if r.returncode == 0 and "<rss" in r.stdout:
+        return r.stdout
+    return urllib.request.urlopen(f"{FEED}?t={int(at.timestamp())}", timeout=20).read().decode("utf-8", "replace")
+
+
 def run_alarm(name: str, at: datetime) -> str:
     if name == "daily":
         if runs_since("daily-dashboard.yml", at - timedelta(minutes=2)):
@@ -86,7 +96,7 @@ def run_alarm(name: str, at: datetime) -> str:
         return dispatch("daily-dashboard.yml", "auto=true", "telegram=true")
     if name == "podcast":
         d = at.astimezone(KST).strftime("%Y-%m-%d")
-        feed = urllib.request.urlopen(f"{FEED}?t={int(at.timestamp())}", timeout=20).read().decode("utf-8", "replace")
+        feed = podcast_feed(at)
         if f"episodes/{d}-" in feed:
             return "오늘 회차 있음"
         if runs_since("daily-dashboard.yml", at - timedelta(minutes=2)):
