@@ -34,6 +34,7 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 종목 리포트가 아닌 시장 점검·생각거리 글. 파일: `memo/<YYYY-MM-DD>_<짧은영문>.html`(+ 내려받을 .ppt·.pdf) + `memo/index.json` 에 한 줄.
 - index.json 항목: date, title, sub, headline, tags, file, downloads[[버튼 이름, 파일]]. 코드는 build_site.py `build_memo()`.
 - site.yml 자동 실행 경로에 memo/ 가 없으므로, 메모만 바꾼 커밋은 `trigger-site/` 에 파일 하나를 같이 넣어 홈페이지를 다시 만든다.
+- 생각정리 팟캐스트: memo/ 가 main 에 올라오면 memo-podcast.yml 이 `memo_pod.py` 로 글마다 음성을 만들어 memo-podcast 브랜치 피드에 올린다(출근길 피드와 별도, 구독 https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/feed.xml). 표·그림 제목·출처 줄은 읽지 않는다.
 - 첫 글: 2026-10-27 "한국만 약한가, 메모리가 약한가"(빌더 /mnt/project-files/kr-weak/, make.sh).
 
 ## 홈 광고 (PC 왼쪽 날개 · 휴대폰 상단 띠)

@@ -1,0 +1,50 @@
+name: 생각정리 팟캐스트 (Brian's memo 음성)
+
+# 홈페이지 Brian's memo(memo/) 글을 음성으로 만들어 memo-podcast 브랜치의 별도 피드에 올린다(memo_pod.py).
+# 출근길 브리핑 피드와 따로다. 휴대폰 팟캐스트 앱 구독 주소:
+#   https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/feed.xml
+# 새 메모가 main 에 올라오거나 글이 바뀌면 그 회차만 새로 만든다(바뀌지 않은 회차는 그대로).
+# 브랜치는 매번 커밋 하나로 덮어써(force push) MP3가 저장소 기록에 쌓이지 않게 한다.
+on:
+  push:
+    branches: [main]
+    paths: ["memo/**", "memo_pod.py"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: memo-podcast
+  cancel-in-progress: false
+
+jobs:
+  pod:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+      # 내 목소리(선택): 둘 다 있으면 ElevenLabs 복제 음성, 없으면 기본 음성(출근길 브리핑과 같은 목소리)
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q edge-tts
+      - name: 메모 음성 만들기 → memo-podcast 브랜치
+        run: |
+          mkdir -p _memo_pod
+          if git fetch --depth 1 origin memo-podcast; then git archive FETCH_HEAD | tar -x -C _memo_pod; fi
+          python memo_pod.py --pod _memo_pod
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/memo.index"
+          rm -f "$GIT_INDEX_FILE"
+          git --work-tree=_memo_pod add -A -f .
+          commit=$(git commit-tree "$(git write-tree)" -m "memo podcast: $(TZ=Asia/Seoul date '+%F %H:%M')")
+          git push --force origin "$commit:refs/heads/memo-podcast"
