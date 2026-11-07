@@ -17,7 +17,7 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 숫자는 출처와 기준 시각을 함께 적는다. 추정·가정은 "가정"이라고 밝힌다. 매수·매도 권유 문구 없이 고지사항을 붙인다.
 - 슬라이드(덱)도 같은 색·글꼴.
 
-## 전일 미국장 강세종목 리포트 (/strong/)
+## 전일 강세종목 리포트 (/strong/) — 글로벌(미국·한국·중국 등), 제목은 시장 이름 없이 "전일 강세종목"
 - 파일: `us_strong/YYYY-MM-DD_TICKER.html` (date = 등록일, KST) + `us_strong/index.json` 에 한 줄 추가.
 - index.json 항목: date, ticker, exchange, name, nameEn, sector, price, changePct, priceNote, headline, tags, file,
   market{day(전일 미국장 날짜), nasdaq, sp500, source}.
