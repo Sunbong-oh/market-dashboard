@@ -1,0 +1,45 @@
+name: 위험신호 실적 둔화 규칙 검증 (DART)
+
+# risk_earn_bt.py: 과거 10년 분기 매출(DART)·발표일·주가로 '폭증 뒤 매출 성장률 둔화 분기 발표 전 정리' 규칙을 검증한다.
+# 결과는 risk-bt 브랜치 result.json. 스크립트를 고쳐 main 에 올리면 다시 돈다(또는 수동 실행).
+on:
+  push:
+    branches: [main]
+    paths: ["risk_earn_bt.py", ".github/workflows/risk-bt.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: risk-bt
+  cancel-in-progress: true
+
+jobs:
+  bt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 검증
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY || secrets.DART_KEY || secrets.OPENDART_API_KEY || vars.DART_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: |
+          mkdir -p _bt
+          python risk_earn_bt.py --out _bt 2>&1 | tee _bt/run.log
+      - name: risk-bt 브랜치에 저장
+        if: ${{ !cancelled() }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/bt.index"
+          rm -f "$GIT_INDEX_FILE"
+          git --work-tree=_bt add -A -f .
+          commit=$(git commit-tree "$(git write-tree)" -m "risk-bt: $(date -u -d '+9 hours' '+%Y-%m-%d %H:%M')")
+          git push --force origin "$commit:refs/heads/risk-bt"
