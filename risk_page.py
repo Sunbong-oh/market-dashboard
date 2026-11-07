@@ -450,6 +450,77 @@ def earn_section(rows, n):
 · 다음 발표일은 증시 캘린더 → 지난 잠정실적 공시일 + 91일 <b>추정</b> → 분기·사업보고서 제출 기한(분기 끝 + 45일, 4분기는 + 90일) 순서로 씁니다.</p>{n}</section>"""
 
 
+# ---------- 차트 클라이맥스 경보 (2026-11-07 사용자: '하이닉스는 재무제표보다 클라이맥스 차트였어') ----------
+# 🟠 클라이맥스 구간: 전날 종가가 200일 이동평균의 +CL_EXT 이상이고 60거래일 +CL_RUN 이상.
+# 🔴 매도 신호: 구간에 든 뒤 CL_WIN 거래일 안에 하루 -CL_DROP 이상 빠진 첫날(그 뒤 CL_HOLD 거래일 표시).
+# 🟡 과열: 200일선 +CL_WARN 이상 — 이 정도에선 실적이 가속 중이면 급락이 눌림이었다(아래 검증).
+CL_EXT, CL_RUN, CL_DROP, CL_WIN, CL_HOLD, CL_WARN = 2.0, 0.5, 0.10, 10, 20, 1.0
+# 검증(2026-11-07, 시가총액 상위 약 240종목 2015~2026 네이버 일봉, 판 날부터 60거래일 코스피 대비): (조건, 건수, 중앙값, 덜 오른 비율)
+CL_BT = (("아무 날", 81356, -0.015, 0.54), ("200일선 +100% → 첫 -10%", 190, -0.036, 0.57),
+         ("200일선 +150% → 첫 -10%", 90, -0.080, 0.59), ("200일선 +200% → 첫 -10% (지금 기준)", 49, -0.127, 0.71),
+         ("  └ 2015~2020", 8, 0.057, 0.38), ("  └ 2021~2026", 41, -0.140, 0.78))
+
+
+def climax(bars):
+    """{lvl, ext(200일선 이격), run(60일), trig(날짜, 하루 등락)} 또는 None."""
+    c = [b[2] for b in bars or []]
+    d = [b[0] for b in bars or []]
+    if len(c) < 262:
+        return None
+    cs = [0.0]
+    for x in c:
+        cs.append(cs[-1] + x)
+    ext = lambda i: c[i] / ((cs[i + 1] - cs[i - 199]) / 200) - 1
+    hot = lambda i: ext(i) >= CL_EXT and c[i] / c[i - 60] - 1 >= CL_RUN
+    n = len(c)
+    trig, armed = None, -999
+    for i in range(max(262, n - CL_HOLD - CL_WIN - 5), n):
+        if hot(i - 1):
+            armed = i - 1
+        if i - armed <= CL_WIN and c[i] / c[i - 1] - 1 <= -CL_DROP and i >= n - CL_HOLD:
+            trig = (d[i], c[i] / c[i - 1] - 1)
+            break
+    e, run = ext(n - 1), c[-1] / c[-61] - 1
+    lvl = "sell" if trig else "hot" if (hot(n - 1) or n - 1 - armed <= CL_WIN) else "warm" if e >= CL_WARN else "ok"
+    return {"lvl": lvl, "ext": e, "run": run, "trig": trig}
+
+
+CLV = {"sell": ("🔴 매도 신호", "sell"), "hot": ("🟠 클라이맥스", "ready"), "warm": ("🟡 과열", "slow"), "ok": ("🟢 보통", "okk")}
+
+
+def climax_rows(names, bars):
+    rows = []
+    for code, nm in names.items():
+        x = climax((bars or {}).get(code))
+        if x:
+            rows.append({"code": code, "n": nm, **x})
+    order = {"sell": 0, "hot": 1, "warm": 2, "ok": 3}
+    rows.sort(key=lambda x: (order[x["lvl"]], x["code"] not in LEADERS, -x["ext"]))
+    return rows
+
+
+def climax_section(rows, n):
+    if not rows:
+        return ""
+    show = [x for x in rows if x["lvl"] != "ok" or x["code"] in LEADERS]
+    tg = lambda x: f'<br><small>{_md(x["trig"][0])} {_p(x["trig"][1])}</small>' if x["trig"] else ""
+    trs = "".join(f'<tr class="{CLV[x["lvl"]][1]}"><td class="l"><b>{escape(x["n"])}</b></td><td>{_p(x["ext"])}</td><td>{_p(x["run"])}</td>'
+                  f'<td>{CLV[x["lvl"]][0]}{tg(x)}</td></tr>' for x in show)
+    quiet = len(rows) - len(show)
+    bt = "".join(f'<tr><td class="l">{escape(a)}</td><td>{b:,}</td><td>{_p(c)}</td><td>{d:.0%}</td></tr>' for a, b, c, d in CL_BT)
+    return f"""<section class="pg"><h2>차트 클라이맥스 경보 — 하이닉스 2026년 6월형</h2>
+<ul class="sq"><li><b>🟠 클라이맥스</b>: 주가가 200일 이동평균보다 <b>+{CL_EXT:.0%} 이상</b>(평균의 {CL_EXT + 1:.0f}배) 위에 있고 60거래일 +{CL_RUN:.0%} 이상 오른 상태. 다음 급락 하루가 매도 신호입니다.</li>
+<li><b>🔴 매도 신호</b>: 클라이맥스 구간에 든 뒤 {CL_WIN}거래일 안에 <b>하루 -{CL_DROP:.0%} 이상</b> 빠진 첫날. 하이닉스: 6/22 200일선 +216%·60일 +196% → <b>6/23 -12.5%</b>(292만 → 255.5만 원) 신호, 7/30 132만 원.</li>
+<li>🟡 과열(200일선 +{CL_WARN:.0%}↑)에서는 실적이 가속 중이면 급락이 눌림이었습니다(판 뒤 60일 코스피 대비 +23.8%, 23건). 그래서 매도 신호는 +{CL_EXT:.0%}에서만 냅니다.</li></ul>
+<div class="tw"><table class="earn"><tr><th>종목</th><th>200일선 대비</th><th>60일 상승</th><th>판정</th></tr>{trs}</table></div>
+<p class="note">{f"그 밖의 {quiet}종목은 🟢 보통(200일선 +{CL_WARN:.0%} 미만)." if quiet else ""}</p>
+<h2 style="margin-top:16px">과거 검증 — 급락한 날 팔았다면 60거래일 뒤 코스피 대비</h2>
+<div class="tw"><table><tr><th>조건 (60일 +{CL_RUN:.0%}↑ 공통)</th><th>건수</th><th>중앙값</th><th>덜 오른 비율</th></tr>{bt}</table></div>
+<p class="note">· 시가총액 상위 약 240종목(반도체 포함), 2015~2026 네이버 일봉, 2026-11-07 계산. 같은 종목은 60거래일에 한 번만 셉니다.<br>
+· <b>2015~2020년엔 통하지 않았습니다</b>(8건, 중앙 +5.7%). 성적 대부분이 2021년 이후, 특히 2026년 급락장에서 나왔습니다. 판 뒤 더 오른 경우도 있습니다(성호전자 2025-12 +760%, 네이처셀 2017-12, 알테오젠 2020-06 등).<br>
+· 실적 구간과 겹쳐 보면: 200일선 +200%에선 실적이 가속 중이어도 판 쪽이 나았습니다(11건 중 7건, 중앙 -3.6%).</p>{n}</section>"""
+
+
 # ---------- 화면 (KB 리서치 스타일) ----------
 CSS = """
 .rk{--y:#F2A900;--y2:#FBE7B0;--ink:#3D3A35;--bg2:#FAF8F3;--mut:#6B665D;--ln:#E6E0D2;--red:#C8102E;--grn:#2E7D4F;
@@ -580,10 +651,11 @@ def body(r, now):
 
 <section class="pg"><h2>켜지면 할 일 (미리 정한 내 규칙)</h2><ul class="sq act">{acts}</ul>
 <p class="note">스위치가 켜졌을 때 고민하지 않고 그대로 하기 위해 미리 적어 둔 규칙입니다. 바꾸고 싶으면 말해 주세요.</p>{pf(3)}</section>
-{earn_section(r.get("earn") or [], pf(4).replace(src, esrc))}
+{climax_section(r.get("climax") or [], pf(4))}
+{earn_section(r.get("earn") or [], pf(5).replace(src, esrc))}
 
 <section class="pg"><h2>소부장 vs 대장 (최근 {len(r["chart"]["d"])}거래일, 첫날 = 100)</h2>{svg(r["chart"])}
-<p class="note">노란 선이 오르는데 검은 선이 꺾이고 빨간 칸이 생기면 위험 구간입니다.</p>{pf(5)}</section>
+<p class="note">노란 선이 오르는데 검은 선이 꺾이고 빨간 칸이 생기면 위험 구간입니다.</p>{pf(6)}</section>
 
 <section class="pg"><h2>과거 성적 ({_d(st["from"])} 이후)</h2>
 <div class="stat"><div><b>{st["n"]}번</b><span>스위치가 새로 켜진 횟수</span></div>
@@ -593,11 +665,11 @@ def body(r, now):
 <div class="tw"><table><tr><th>켜진 날</th><th>소부장 30일</th><th>신고가 비율</th><th>대장 고점 대비</th><th>한 달 최대 낙폭</th><th>결과</th></tr>{cases}</table></div>
 <p class="note">· 한 달 = 켜진 날 다음 {H}거래일, 최대 낙폭 = 그 안의 가장 낮은 소부장 지수 종가 ÷ 켜진 날 종가 - 1.<br>
 · 소부장 지수 = 지금 '반도체와반도체장비' 업종(시가총액 상위 500 안) 종목의 하루 등락률 평균. 지금 명단으로 과거를 계산하므로 그 사이 사라지거나 작아진 종목이 빠져 있습니다(실제보다 좋게 보일 수 있음).<br>
-· 기준값(+15%·20%·-5%·-5%)은 2015~2026 자료를 보고 정한 <b>가정</b>입니다. 같은 자료로 정하고 같은 자료로 채점했으므로 앞으로의 적중률은 더 낮을 수 있습니다.</p>{pf(6)}</section>
+· 기준값(+15%·20%·-5%·-5%)은 2015~2026 자료를 보고 정한 <b>가정</b>입니다. 같은 자료로 정하고 같은 자료로 채점했으므로 앞으로의 적중률은 더 낮을 수 있습니다.</p>{pf(7)}</section>
 
 <section class="pg"><h2>고지사항</h2><p class="note">이 페이지는 공개된 시세 자료로 계산한 참고용 점검표이며, 특정 종목의 매수·매도를 권유하지 않습니다.
 과거 성과가 미래 수익을 보장하지 않으며, 신호가 켜지지 않은 채 큰 하락이 오거나 신호가 켜졌는데 오르는 경우도 있습니다. 투자 판단과 결과의 책임은 투자자 본인에게 있습니다.
-마지막 계산: {now:%Y-%m-%d %H:%M} KST.</p>{pf(7)}</section>
+마지막 계산: {now:%Y-%m-%d %H:%M} KST.</p>{pf(8)}</section>
 </div>'''
 
 
@@ -618,6 +690,13 @@ def build(out, page, now=None):
         except Exception as e:
             print("실적 둔화 계산 실패:", e)
             r["earn"] = []
+        try:
+            nm = dict(LEADERS)
+            nm.update(mem)
+            r["climax"] = climax_rows(nm, r.get("_bars"))
+        except Exception as e:
+            print("클라이맥스 계산 실패:", e)
+            r["climax"] = []
     if not r:
         (d / "index.html").write_text(page("🚦 위험신호", '<p class="err">시세를 받지 못해 이번에는 계산하지 못했습니다.</p>',
                                            "../", "risk/", "RISK SWITCH", "반도체 소부장 나 홀로 급등 경보"), encoding="utf-8")
@@ -628,6 +707,7 @@ def build(out, page, now=None):
     st = {k: r[k] for k in ("asof", "level", "n_ok", "lastOn", "since", "src")}
     st["earn_sell"] = [x["n"] for x in r["earn"] if x["lvl"] == "sell"]
     st["earn_ready"] = [x["n"] for x in r["earn"] if x["lvl"] == "ready"]
+    st["climax"] = {x["n"]: x["lvl"] for x in r.get("climax") or [] if x["lvl"] in ("sell", "hot")}
     (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     print("위험신호:", r["level"], r["n_ok"], "/ 4, 과거", r["stat"]["n"], "번 중", r["stat"]["hit"], "번")
     return r
@@ -645,5 +725,7 @@ def home(r):
             f'margin:0 0 12px;font:700 14px/1.4 \'Noto Sans KR\',sans-serif"><span>🚦 소부장 위험신호</span><b style="font-size:15px">{t}</b>'
             f'<span style="font-weight:500;opacity:.85">조건 {r["n_ok"]}/4 · {_d(r["asof"])}</span>'
             + "".join(f'<span style="background:#fff;color:#C8102E;border-radius:6px;padding:1px 7px;font-size:13px">📉 {escape(x["n"])} {EL[x["lvl"]][0]}</span>'
-                      for x in r.get("earn") or [] if x["code"] in LEADERS and x["lvl"] in ("sell", "ready")) +
+                      for x in r.get("earn") or [] if x["code"] in LEADERS and x["lvl"] in ("sell", "ready"))
+            + "".join(f'<span style="background:#fff;color:#C8102E;border-radius:6px;padding:1px 7px;font-size:13px">📈 {escape(x["n"])} 차트 {CLV[x["lvl"]][0]}</span>'
+                      for x in r.get("climax") or [] if x["lvl"] in ("sell", "hot")) +
             f'<span style="margin-left:auto;font-weight:800">자세히 →</span></a>')
