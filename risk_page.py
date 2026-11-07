@@ -14,7 +14,9 @@
 지금 명단으로 과거를 계산하므로(사라진·작아진 종목 빠짐) 과거 성적은 실제보다 좋게 보일 수 있다.
 """
 import json
+import os
 import re
+import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -77,6 +79,93 @@ def _bars(code):
     return []
 
 
+# ---------- KB증권 Open API 일봉 (IVS11560, 수정주가) ----------
+# KB 서버는 GitHub Actions 에서만 연결된다(사이트 빌드 site.yml 에 KB 키를 넘김). 최근 KB_CNT 거래일은 KB 값으로,
+# 그보다 오래된 과거(2015~)는 네이버 일봉으로 채운다. KB 가 안 되면 네이버만 쓴다. 결과는 risk/state.json 의 src.
+KB_BASE = os.environ.get("KB_OPENAPI_BASE_URL", "https://developer.kbsec.com:32484").rstrip("/")
+KB_CNT = 400
+
+
+class KB:
+    def __init__(self):
+        self.key = os.environ.get("KB_OPENAPI_APP_KEY", "").strip()
+        self.sec = os.environ.get("KB_OPENAPI_APP_SECRET", "").strip()
+        self.token, self.ok, self.fail, self.err = None, 0, 0, None
+        if not (self.key and self.sec):
+            self.err = "KB 키 없음"
+            return
+        try:
+            from study_fin import _kb_header, _kb_post
+            self.hdr, self._post = _kb_header(), _kb_post
+            t = _kb_post("/oauth2/token", {"dataHeader": self.hdr, "dataBody": {"appKey": self.key, "appSecret": self.sec,
+                                                                                 "grantType": "client_credentials"}}, {})
+            tb = t.get("dataBody", t)
+            self.token = tb.get("access_token") or tb.get("accessToken")
+            if not self.token:
+                self.err = f"토큰 응답 이상: {str(t)[:120]}"
+        except Exception as e:
+            self.err = f"토큰 발급 실패: {str(e)[:120]}"
+
+    def daily(self, code, kosdaq):
+        """[(YYYYMMDD, 고가, 종가)] KB 원문 단위(자릿수는 나중에 네이버와 맞춘다). 실패하면 []."""
+        if not self.token:
+            return []
+        last = None
+        for info in ("2", "1"):  # 2 = 수정주가, 안 되면 1
+            try:
+                p = self._post("/api/v1/ivs11560", {"dataHeader": self.hdr, "dataBody": {
+                    "info_ccd": info, "mkt_clsf": "1" if kosdaq else "0", "chrt_clsf": "D", "minute_tck_indx": "",
+                    "is_cd": code, "inq_clsf": "2", "strt_dy": "", "inq_cnt": str(KB_CNT)}},
+                    {"appKey": self.key, "Authorization": f"bearer {self.token}"})
+                out = []
+                stack = [p.get("dataBody")]
+                while stack:
+                    o = stack.pop()
+                    if isinstance(o, dict):
+                        if "cls_prc_p2" in o:
+                            d = str(o.get("dt") or "").strip()
+                            try:
+                                h = float(str(o.get("hgh_prc_p2")).replace(",", ""))
+                                c = float(str(o.get("cls_prc_p2")).replace(",", ""))
+                            except (TypeError, ValueError):
+                                continue
+                            if re.fullmatch(r"20\d{6}", d) and c > 0:
+                                out.append((d, h, c))
+                        stack.extend(v for v in o.values() if isinstance(v, (dict, list)))
+                    elif isinstance(o, list):
+                        stack.extend(o)
+                time.sleep(0.12)
+                if len(out) >= 20:
+                    self.ok += 1
+                    return sorted(set(out))
+                last = str((p.get("dataHeader") or {}).get("processMessage") or p)[:120]
+            except Exception as e:
+                last = str(e)[:120]
+        self.fail += 1
+        self.err = self.err or last
+        return []
+
+
+def _merge(nv, kb):
+    """네이버 일봉에 KB 일봉을 덮어쓴다. KB 가격 자릿수(10의 거듭제곱)는 겹치는 날 네이버 종가에 맞춘다."""
+    if not kb:
+        return nv, False
+    nm = {d: c for d, _, c in nv}
+    rs = sorted(nm[d] / c for d, _, c in kb if d in nm and c)
+    f = 1.0
+    if rs:
+        r = rs[len(rs) // 2]
+        f = next((10.0 ** k for k in range(-4, 5) if 0.5 < r / 10.0 ** k < 2), 1.0)
+    first = kb[0][0]
+    return [b for b in nv if b[0] < first] + [(d, h * f, c * f) for d, h, c in kb], True
+
+
+def markets():
+    """{코드: True(코스닥)}"""
+    c = _get(CODES_URL) or {}
+    return {r[0]: (len(r) > 2 and r[2] == "코스닥") for r in c.get("list") or []}
+
+
 def members():
     """{코드: 이름} 소부장 명단."""
     j, c = _get(MAP_URL), _get(CODES_URL)
@@ -96,6 +185,16 @@ def compute(mem=None):
     codes = list(mem) + list(LEADERS)
     with ThreadPoolExecutor(max_workers=8) as ex:
         bars = dict(zip(codes, ex.map(_bars, codes)))
+    kb, mk = KB(), markets()
+    used = 0
+    if kb.token:
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            kbars = dict(zip(codes, ex.map(lambda c: kb.daily(c, mk.get(c, False)), codes)))
+        for c in codes:
+            bars[c], u = _merge(bars[c], kbars[c])
+            used += u
+    src = {"kb": used, "total": len(codes), "kb_fail": kb.fail, "kb_err": kb.err}
+    print("위험신호 일봉 출처: KB", used, "/", len(codes), "종목", "" if not kb.err else f"(KB: {kb.err})")
     lead = [bars[c] for c in LEADERS]
     if any(not b for b in lead):
         return None
@@ -162,7 +261,7 @@ def compute(mem=None):
     else:
         level = "off"
     tail = range(max(0, N - 160), N)
-    return {"asof": ds[-1], "level": level, "checks": ck, "n_ok": n_ok, "since": (i - lastOn) if lastOn >= 0 else None,
+    return {"src": src, "asof": ds[-1], "level": level, "checks": ck, "n_ok": n_ok, "since": (i - lastOn) if lastOn >= 0 else None,
             "lastOn": ds[lastOn] if lastOn >= 0 else None, "members": len(mem), "cases": cases,
             "stat": {"n": len(done), "hit": sum(c["mdd"] <= -HIT for c in done),
                      "avg": sum(c["mdd"] for c in done) / len(done) if done else 0,
@@ -397,7 +496,10 @@ def svg(ch):
 def body(r, now):
     t, s = lv_text(r)
     st = r["stat"]
-    src = f"자료: 네이버 증권 일봉(소부장 {r['members']}종목·SK하이닉스·삼성전자), 기준 {_d(r['asof'])} (장중이면 잠정) · 계산 Brian's 투자노트"
+    k = r.get("src") or {}
+    feed = (f"KB증권 Open API 일봉(최근 {KB_CNT}거래일, {k['kb']}/{k['total']}종목)·네이버 증권 일봉(그 이전)" if k.get("kb")
+            else "네이버 증권 일봉(KB증권 API 연결 실패)")
+    src = f"자료: {feed}, 소부장 {r['members']}종목·SK하이닉스·삼성전자, 기준 {_d(r['asof'])} (장중이면 잠정) · 계산 Brian's 투자노트"
     pf = lambda n: f'<div class="pf"><span>{escape(src)}</span><span>{n}</span></div>'
     esrc = f"자료: 네이버 증권 분기 실적·컨센서스, DART 영업(잠정)실적 공시, 증시 캘린더 · 기준 {now:%Y-%m-%d %H:%M} KST"
 
@@ -478,7 +580,7 @@ def build(out, page, now=None):
     html = f"<style>{CSS}</style>{body(r, now)}"
     (d / "index.html").write_text(page("🚦 위험신호", html, "../", "risk/", "RISK SWITCH",
                                        f"반도체 소부장 나 홀로 급등 경보 · 기준 {_d(r['asof'])}"), encoding="utf-8")
-    st = {k: r[k] for k in ("asof", "level", "n_ok", "lastOn", "since")}
+    st = {k: r[k] for k in ("asof", "level", "n_ok", "lastOn", "since", "src")}
     st["earn_sell"] = [x["n"] for x in r["earn"] if x["lvl"] == "sell"]
     (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     print("위험신호:", r["level"], r["n_ok"], "/ 4, 과거", r["stat"]["n"], "번 중", r["stat"]["hit"], "번")
