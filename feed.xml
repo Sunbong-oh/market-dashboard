@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+ <channel>
+  <title>생각정리 · Brian&#x27;s memo</title>
+  <link>https://sunbong-oh.github.io/market-dashboard/memo/</link>
+  <atom:link href="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/feed.xml" rel="self" type="application/rss+xml"/>
+  <language>ko-kr</language>
+  <description>홈페이지 Brian's memo(시장 점검·생각거리)를 음성으로 읽어 드립니다. 개인적인 생각 정리이며 투자 권유가 아닙니다.</description>
+  <itunes:author>market-dashboard</itunes:author>
+  <itunes:explicit>false</itunes:explicit>
+  <itunes:image href="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/main/assets/pod-memo.png"/>
+  <image><url>https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/main/assets/pod-memo.png</url><title>생각정리 · Brian&#x27;s memo</title><link>https://sunbong-oh.github.io/market-dashboard/</link></image>
+  <itunes:block>Yes</itunes:block>
+  <lastBuildDate>Sat, 07 Nov 2026 18:22:11 +0900</lastBuildDate>
+  <item>
+   <title>11/7 블루웨이브 뒤에, 왜 원자력인가</title>
+   <description>블루웨이브는 데이터센터를 없애기보다 조건을 붙였다: 요금을 떠넘기지 말 것(자체 발전·비용 전액 부담), 깨끗한 전기, 환경 기준. 24시간·무탄소·자체 조달을 한꺼번에 맞추는 전원은 사실상 원자력이고, 양당이 모두 미는 거의 유일한 전력원이다. 금요일 원전·연료주는 +15~23%(오클로 +22.7%, 센트러스 +17.5%)로 GE버노바 +0.5%·엔비디아 +2.8%와 갈렸다 — 시장이 전력을 &#x27;양&#x27;에서 &#x27;종류&#x27;로 나눠 보기 시작한 신호.</description>
+   <link>https://sunbong-oh.github.io/market-dashboard/memo/2026-11-07_nuclear-bluewave.html</link>
+   <pubDate>Sat, 07 Nov 2026 21:00:00 +0900</pubDate>
+   <guid isPermaLink="false">78cd989e-ec1a-5fc4-88b9-d88a3ae8f9a8</guid>
+   <enclosure url="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/episodes/2026-11-07_nuclear-bluewave-bc72872b78.mp3" length="3534048" type="audio/mpeg"/>
+   <itunes:duration>589</itunes:duration>
+  </item>
+  <item>
+   <title>11/5 블루웨이브, 왜 현대차·K뷰티·바이오인가</title>
+   <description>민주당이 상·하원을 가져가자 미국 시장은 관세·물가 피해주부터 되돌렸다(GM +4.6%, 에스티로더 +6.3%, WTI −8.1%). 현대차·K뷰티는 그 &#x27;미국 소비자&#x27; 바스켓의 한국판이지만 관세는 아직 그대로라 &#x27;기대&#x27; 단계. 바이오는 선거 전부터 강했다: 9/30 이후 코스피 −16.9% 동안 셀트리온 +12.5%, 삼성바이오 +8.2%. 실적·금리·메모리와 낮은 상관에, 약가 리스크가 작다는 확인이 더해졌다.</description>
+   <link>https://sunbong-oh.github.io/market-dashboard/memo/2026-11-05_bluewave.html</link>
+   <pubDate>Thu, 05 Nov 2026 21:00:00 +0900</pubDate>
+   <guid isPermaLink="false">f7b5f39c-de48-586c-9fd3-272c1e00ffc0</guid>
+   <enclosure url="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/episodes/2026-11-05_bluewave-94e4fe4682.mp3" length="5394096" type="audio/mpeg"/>
+   <itunes:duration>899</itunes:duration>
+  </item>
+  <item>
+   <title>11/5 블루웨이브 다음 날, 돈은 어디서 어디로 갔나</title>
+   <description>시장이 판 것은 &#x27;AI&#x27;가 아니라 &#x27;AI에 돈을 받는 쪽&#x27;이다. 전력·냉각·메모리는 급락했지만(비스트라 −13.8%, 마이크론 −7.0%) 실적이 좋던 빅테크는 반도체·설비 구매 부담을 덜 수 있다는 안도감에 올랐다(마이크로소프트 +6.7%). 아시아에선 카카오·네이버, 홍콩 플랫폼·전기차, 소니·도요타가 급등했고, 중국 반도체도 올라 &#x27;반도체 전부에서 탈출&#x27; 신호로 보기는 이르다.</description>
+   <link>https://sunbong-oh.github.io/market-dashboard/memo/2026-11-05_bluewave-rotation.html</link>
+   <pubDate>Thu, 05 Nov 2026 21:00:00 +0900</pubDate>
+   <guid isPermaLink="false">295e2c60-145b-58a8-8bf3-2a6a47693d84</guid>
+   <enclosure url="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/episodes/2026-11-05_bluewave-rotation-852d15924b.mp3" length="4258512" type="audio/mpeg"/>
+   <itunes:duration>710</itunes:duration>
+  </item>
+  <item>
+   <title>10/28 SK하이닉스, 매출 증가가 꺾이고 있나</title>
+   <description>3Q26 매출 104.6조, 영업이익 83.3조로 사상 최대지만 전분기 대비 매출 증가율은 +60%→+51%→+32%로 두 분기 연속 둔화했고 분기 매출 증분도 처음 줄었다. 영업이익률은 79.7%로 계속 올랐지만 키옥시아 평가손익 때문에 순이익은 93.9조→39.8조로 반 토막. 주가는 6월 고점 대비 −55%.</description>
+   <link>https://sunbong-oh.github.io/market-dashboard/memo/2026-10-28_hynix-3q26.html</link>
+   <pubDate>Wed, 28 Oct 2026 21:00:00 +0900</pubDate>
+   <guid isPermaLink="false">6d8c7e12-699b-5e8a-81a9-b54c384f4e86</guid>
+   <enclosure url="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/episodes/2026-10-28_hynix-3q26-565353137d.mp3" length="4693104" type="audio/mpeg"/>
+   <itunes:duration>782</itunes:duration>
+  </item>
+  <item>
+   <title>10/27 한국만 약한가, 메모리가 약한가</title>
+   <description>30개 자산을 9/30=100으로 겹쳐 봤다. 메모리는 세계 공통(키옥시아 −30%, 하이닉스 −24.5%)이지만 코스피(−17.5%)가 지수로 가장 약한 건 시총 56%가 메모리이고 외국인이 19조원을 팔았기 때문. 원화는 강세, 미 금리는 하락으로 환율·금리는 원인이 아니었다.</description>
+   <link>https://sunbong-oh.github.io/market-dashboard/memo/2026-10-27_kr-weak.html</link>
+   <pubDate>Tue, 27 Oct 2026 21:00:00 +0900</pubDate>
+   <guid isPermaLink="false">81f6f27c-cb3c-5536-9526-53112de96c20</guid>
+   <enclosure url="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/episodes/2026-10-27_kr-weak-4a3ed898d2.mp3" length="4222224" type="audio/mpeg"/>
+   <itunes:duration>704</itunes:duration>
+  </item>
+ </channel>
+</rss>
