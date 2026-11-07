@@ -8,7 +8,7 @@
   /close/       장마감 리포트 (국내 장마감 수급체크) — kb-market-report 저장소의 archive/ (환경변수 CLOSE_REPO)
   /target/      목표주가 변동 (증권사 리포트 상향·하향, 평일 08:40·21:00) — kb-market-report 저장소의 consensus/*.json
   /us/          해외주식 리포트 (국내 증권사 미국주식 리포트 요약) — us_reports/*.json (us_reports.py)
-  /strong/      전일 미국장 강세종목 리포트 (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
+  /strong/      전일 강세종목 리포트(글로벌) (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
   홈 '오늘의 주식 퀴즈' — quiz/questions.json(주식 상식) + study/terms.json(용어) 에서 날마다 3문제
   /play/        놀이터 (게임 9가지·등급·오늘의 미션) + 홈 '코스피 오를까 내릴까?' 투표 — play_page.py
   /study/       재무제표 공부 (활용법·5분 체크·업종별·용어사전·사례노트) — study/*.json (study_page.py)
@@ -99,7 +99,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
-        ("us/", "해외주식"), ("strong/", "전일 미국장 강세종목"), ("memo/", "Brian's memo"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
+        ("us/", "해외주식"), ("strong/", "전일 강세종목"), ("memo/", "Brian's memo"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
@@ -1468,15 +1468,14 @@ def build_strong():
             + '<div class="st-note">전일 미국장에서 강세를 보인 종목을 골라 만든 종목 리포트입니다. 재무는 SEC 공시(10-K·10-Q), '
               '주가는 각 리포트에 적힌 출처와 기준 시각을 따릅니다. 미국 종목은 파란 🇺🇸 미국시장 배지, 미국 외 시장 종목(예: 🇨🇳 중국시장, 🇰🇷 한국시장)은 빨간 배지로 표시하고, 재무는 그 나라 공시(한국은 OpenDART)를 씁니다. 매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.'
               + ('<br>날짜 옆 지수(나스닥·S&amp;P500, 중국 종목은 상하이종합·과창판50 등): 전일 종가 기준 등락(Yahoo Finance)' if any(it.get("market") for it in items) else '') + '</div>')
-    (out / "index.html").write_text(page("🚀 전일 미국장 강세종목", body, "../", "strong/", "US STRONG STOCKS",
+    (out / "index.html").write_text(page("🚀 전일 강세종목", body, "../", "strong/", "GLOBAL STRONG STOCKS",
                                          "날짜별 · 같은 날은 등락률 높은 순"), encoding="utf-8")
     return items
 
 
 def _strong_title(its):
-    """그날 카드가 전부 미국 외 시장(예: 중국)이면 제목에서 '미국'을 빼고 시장 이름을 붙인다."""
-    rgs = sorted({it.get("region", "") for it in its})
-    return "🚀 전일 미국시장 강세종목" if rgs == [""] else ("🚀 전일 강세종목 · " + " · ".join(escape(r) for r in rgs if r) if "" not in rgs else "🚀 전일 강세종목")
+    """홈 제목. 미국·한국·중국 등 글로벌 종목이 다 들어가므로 시장 이름 없이 '전일 강세종목'(사용자 지시 2026-11-07)."""
+    return "🚀 전일 강세종목"
 
 
 def kr_until(it):
@@ -1983,7 +1982,7 @@ def news_quiz(now, target=None, strong=None):
     """오늘의 소식 문제 목록 [{id, cat, q, choices(정답이 0번), answer, explain, link, day}]. 자료가 없으면 빈 목록."""
     out = []
     md = lambda day: f"{int(day[5:7])}/{int(day[8:10])}"
-    # 1) 전일 미국장 강세종목: 어떤 회사인가
+    # 1) 전일 강세종목: 어떤 회사인가
     for it in (strong or [])[:1]:
         if _nq_fresh(it.get("date", ""), now) and it.get("sector"):
             others = [x.get("sector") for x in strong[1:]] + NQ_SECTORS
