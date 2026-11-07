@@ -2443,6 +2443,7 @@ def earnings_home(now):
 PODCASTS = (
     ("출근길 미국증시 브리핑", "평일 아침 7시", "https://sunbong-oh.github.io/market-dashboard/podcast/feed.xml"),
     ("퇴근길 장마감 브리핑", "평일 오후 4시", "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/podcast/feed.xml"),
+    ("생각정리 · Brian's memo", "새 메모가 올라올 때", "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast/feed.xml"),
 )
 POD_CSS = """
 .pod{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
