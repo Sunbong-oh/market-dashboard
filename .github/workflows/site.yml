@@ -69,6 +69,9 @@ jobs:
       - name: 사이트 생성
         env:
           PYTHONIOENCODING: utf-8
+          # 위험신호(risk_page.py)가 KB증권 Open API 일봉(IVS11560)을 받는다. 없으면 네이버만.
+          KB_OPENAPI_APP_KEY: ${{ secrets.KB_OPENAPI_APP_KEY || secrets.KB_APP_KEY || secrets.KB_APPKEY || secrets.KB_OPENAPI_KEY || vars.KB_OPENAPI_APP_KEY }}
+          KB_OPENAPI_APP_SECRET: ${{ secrets.KB_OPENAPI_APP_SECRET || secrets.KB_APP_SECRET || secrets.KB_APPSECRET || secrets.KB_OPENAPI_SECRET || vars.KB_OPENAPI_APP_SECRET }}
           CLOSE_REPO: ${{ github.workspace }}/_close
         run: python build_site.py
       - name: 재무제표 공부 자료 붙이기 (study-fin 브랜치 -> /study/fin/)
