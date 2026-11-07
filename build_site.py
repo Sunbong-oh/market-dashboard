@@ -11,6 +11,7 @@
   /strong/      전일 강세종목 리포트(글로벌) (날짜별, Claude가 만든 종목 리포트) — us_strong/index.json + HTML
   홈 '오늘의 주식 퀴즈' — quiz/questions.json(주식 상식) + study/terms.json(용어) 에서 날마다 3문제
   /play/        놀이터 (게임 9가지·등급·오늘의 미션) + 홈 '코스피 오를까 내릴까?' 투표 — play_page.py
+  /risk/        위험신호 (반도체 소부장 나 홀로 급등 경보) — risk_page.py
   /study/       재무제표 공부 (활용법·5분 체크·업종별·용어사전·사례노트) — study/*.json (study_page.py)
 """
 import json
@@ -28,6 +29,7 @@ from pathlib import Path
 import dashboard as d
 import study_page
 import play_page
+import risk_page
 from company_ko import KR_COMPANY, describe, sector_ko
 
 ROOT = Path(__file__).resolve().parent
@@ -99,7 +101,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
-        ("us/", "해외주식"), ("strong/", "전일 강세종목"), ("memo/", "Brian's memo"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
+        ("us/", "해외주식"), ("strong/", "전일 강세종목"), ("memo/", "Brian's memo"), ("close/", "장마감 리포트"), ("study/", "재무제표 공부"), ("play/", "놀이터"), ("risk/", "위험신호"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
@@ -2491,7 +2493,7 @@ def podcast_home():
             f'구독해 두면 새 회차가 자동으로 내려받아져 안드로이드 오토·카플레이에서 바로 재생됩니다.</div></section>{POD_JS}')
 
 
-def build_home(now, daily, close, live=None, target=None, us=None, strong=None, kospi_hist=None):
+def build_home(now, daily, close, live=None, target=None, us=None, strong=None, kospi_hist=None, risk=None):
     if live:
         s1 = f'<iframe class="embed" scrolling="no" src="{live["embed"]}?v={VER}" title="실시간 시세" loading="eager"></iframe>'
     elif daily and daily.get("embed"):
@@ -2505,6 +2507,7 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None, 
         s3, more3 = '<section class="panel"><p class="err">장마감 리포트를 불러오지 못했습니다.</p></section>', ""
     body = (f'<style>{HOME_CSS}{ISSUE_CSS}{VCNT_CSS}</style>{CLOSE_FIRST_JS}<div class="home">'
             f'<div id="vcnt" hidden></div>'
+            f'{risk_page.home(risk)}'
             f'{strong_home(strong)}'
             f'{ad_strip()}'
             f'{podcast_home()}'
@@ -2601,7 +2604,8 @@ def main():
     study = study_page.build(OUT, page)
     play_page.build(OUT, page, now, VISIT_API, VISIT_NS)
     play_page.build_lab(OUT, page)
-    build_home(now, daily, close, live, target, us, strong, play_page.kospi_history())
+    risk = risk_page.build(OUT, page, now)
+    build_home(now, daily, close, live, target, us, strong, play_page.kospi_history(), risk)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "us": us and us["day"], "study": study,
                       "live": bool(live)}, ensure_ascii=False))
