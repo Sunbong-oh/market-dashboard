@@ -267,7 +267,7 @@ def compute(mem=None):
                      "avg": sum(c["mdd"] for c in done) / len(done) if done else 0,
                      "base_hit": sum(x <= -HIT for x in base) / len(base), "base_avg": sum(base) / len(base),
                      "from": ds[START]},
-            "chart": {"d": [ds[j] for j in tail], "S": [S[j] for j in tail], "L": [L[j] for j in tail],
+            "_bars": bars, "chart": {"d": [ds[j] for j in tail], "S": [S[j] for j in tail], "L": [L[j] for j in tail],
                       "on": [on[j] for j in tail], "nh": [NH[j] for j in tail]}}
 
 
@@ -279,6 +279,12 @@ Q_URL = "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/study-fin
 PRE_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/earnings-live/earnings.json"
 CAL_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/main/calendar/{ym}.json"
 BOOM_QOQ, BOOM_YOY, SLOW_PT = 0.15, 0.50, 0.05   # 폭증: 직전 분기 전분기 대비 +15%↑ 또는 전년 대비 +50%↑ / 둔화: 성장률 5%p↑ 하락
+# 매도 방아쇠(2026-11-07 사용자: '하이닉스를 6월에 팔았어야 하는 규칙'): 둔화 구간(직전 발표 ~ 다음 발표) 안에서
+# 60거래일 상승률(전날 기준) +RUN60 이상이던 종목이 하루 -DROP1 이상 빠지면 매도. 가속 구간의 같은 급락은 눌림이었다(검증 risk_earn_bt).
+RUN60, DROP1 = 1.00, 0.10
+# 과거 검증(risk-bt 2026-11-07 실행, 반도체 44종목 2015~2026, 실제 매출로 구간을 정한 '완벽한 예상' 가정): (60일 상승, 하루 하락, 둔화 n·중앙·하락비율, 가속 n·중앙·하락비율)
+BT_ROWS = ((1.00, 0.10, 10, -0.116, 0.70, 6, 0.294, 0.17), (1.50, 0.07, 13, -0.121, 0.62, 2, 0.074, 0.50),
+           (1.00, 0.07, 21, -0.051, 0.62, 8, 0.294, 0.12), (0.80, 0.07, 37, -0.019, 0.54, 12, 0.250, 0.17))
 
 
 def _qnext(q):
@@ -308,7 +314,7 @@ def _cal_days(now):
     return out
 
 
-def earn_one(code, name, qj, pre, cal):
+def earn_one(code, name, qj, pre, cal, bars=None):
     act, cons = {}, {}
     for row in (qj or {}).get("q") or []:
         if row[1] is None:
@@ -337,12 +343,27 @@ def earn_one(code, name, qj, pre, cal):
     nqoq, nyoy = g(est, act[last]), g(est, act.get(_qprev(nq, 4)))
     prev_q = g(act.get(_qprev(last)), act.get(_qprev(last, 2)))
     boom = (lq is not None and lq >= BOOM_QOQ) or (ly is not None and ly >= BOOM_YOY)
+    # 둔화 구간의 시작 = 직전 분기 실적 발표일(잠정실적 공시일, 없으면 정기보고서 제출 기한)
+    if p and p.get("day") and p["q"] == last:
+        start = p["day"].replace("-", "")
+    else:
+        y, m = int(last[:4]), int(last[5:7])
+        start = ((datetime(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)) + timedelta(days=90 if m == 12 else 45)).strftime("%Y%m%d")
+    c = [b[2] for b in bars or []]
+    dd = [b[0] for b in bars or []]
+    run = c[-1] / c[-61] - 1 if len(c) > 61 else None
+    trig = None
+    for i in range(max(61, next((k for k, d in enumerate(dd) if d > start), len(dd))), len(c)):
+        if c[i - 1] / c[i - 61] - 1 >= RUN60 and c[i] / c[i - 1] - 1 <= -DROP1:
+            trig = (dd[i], c[i] / c[i - 1] - 1, c[i - 1] / c[i - 61] - 1)
+            break
+    window = nqoq is not None and lq is not None and boom and nqoq <= lq - SLOW_PT
     if nqoq is None or lq is None:
         lvl = "none"
-    elif nqoq <= lq - SLOW_PT:
-        lvl = "sell" if boom else "slow"
+    elif window:
+        lvl = "sell" if trig else "ready" if run is not None and run >= RUN60 else "watch"
     else:
-        lvl = "ok"
+        lvl = "dip" if trig else "ok"
     when = cal.get(name)
     if when:
         when_t = f"{when[5:7]}/{when[8:]} (캘린더)"
@@ -357,18 +378,18 @@ def earn_one(code, name, qj, pre, cal):
 
     return {"code": code, "n": name, "last": last, "sales": act[last], "lq": lq, "ly": ly, "pq": prev_q,
             "nq": nq, "est": est, "how": how, "nqoq": nqoq, "nyoy": nyoy, "boom": boom, "lvl": lvl,
-            "when": when, "when_t": when_t}
+            "when": when, "when_t": when_t, "start": start, "run": run, "trig": trig}
 
 
-def earnings(mem, now):
+def earnings(mem, now, bars=None):
     names = dict(LEADERS)
     names.update(mem)
     pre = (_get(PRE_URL) or {}).get("kr_prelim") or {}
     cal = _cal_days(now)
     with ThreadPoolExecutor(max_workers=8) as ex:
         qs = dict(zip(names, ex.map(lambda c: _get(Q_URL.format(code=c)), names)))
-    rows = [x for x in (earn_one(c, n, qs[c], pre, cal) for c, n in names.items()) if x]
-    order = {"sell": 0, "slow": 1, "ok": 2, "none": 3}
+    rows = [x for x in (earn_one(c, n, qs[c], pre, cal, (bars or {}).get(c)) for c, n in names.items()) if x]
+    order = {"sell": 0, "ready": 1, "watch": 2, "dip": 3, "ok": 4, "none": 5}
     rows.sort(key=lambda x: (x["code"] not in LEADERS, order[x["lvl"]], -(x["sales"] or 0)))
     return rows
 
@@ -377,7 +398,24 @@ def _won(v):
     return "-" if v is None else f"{v / 10000:,.1f}조" if v >= 10000 else f"{v:,.0f}억"
 
 
-EL = {"sell": ("🔴 발표 전 정리", "sell"), "slow": ("🟡 둔화 예상", "slow"), "ok": ("🟢 유지·가속", "okk"), "none": ("⚪ 예상치 없음", "nn")}
+EL = {"sell": ("🔴 매도 신호", "sell"), "ready": ("🟠 급락 하루면 매도", "ready"), "watch": ("🟡 둔화 구간", "slow"),
+      "dip": ("🟢 가속 구간 급락(눌림)", "okk"), "ok": ("🟢 유지·가속", "okk"), "none": ("⚪ 예상치 없음", "nn")}
+ES = {"sell": "🔴 매도", "ready": "🟠 대기", "watch": "🟡 둔화", "dip": "🟢 눌림", "ok": "🟢 유지", "none": "⚪ 없음"}
+
+
+def _md(d):
+    return f"{int(d[4:6])}/{int(d[6:])}"
+
+
+def earn_why(x):
+    if x["lvl"] == "sell":
+        t = x["trig"]
+        return f'{_md(t[0])} 하루 {_p(t[1])} (그 전 60일 {_p(t[2])})'
+    if x["lvl"] in ("ready", "watch"):
+        return f'60일 {_p(x["run"]) if x["run"] is not None else "-"}'
+    if x["lvl"] == "dip":
+        return f'{_md(x["trig"][0])} {_p(x["trig"][1])}'
+    return ""
 
 
 def earn_section(rows, n):
@@ -388,21 +426,28 @@ def earn_section(rows, n):
         if x["code"] in LEADERS and x["lvl"] != "none":
             head += (f'<li><b>{escape(x["n"])}</b>: 매출 성장률(전분기 대비) {_p(x["pq"]) if x["pq"] is not None else "-"} → '
                      f'{_p(x["lq"])} ({x["last"][2:4]}년 {int(x["last"][5:7]) // 3}분기 실제) → <b>{_p(x["nqoq"])}</b> ({x["nq"][2:4]}년 {int(x["nq"][5:7]) // 3}분기 예상). '
-                     f'판정 <b>{EL[x["lvl"]][0]}</b>, 다음 발표 {escape(x["when_t"])}</li>')
+                     f'판정 <b>{EL[x["lvl"]][0]}</b>{f" ({escape(earn_why(x))})" if earn_why(x) else ""}, 다음 발표 {escape(x["when_t"])}</li>')
     trs = ""
     for x in rows:
-        t, c = EL[x["lvl"]]
-        t = {"sell": "🔴 정리", "slow": "🟡 둔화", "ok": "🟢 유지", "none": "⚪ 없음"}[x["lvl"]]
+        c = EL[x["lvl"]][1]
         trs += (f'<tr class="{c}"><td class="l"><b>{escape(x["n"])}</b><br><small>{x["last"][2:]} 매출 {_won(x["sales"])}</small></td>'
-                f'<td>{_p(x["lq"]) if x["lq"] is not None else "-"}<br><small>전년 {_p(x["ly"]) if x["ly"] is not None else "-"}</small></td>'
-                f'<td>{_p(x["nqoq"]) if x["nqoq"] is not None else "-"}<br><small>전년 {_p(x["nyoy"]) if x["nyoy"] is not None else "-"}</small></td>'
-                f'<td>{t}</td><td>{escape(x["when_t"])}</td></tr>')
-    return f"""<section class="pg"><h2>실적 둔화 경보 — 분기 매출 성장률</h2>
-<ul class="sq">{head}<li>규칙: 실적이 폭증하던 종목(직전 분기 매출 전분기 대비 +{BOOM_QOQ:.0%}↑ 또는 전년 대비 +{BOOM_YOY:.0%}↑)의 <b>다음 분기 예상 성장률(전분기 대비)이 직전 분기보다 {SLOW_PT * 100:.0f}%p 넘게 낮으면</b> 그 분기 실적 발표 전에 정리.</li></ul>
-<div class="tw"><table class="earn"><tr><th>종목</th><th>직전 분기<br>전분기 대비</th><th>다음 분기 예상<br>전분기 대비</th><th>판정</th><th>다음 발표</th></tr>{trs}</table></div>
-<p class="note">· 실제 = 네이버 증권 분기 실적 + DART 영업(잠정)실적 공시. 다음 분기 예상 = 네이버 분기 컨센서스, 없고 4분기면 '연간 컨센서스 - 1~3분기 실제'(<b>가정</b>, 연간 컨센서스가 늦게 바뀌면 틀릴 수 있음).<br>
-· 다음 발표일은 증시 캘린더에 있으면 그 날, 없으면 지난 잠정실적 공시일 + 91일 <b>추정</b>, 잠정실적을 내지 않는 회사는 분기·사업보고서 제출 기한(분기 끝 + 45일, 4분기는 + 90일)입니다.<br>
-· 이 규칙은 과거 컨센서스 자료가 없어 아직 검증하지 못했습니다. 하이닉스 2026년 예: 매출 성장률(전분기 대비)이 1분기 +60%로 가장 높았고, 2분기 +51%로 줄어든 실적(7월 발표) 전인 6/22에 주가가 고점이었습니다(실제 숫자 기준, 당시 컨센서스는 확인 못 함).</p>{n}</section>"""
+                f'<td>{_p(x["lq"]) if x["lq"] is not None else "-"}<br><small>→ 예상 {_p(x["nqoq"]) if x["nqoq"] is not None else "-"}</small></td>'
+                f'<td>{ES[x["lvl"]]}<br><small>{escape(earn_why(x))}</small></td><td>{escape(x["when_t"])}</td></tr>')
+    bt = "".join(f'<tr><td>+{g:.0%} / -{d:.0%}</td><td>{n1}건 · {_p(m1)} · {r1:.0%}</td><td>{n2}건 · {_p(m2)} · {r2:.0%}</td></tr>'
+                 for g, d, n1, m1, r1, n2, m2, r2 in BT_ROWS)
+    return f"""<section class="pg"><h2>실적 둔화 경보 — 둔화 구간의 첫 급락에 판다</h2>
+<ul class="sq">{head}
+<li><b>둔화 구간</b>: 실적이 폭증하던 종목(직전 분기 매출 전분기 대비 +{BOOM_QOQ:.0%}↑ 또는 전년 대비 +{BOOM_YOY:.0%}↑)인데 다음 분기 예상 성장률(전분기 대비)이 {SLOW_PT * 100:.0f}%p 넘게 낮을 때. 직전 실적 발표일부터 다음 발표일까지.</li>
+<li><b>매도 신호</b>: 둔화 구간 안에서, 60거래일 동안 +{RUN60:.0%} 넘게 오른 종목이 <b>하루 -{DROP1:.0%} 이상</b> 빠진 첫날. 하이닉스는 2026-06-23(전날 292만 원 → 255.5만 원)에 신호가 나왔고, 7/30에는 132만 원까지 내렸습니다.</li>
+<li>🟠 급락 하루면 매도 = 둔화 구간이고 60일 +{RUN60:.0%} 넘게 오른 상태. 다음 -{DROP1:.0%} 하루가 매도 신호입니다.</li>
+<li>같은 급락이 <b>가속 구간</b>(성장률이 유지·가속)에서 나오면 과거엔 대부분 눌림이었습니다(아래 표).</li></ul>
+<div class="tw"><table class="earn"><tr><th>종목</th><th>직전 분기 성장률<br>(전분기 대비)</th><th>판정</th><th>다음 발표</th></tr>{trs}</table></div>
+<h2 style="margin-top:16px">과거 검증 — 급락한 날 팔았다면 60거래일 뒤 코스피 대비</h2>
+<div class="tw"><table><tr><th>60일 상승 / 하루 하락</th><th>둔화 구간에서 팔았을 때<br><small>건수 · 중앙값 · 판 뒤 덜 오른 비율</small></th><th>가속 구간에서 팔았을 때</th></tr>{bt}</table></div>
+<p class="note">· 검증: 반도체 44종목 2015~2026, DART 분기 매출·발표일(잠정실적 공시 또는 정기보고서 접수일) + 네이버 일봉, 2026-11-07 실행(risk-bt 브랜치 result.json). 지금 쓰는 기준은 첫 줄(+100% / -10%).<br>
+· 과거엔 그때의 컨센서스가 없어 <b>실제 매출로 구간을 정했습니다(완벽한 예상 가정)</b>. 실제로는 예상치가 틀릴 수 있어 성적이 더 나쁠 수 있고, 건수가 적고(10건) 2026년에 몰려 있습니다. 둔화 구간에서도 판 뒤 더 오른 경우가 3건 있었습니다(제주반도체 2026-03, 기가비스 2026-03, 케이씨텍 2026-06).<br>
+· 실제 = 네이버 증권 분기 실적 + DART 영업(잠정)실적 공시. 다음 분기 예상 = 네이버 분기 컨센서스, 없고 4분기면 '연간 컨센서스 - 1~3분기 실제'(<b>가정</b>).<br>
+· 다음 발표일은 증시 캘린더 → 지난 잠정실적 공시일 + 91일 <b>추정</b> → 분기·사업보고서 제출 기한(분기 끝 + 45일, 4분기는 + 90일) 순서로 씁니다.</p>{n}</section>"""
 
 
 # ---------- 화면 (KB 리서치 스타일) ----------
@@ -436,7 +481,7 @@ CSS = """
 .rk .stat div{background:#fff;border:1px solid var(--ln);border-top:3px solid var(--y);padding:8px 10px}
 .rk .stat b{display:block;font-size:22px}.rk .stat span{font-size:12px;color:var(--mut)}
 .rk .lg{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;font-weight:700;margin-top:6px}.rk .lg i{display:inline-block;width:14px;height:8px;margin-right:5px;vertical-align:1px}
-.rk table.earn td:first-child{min-width:96px}.rk table.earn td:nth-child(4){white-space:nowrap}.rk table.earn small{color:var(--mut);font-size:11px}.rk tr.sell td{background:#FBE3E6}.rk tr.slow td{background:#FDF3D7}.rk tr.nn td{color:var(--mut)}
+.rk table.earn td:first-child{min-width:96px}.rk table.earn td:nth-child(3){white-space:nowrap}.rk table.earn td:nth-child(4){font-size:11.5px}.rk table.earn small{color:var(--mut);font-size:11px}.rk tr.sell td{background:#FBE3E6}.rk tr.slow td{background:#FDF3D7}.rk tr.ready td{background:#FCE3C8}.rk tr.nn td{color:var(--mut)}
 .rk .act li{font-size:15px;font-weight:700}
 .rk .note{font-size:12px;color:var(--mut);line-height:1.6}
 @media(max-width:640px){.rk .cov{grid-template-columns:1fr}.rk .sw .t{font-size:20px}.rk table{font-size:12px}.rk th,.rk td{padding:6px 3px}}
@@ -569,7 +614,7 @@ def build(out, page, now=None):
         r = None
     if r:
         try:
-            r["earn"] = earnings(mem, now)
+            r["earn"] = earnings(mem, now, r.get("_bars"))
         except Exception as e:
             print("실적 둔화 계산 실패:", e)
             r["earn"] = []
@@ -582,6 +627,7 @@ def build(out, page, now=None):
                                        f"반도체 소부장 나 홀로 급등 경보 · 기준 {_d(r['asof'])}"), encoding="utf-8")
     st = {k: r[k] for k in ("asof", "level", "n_ok", "lastOn", "since", "src")}
     st["earn_sell"] = [x["n"] for x in r["earn"] if x["lvl"] == "sell"]
+    st["earn_ready"] = [x["n"] for x in r["earn"] if x["lvl"] == "ready"]
     (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     print("위험신호:", r["level"], r["n_ok"], "/ 4, 과거", r["stat"]["n"], "번 중", r["stat"]["hit"], "번")
     return r
@@ -598,6 +644,6 @@ def home(r):
             f'background:{bg};color:{fg};border:1px solid #E6E0D2;border-left:6px solid #F2A900;border-radius:10px;padding:9px 12px;'
             f'margin:0 0 12px;font:700 14px/1.4 \'Noto Sans KR\',sans-serif"><span>🚦 소부장 위험신호</span><b style="font-size:15px">{t}</b>'
             f'<span style="font-weight:500;opacity:.85">조건 {r["n_ok"]}/4 · {_d(r["asof"])}</span>'
-            + "".join(f'<span style="background:#fff;color:#C8102E;border-radius:6px;padding:1px 7px;font-size:13px">📉 {escape(x["n"])} 매출 성장 둔화 예상 → 발표 전 정리</span>'
-                      for x in r.get("earn") or [] if x["code"] in LEADERS and x["lvl"] == "sell") +
+            + "".join(f'<span style="background:#fff;color:#C8102E;border-radius:6px;padding:1px 7px;font-size:13px">📉 {escape(x["n"])} {EL[x["lvl"]][0]}</span>'
+                      for x in r.get("earn") or [] if x["code"] in LEADERS and x["lvl"] in ("sell", "ready")) +
             f'<span style="margin-left:auto;font-weight:800">자세히 →</span></a>')
