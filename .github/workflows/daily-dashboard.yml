@@ -29,7 +29,7 @@ on:
 
 permissions:
   contents: write   # 웹사이트용 archive/daily/ 저장
-  actions: read
+  actions: write   # 음성을 올린 뒤 홈페이지(site.yml) 다시 만들기 요청
 
 # 여러 실행이 겹쳐도 차례로 돌게 해서, 뒤엣것이 "이미 보냄"을 볼 수 있게 한다
 concurrency:
@@ -162,6 +162,9 @@ jobs:
           git --work-tree=_pod add -A -f .
           commit=$(git commit-tree "$(git write-tree)" -m "podcast: $day")
           git push --force origin "$commit:refs/heads/podcast"
+          # 홈페이지 피드(/podcast/feed.xml)는 site.yml 이 다시 만들어야 바뀐다. 봇이 띄운 데일리는 workflow_run 으로
+          # site.yml 을 깨우지 못해(GITHUB_TOKEN 실행) 2026-11-07 아침 회차가 몇 시간 동안 피드에 안 보였다 → 직접 요청
+          GH_TOKEN="${{ github.token }}" gh workflow run site.yml --repo "${{ github.repository }}" --ref main || echo "site.yml 실행 요청 실패"
       - name: 음성 브리핑 실패 알림 (텔레그램)
         # 음성 단계가 실패하면 조용히 넘어가지 않고 알린다. 아침 점검 루틴(07:20)이 음성만 다시 만든다.
         if: steps.gate.outputs.send == '1' && steps.pod.outcome == 'failure'
