@@ -172,6 +172,140 @@ def compute(mem=None):
                       "on": [on[j] for j in tail], "nh": [NH[j] for j in tail]}}
 
 
+# ---------- 실적 둔화 경보 (분기 매출 성장률) ----------
+# 사용자 규칙(2026-11-07): 실적이 폭증하다가 '다음 분기 매출 성장률이 줄어들 것'으로 예상되면 그 분기 실적 발표 전에 정리.
+# 실제 = 네이버 분기 표(study-fin q/<코드>.json) + 오늘까지 나온 DART 잠정실적(kb earnings-live kr_prelim).
+# 다음 분기 예상 = 네이버 분기 컨센서스. 없고 다음 분기가 4분기면 '연간 컨센서스 - 1~3분기 실제'로 만든다.
+Q_URL = "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/study-fin/q/{code}.json"
+PRE_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/earnings-live/earnings.json"
+CAL_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/main/calendar/{ym}.json"
+BOOM_QOQ, BOOM_YOY, SLOW_PT = 0.15, 0.50, 0.05   # 폭증: 직전 분기 전분기 대비 +15%↑ 또는 전년 대비 +50%↑ / 둔화: 성장률 5%p↑ 하락
+
+
+def _qnext(q):
+    y, m = int(q[:4]), int(q[5:7])
+    return f"{y + (m == 12)}.{(m % 12) + 3:02d}"
+
+
+def _qprev(q, n=1):
+    y, m = int(q[:4]), int(q[5:7])
+    for _ in range(n):
+        y, m = (y - 1, 12) if m == 3 else (y, m - 3)
+    return f"{y}.{m:02d}"
+
+
+def _cal_days(now):
+    """{회사 이름: 'YYYY-MM-DD'} 앞으로 석 달 증시 캘린더 국내 실적 일정."""
+    out, y, m = {}, now.year, now.month
+    for _ in range(3):
+        j = _get(CAL_URL.format(ym=f"{y}-{m:02d}")) or {}
+        for day, v in sorted((j.get("days") or {}).items()):
+            if day < now.strftime("%Y-%m-%d"):
+                continue
+            for n in v.get("earnings_kr") or []:
+                n = re.sub(r"\(.*?\)|★|\s", "", n)
+                out.setdefault(n, day)
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return out
+
+
+def earn_one(code, name, qj, pre, cal):
+    act, cons = {}, {}
+    for row in (qj or {}).get("q") or []:
+        if row[1] is None:
+            continue
+        (cons if len(row) > 4 and row[4] else act)[row[0]] = row[1]
+    p = pre.get(code)
+    if p and p.get("sales") and p["sales"][0]:
+        act[p["q"]] = p["sales"][0]
+        if p["sales"][1]:
+            act.setdefault(_qprev(p["q"]), p["sales"][1])
+        if p["sales"][2]:
+            act.setdefault(_qprev(p["q"], 4), p["sales"][2])
+    if not act:
+        return None
+    last = max(act)
+    nq = _qnext(last)
+    est, how = cons.get(nq), "네이버 분기 컨센서스"
+    if est is None and nq.endswith(".12"):
+        y = nq[:4]
+        ann = {r[0]: r[1] for r in (qj or {}).get("a") or [] if len(r) > 4 and r[4] and r[1]}
+        q123 = [act.get(f"{y}.{m}") for m in ("03", "06", "09")]
+        if ann.get(nq) and all(q123):
+            est, how = ann[nq] - sum(q123), "연간 컨센서스 - 1~3분기 실제"
+    g = lambda a, b: (a / b - 1) if a and b and b > 0 else None
+    lq, ly = g(act[last], act.get(_qprev(last))), g(act[last], act.get(_qprev(last, 4)))
+    nqoq, nyoy = g(est, act[last]), g(est, act.get(_qprev(nq, 4)))
+    prev_q = g(act.get(_qprev(last)), act.get(_qprev(last, 2)))
+    boom = (lq is not None and lq >= BOOM_QOQ) or (ly is not None and ly >= BOOM_YOY)
+    if nqoq is None or lq is None:
+        lvl = "none"
+    elif nqoq <= lq - SLOW_PT:
+        lvl = "sell" if boom else "slow"
+    else:
+        lvl = "ok"
+    when = cal.get(name)
+    if when:
+        when_t = f"{when[5:7]}/{when[8:]} (캘린더)"
+    elif p and p.get("day") and p["q"] == last:
+        dt = datetime.strptime(p["day"], "%Y-%m-%d") + timedelta(days=91)
+        when_t, when = f"{dt:%m/%d}께 (추정)", dt.strftime("%Y-%m-%d")
+    else:  # 잠정실적 공시가 없는 회사: 정기보고서 제출 기한(분기 끝 + 45일, 4분기는 + 90일)
+        y, m = int(nq[:4]), int(nq[5:7])
+        end = datetime(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)
+        dt = end + timedelta(days=90 if m == 12 else 45)
+        when, when_t = dt.strftime("%Y-%m-%d"), f"{dt:%m/%d}까지 (보고서 기한)"
+
+    return {"code": code, "n": name, "last": last, "sales": act[last], "lq": lq, "ly": ly, "pq": prev_q,
+            "nq": nq, "est": est, "how": how, "nqoq": nqoq, "nyoy": nyoy, "boom": boom, "lvl": lvl,
+            "when": when, "when_t": when_t}
+
+
+def earnings(mem, now):
+    names = dict(LEADERS)
+    names.update(mem)
+    pre = (_get(PRE_URL) or {}).get("kr_prelim") or {}
+    cal = _cal_days(now)
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        qs = dict(zip(names, ex.map(lambda c: _get(Q_URL.format(code=c)), names)))
+    rows = [x for x in (earn_one(c, n, qs[c], pre, cal) for c, n in names.items()) if x]
+    order = {"sell": 0, "slow": 1, "ok": 2, "none": 3}
+    rows.sort(key=lambda x: (x["code"] not in LEADERS, order[x["lvl"]], -(x["sales"] or 0)))
+    return rows
+
+
+def _won(v):
+    return "-" if v is None else f"{v / 10000:,.1f}조" if v >= 10000 else f"{v:,.0f}억"
+
+
+EL = {"sell": ("🔴 발표 전 정리", "sell"), "slow": ("🟡 둔화 예상", "slow"), "ok": ("🟢 유지·가속", "okk"), "none": ("⚪ 예상치 없음", "nn")}
+
+
+def earn_section(rows, n):
+    if not rows:
+        return ""
+    head = ""
+    for x in rows:
+        if x["code"] in LEADERS and x["lvl"] != "none":
+            head += (f'<li><b>{escape(x["n"])}</b>: 매출 성장률(전분기 대비) {_p(x["pq"]) if x["pq"] is not None else "-"} → '
+                     f'{_p(x["lq"])} ({x["last"][2:4]}년 {int(x["last"][5:7]) // 3}분기 실제) → <b>{_p(x["nqoq"])}</b> ({x["nq"][2:4]}년 {int(x["nq"][5:7]) // 3}분기 예상). '
+                     f'판정 <b>{EL[x["lvl"]][0]}</b>, 다음 발표 {escape(x["when_t"])}</li>')
+    trs = ""
+    for x in rows:
+        t, c = EL[x["lvl"]]
+        t = {"sell": "🔴 정리", "slow": "🟡 둔화", "ok": "🟢 유지", "none": "⚪ 없음"}[x["lvl"]]
+        trs += (f'<tr class="{c}"><td class="l"><b>{escape(x["n"])}</b><br><small>{x["last"][2:]} 매출 {_won(x["sales"])}</small></td>'
+                f'<td>{_p(x["lq"]) if x["lq"] is not None else "-"}<br><small>전년 {_p(x["ly"]) if x["ly"] is not None else "-"}</small></td>'
+                f'<td>{_p(x["nqoq"]) if x["nqoq"] is not None else "-"}<br><small>전년 {_p(x["nyoy"]) if x["nyoy"] is not None else "-"}</small></td>'
+                f'<td>{t}</td><td>{escape(x["when_t"])}</td></tr>')
+    return f"""<section class="pg"><h2>실적 둔화 경보 — 분기 매출 성장률</h2>
+<ul class="sq">{head}<li>규칙: 실적이 폭증하던 종목(직전 분기 매출 전분기 대비 +{BOOM_QOQ:.0%}↑ 또는 전년 대비 +{BOOM_YOY:.0%}↑)의 <b>다음 분기 예상 성장률(전분기 대비)이 직전 분기보다 {SLOW_PT * 100:.0f}%p 넘게 낮으면</b> 그 분기 실적 발표 전에 정리.</li></ul>
+<div class="tw"><table class="earn"><tr><th>종목</th><th>직전 분기<br>전분기 대비</th><th>다음 분기 예상<br>전분기 대비</th><th>판정</th><th>다음 발표</th></tr>{trs}</table></div>
+<p class="note">· 실제 = 네이버 증권 분기 실적 + DART 영업(잠정)실적 공시. 다음 분기 예상 = 네이버 분기 컨센서스, 없고 4분기면 '연간 컨센서스 - 1~3분기 실제'(<b>가정</b>, 연간 컨센서스가 늦게 바뀌면 틀릴 수 있음).<br>
+· 다음 발표일은 증시 캘린더에 있으면 그 날, 없으면 지난 잠정실적 공시일 + 91일 <b>추정</b>, 잠정실적을 내지 않는 회사는 분기·사업보고서 제출 기한(분기 끝 + 45일, 4분기는 + 90일)입니다.<br>
+· 이 규칙은 과거 컨센서스 자료가 없어 아직 검증하지 못했습니다. 하이닉스 2026년 예: 매출 성장률(전분기 대비)이 1분기 +60%로 가장 높았고, 2분기 +51%로 줄어든 실적(7월 발표) 전인 6/22에 주가가 고점이었습니다(실제 숫자 기준, 당시 컨센서스는 확인 못 함).</p>{n}</section>"""
+
+
 # ---------- 화면 (KB 리서치 스타일) ----------
 CSS = """
 .rk{--y:#F2A900;--y2:#FBE7B0;--ink:#3D3A35;--bg2:#FAF8F3;--mut:#6B665D;--ln:#E6E0D2;--red:#C8102E;--grn:#2E7D4F;
@@ -203,6 +337,7 @@ CSS = """
 .rk .stat div{background:#fff;border:1px solid var(--ln);border-top:3px solid var(--y);padding:8px 10px}
 .rk .stat b{display:block;font-size:22px}.rk .stat span{font-size:12px;color:var(--mut)}
 .rk .lg{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;font-weight:700;margin-top:6px}.rk .lg i{display:inline-block;width:14px;height:8px;margin-right:5px;vertical-align:1px}
+.rk table.earn td:first-child{min-width:96px}.rk table.earn td:nth-child(4){white-space:nowrap}.rk table.earn small{color:var(--mut);font-size:11px}.rk tr.sell td{background:#FBE3E6}.rk tr.slow td{background:#FDF3D7}.rk tr.nn td{color:var(--mut)}
 .rk .act li{font-size:15px;font-weight:700}
 .rk .note{font-size:12px;color:var(--mut);line-height:1.6}
 @media(max-width:640px){.rk .cov{grid-template-columns:1fr}.rk .sw .t{font-size:20px}.rk table{font-size:12px}.rk th,.rk td{padding:6px 3px}}
@@ -264,6 +399,8 @@ def body(r, now):
     st = r["stat"]
     src = f"자료: 네이버 증권 일봉(소부장 {r['members']}종목·SK하이닉스·삼성전자), 기준 {_d(r['asof'])} (장중이면 잠정) · 계산 Brian's 투자노트"
     pf = lambda n: f'<div class="pf"><span>{escape(src)}</span><span>{n}</span></div>'
+    esrc = f"자료: 네이버 증권 분기 실적·컨센서스, DART 영업(잠정)실적 공시, 증시 캘린더 · 기준 {now:%Y-%m-%d %H:%M} KST"
+
     kd = (f'<div class="kd"><b>KEY DATA</b>'
           f'<div><span>기준일</span><span>{_d(r["asof"])}</span></div>'
           f'<div><span>맞은 조건</span><span>{r["n_ok"]} / 4</span></div>'
@@ -296,9 +433,10 @@ def body(r, now):
 
 <section class="pg"><h2>켜지면 할 일 (미리 정한 내 규칙)</h2><ul class="sq act">{acts}</ul>
 <p class="note">스위치가 켜졌을 때 고민하지 않고 그대로 하기 위해 미리 적어 둔 규칙입니다. 바꾸고 싶으면 말해 주세요.</p>{pf(3)}</section>
+{earn_section(r.get("earn") or [], pf(4).replace(src, esrc))}
 
 <section class="pg"><h2>소부장 vs 대장 (최근 {len(r["chart"]["d"])}거래일, 첫날 = 100)</h2>{svg(r["chart"])}
-<p class="note">노란 선이 오르는데 검은 선이 꺾이고 빨간 칸이 생기면 위험 구간입니다.</p>{pf(4)}</section>
+<p class="note">노란 선이 오르는데 검은 선이 꺾이고 빨간 칸이 생기면 위험 구간입니다.</p>{pf(5)}</section>
 
 <section class="pg"><h2>과거 성적 ({_d(st["from"])} 이후)</h2>
 <div class="stat"><div><b>{st["n"]}번</b><span>스위치가 새로 켜진 횟수</span></div>
@@ -308,11 +446,11 @@ def body(r, now):
 <div class="tw"><table><tr><th>켜진 날</th><th>소부장 30일</th><th>신고가 비율</th><th>대장 고점 대비</th><th>한 달 최대 낙폭</th><th>결과</th></tr>{cases}</table></div>
 <p class="note">· 한 달 = 켜진 날 다음 {H}거래일, 최대 낙폭 = 그 안의 가장 낮은 소부장 지수 종가 ÷ 켜진 날 종가 - 1.<br>
 · 소부장 지수 = 지금 '반도체와반도체장비' 업종(시가총액 상위 500 안) 종목의 하루 등락률 평균. 지금 명단으로 과거를 계산하므로 그 사이 사라지거나 작아진 종목이 빠져 있습니다(실제보다 좋게 보일 수 있음).<br>
-· 기준값(+15%·20%·-5%·-5%)은 2015~2026 자료를 보고 정한 <b>가정</b>입니다. 같은 자료로 정하고 같은 자료로 채점했으므로 앞으로의 적중률은 더 낮을 수 있습니다.</p>{pf(5)}</section>
+· 기준값(+15%·20%·-5%·-5%)은 2015~2026 자료를 보고 정한 <b>가정</b>입니다. 같은 자료로 정하고 같은 자료로 채점했으므로 앞으로의 적중률은 더 낮을 수 있습니다.</p>{pf(6)}</section>
 
 <section class="pg"><h2>고지사항</h2><p class="note">이 페이지는 공개된 시세 자료로 계산한 참고용 점검표이며, 특정 종목의 매수·매도를 권유하지 않습니다.
 과거 성과가 미래 수익을 보장하지 않으며, 신호가 켜지지 않은 채 큰 하락이 오거나 신호가 켜졌는데 오르는 경우도 있습니다. 투자 판단과 결과의 책임은 투자자 본인에게 있습니다.
-마지막 계산: {now:%Y-%m-%d %H:%M} KST.</p>{pf(6)}</section>
+마지막 계산: {now:%Y-%m-%d %H:%M} KST.</p>{pf(7)}</section>
 </div>'''
 
 
@@ -321,11 +459,18 @@ def build(out, page, now=None):
     now = now or datetime.now(KST)
     d = out / "risk"
     d.mkdir(parents=True, exist_ok=True)
+    mem = members()
     try:
-        r = compute()
+        r = compute(mem)
     except Exception as e:  # 시세를 못 받아도 사이트는 만든다
         print("위험신호 계산 실패:", e)
         r = None
+    if r:
+        try:
+            r["earn"] = earnings(mem, now)
+        except Exception as e:
+            print("실적 둔화 계산 실패:", e)
+            r["earn"] = []
     if not r:
         (d / "index.html").write_text(page("🚦 위험신호", '<p class="err">시세를 받지 못해 이번에는 계산하지 못했습니다.</p>',
                                            "../", "risk/", "RISK SWITCH", "반도체 소부장 나 홀로 급등 경보"), encoding="utf-8")
@@ -333,7 +478,9 @@ def build(out, page, now=None):
     html = f"<style>{CSS}</style>{body(r, now)}"
     (d / "index.html").write_text(page("🚦 위험신호", html, "../", "risk/", "RISK SWITCH",
                                        f"반도체 소부장 나 홀로 급등 경보 · 기준 {_d(r['asof'])}"), encoding="utf-8")
-    (d / "state.json").write_text(json.dumps({k: r[k] for k in ("asof", "level", "n_ok", "lastOn", "since")}, ensure_ascii=False), encoding="utf-8")
+    st = {k: r[k] for k in ("asof", "level", "n_ok", "lastOn", "since")}
+    st["earn_sell"] = [x["n"] for x in r["earn"] if x["lvl"] == "sell"]
+    (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     print("위험신호:", r["level"], r["n_ok"], "/ 4, 과거", r["stat"]["n"], "번 중", r["stat"]["hit"], "번")
     return r
 
@@ -349,4 +496,6 @@ def home(r):
             f'background:{bg};color:{fg};border:1px solid #E6E0D2;border-left:6px solid #F2A900;border-radius:10px;padding:9px 12px;'
             f'margin:0 0 12px;font:700 14px/1.4 \'Noto Sans KR\',sans-serif"><span>🚦 소부장 위험신호</span><b style="font-size:15px">{t}</b>'
             f'<span style="font-weight:500;opacity:.85">조건 {r["n_ok"]}/4 · {_d(r["asof"])}</span>'
+            + "".join(f'<span style="background:#fff;color:#C8102E;border-radius:6px;padding:1px 7px;font-size:13px">📉 {escape(x["n"])} 매출 성장 둔화 예상 → 발표 전 정리</span>'
+                      for x in r.get("earn") or [] if x["code"] in LEADERS and x["lvl"] == "sell") +
             f'<span style="margin-left:auto;font-weight:800">자세히 →</span></a>')
