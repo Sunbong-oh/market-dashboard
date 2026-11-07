@@ -23,6 +23,9 @@ from datetime import datetime, timedelta, timezone
 from html import escape
 
 KST = timezone(timedelta(hours=9))
+# 2026-11-07 사용자: 보완이 끝날 때까지 홈페이지에서 숨김(메뉴·홈 신호등 줄 없음). /risk/ 페이지는 주소로만 열린다.
+# 다시 보이게 하려면 True + build_site.py MENU 에 ("risk/", "위험신호") 추가.
+PUBLIC = False
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
 FCHART = "https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count=3000&requestType=0"
 MAP_URL = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/map.json"
