@@ -478,7 +478,9 @@ def strong_sentence(e, already=False):
     else:
         c = e.get("changePct") or 0
         unit = CURRENCY.get(e.get("currency", "$"), "달러")
-        s = f"{where}{name}, {pct(c, 1)} {updown(c)}고, 종가는 {num(e['price'])}{unit}입니다."
+        if "일본" in (e.get("region") or ""):  # 일본 종목도 "¥" 를 쓰므로 위안이 아니라 엔으로 읽는다
+            unit = "엔"
+        s = f"{where}{name}, {pct(c, 1)} {updown(c)}고, 종가는 {num(e['price'], 0 if unit == '엔' else 2)}{unit}입니다."
     body = e.get("pod")
     if not body:  # 홈페이지용 한 줄 요약에서 첫 문장(강세 이유)만
         body = re.split(r"\.\s", e.get("headline", ""))[0]

@@ -1352,7 +1352,7 @@ def strong_card(it, href):
     chg = it.get("changePct")
     pct = f'<span class="{"up" if chg > 0 else "down"}">{chg:+.2f}%</span>' if chg is not None else ""
     cur = escape(it.get("currency", "$"))  # 미국 외 종목은 index.json 에 currency(예: "¥") 를 적는다
-    dp = 0 if cur == "₩" else 2  # 한국 종목(원)은 소수점 없이
+    dp = 0 if cur == "₩" or "일본" in (it.get("region") or "") else 2  # 한국(원)·일본(엔) 종목은 소수점 없이
     px = f'<div class="px"><b>{cur}{it["price"]:,.{dp}f}</b>{pct}</div>' if it.get("price") else ""
     tags = "".join(f"<span>{escape(t)}</span>" for t in it.get("tags", []))
     rg = f'<span class="rgb">{escape(it["region"])}</span>' if it.get("region") else ""
