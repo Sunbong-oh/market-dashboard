@@ -2526,7 +2526,8 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None, 
 # 종목 리포트가 아닌 시장 점검·생각거리 글. memo/ 에 리포트 HTML(+ 내려받을 PDF·PPT)을 넣고 memo/index.json 에 한 줄 추가하면
 # /memo/ 목록(최신순)과 글 페이지가 생긴다. index.json 항목: date, title, sub, headline, tags, file, downloads[[이름, 파일]]
 MEMO_CSS = STRONG_CSS + """
-.st .dl{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}.st .dl a{font-size:12.5px;font-weight:800;padding:4px 10px;border-radius:8px;
+.st .dl{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}.st .dl:empty{display:none}
+.st .dl .pod{background:#F2A900;color:#3D3A35;cursor:pointer;font-family:inherit}.st audio{display:block;width:100%;margin-top:8px}.st .dl a{font-size:12.5px;font-weight:800;padding:4px 10px;border-radius:8px;
   border:1px solid #F2A900;color:var(--fg,#3D3A35);text-decoration:none;background:transparent}
 """
 
@@ -2547,12 +2548,28 @@ def memo_items():
 def memo_card(it, prefix=""):
     tags = "".join(f"<span>{escape(t)}</span>" for t in it.get("tags", []))
     dls = "".join(f'<a href="{escape(prefix + f)}" download>⬇ {escape(n)}</a>' for n, f in it.get("downloads", []) if (MEMO / f).is_file())
-    return (f'<div class="st"><a href="{escape(prefix + it["file"])}" style="text-decoration:none;color:inherit;display:block">'
+    return (f'<div class="st" data-memo="{escape(it["file"])}"><a href="{escape(prefix + it["file"])}" style="text-decoration:none;color:inherit;display:block">'
             f'<div class="nm">{escape(it["title"])}<small>{escape(it.get("sub", ""))}</small>'
             '<span class="go"><b>📝 메모 읽기</b><i>&lt;-- 터치!!</i></span></div>'
             f'<div class="hl">{escape(it.get("headline", ""))}</div>'
             + (f'<div class="tg">{tags}</div>' if tags else "") + '</a>'
-            + (f'<div class="dl">{dls}</div>' if dls else "") + '</div>')
+            + f'<div class="dl">{dls}</div></div>')
+
+
+# 생각정리 팟캐스트(memo-podcast 브랜치) 음성이 있는 글에 '🎧 팟캐스트로 듣기' 버튼을 단다.
+# 음성은 사이트를 만든 뒤에 생기므로 보는 사람 브라우저가 episodes.json 을 직접 읽는다.
+MEMO_POD_RAW = "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/memo-podcast"
+MEMO_POD_JS = """<script>(function(){var R='""" + MEMO_POD_RAW + """';
+fetch(R+'/episodes.json?t='+Date.now()).then(function(r){return r.json()}).then(function(eps){
+ eps.forEach(function(e){var c=document.querySelector('.st[data-memo="'+e.memo+'"]');if(!c)return;var d=c.querySelector('.dl');
+  var b=document.createElement('button');b.className='pod';b.type='button';
+  b.textContent='🎧 팟캐스트로 듣기'+(e.secs?' ('+Math.max(1,Math.round(e.secs/60))+'분)':'');
+  b.onclick=function(){var a=c.querySelector('audio');if(a){a.paused?a.play():a.pause();return}
+   document.querySelectorAll('.st audio').forEach(function(x){x.pause()});
+   a=document.createElement('audio');a.controls=true;a.preload='none';a.src=R+'/episodes/'+e.file;
+   a.addEventListener('play',function(){document.querySelectorAll('.st audio').forEach(function(x){if(x!==a)x.pause()})});
+   c.appendChild(a);a.play()};
+  d.insertBefore(b,d.firstChild)})}).catch(function(){})})()</script>"""
 
 
 def build_memo():
@@ -2579,7 +2596,7 @@ def build_memo():
     body = (f'<style>{MEMO_CSS}</style>'
             + ("".join(rows) or '<p class="err">아직 올린 메모가 없습니다.</p>')
             + '<div class="st-note">Brian의 생각거리: 시장 흐름을 자산·수급·지표로 점검한 메모입니다. 숫자의 출처와 기준 시각은 각 글에 적혀 있습니다. '
-              '매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.</div>')
+              '매수·매도 추천이 아닌 판단 근거 정리이며, 투자 판단의 참고 자료입니다.</div>' + MEMO_POD_JS)
     (out / "index.html").write_text(page("📝 Brian's memo", body, "../", "memo/", "BRIAN'S MEMO", "생각거리 · 최신순"), encoding="utf-8")
     return items
 
