@@ -211,6 +211,8 @@ def build_script(data):
                      .replace("bp", " 베이시스포인트"))
     if parts:
         say(f"{GAP}주요 지표입니다.{P}" + ", ".join(parts) + "입니다.")
+    for name, why in data.get("ind_reasons") or []:  # 크게 움직인 지표는 이유도
+        say(f"{P}{name}{josa(name, '이', '가')} 크게 움직인 이유는, {speakable(why)}" + ("" if why.endswith("?") else "."))
     v = q_of(data, "^VIX")
     if v:  # 중요 지표라 따로, 천천히
         c = chg(v)
@@ -403,6 +405,38 @@ def reason_score(name, t):
     if len(re.findall(r"[가-힣A-Z]+ ?\d+(?:\.\d+)?%대? ?(?:급등|급락|상승|하락|올라|내려|↑|↓)", t)) >= 2:  # 여러 종목 등락 나열
         return 0
     return 2 * len(set(CATALYST.findall(t))) + (1 if MOVE_WORD.search(t) else 0) - 1
+
+
+# 크게 움직인 지표: (기준, 부를 이름, 검색어, 제목에 있어야 할 낱말). 금리는 bp, 나머지는 %
+BIG_MOVES = {
+    "CL=F": (3.0, "유가", "국제유가 when:1d", r"유가|원유|WTI|브렌트"),
+    "GC=F": (2.0, "금값", "금값 when:1d", r"금값|금 ?가격|금 ?시세|국제 ?금"),
+    "BTC-USD": (5.0, "비트코인", "비트코인 가격 when:1d", r"비트코인"),
+    "^TNX": (10.0, "미국 국채 금리", "미국 국채금리 when:1d", r"국채|금리"),
+}
+IND_WHY = re.compile(r"감산|증산|OPEC|오펙|재고|휴전|종전|평화|이란|이스라엘|러시아|우크라|중동|호르무즈|공급|수요|관세|연준|Fed|"
+                     r"금리 ?(인하|인상|동결)|달러|지정학|합의|제재|전쟁|협상|고용|물가|CPI|PCE|ETF|규제|파월|트럼프|중국|위험 ?회피|안전자산")
+
+
+def indicator_reasons(data):
+    """기준 넘게 움직인 지표마다 이유가 담긴 오늘 국내 기사 제목 하나. [(부를 이름, 제목)]"""
+    import dashboard as d
+    out = []
+    for sym, (th, name, query, must) in BIG_MOVES.items():
+        q = q_of(data, sym)
+        if not q:
+            continue
+        move = (q["last"] - q["prev"]) * 100 if sym == "^TNX" else chg(q)
+        if abs(move) < th:
+            continue
+        heads = [n["title"] for n in sorted(d.google_news(query), key=lambda n: -n["ts"])[:15]]
+        ok = [t for t in heads if re.search(must, t) and not NOISE.search(t)]
+        why = next((t for t in ok if IND_WHY.search(t)), None)
+        if why:
+            why = re.split(r"\s*(?:⋯|…|\.{2,})\s*", why)[0]  # 묶음 기사면 첫 꼭지만
+            why = re.sub(r"\s*-\s*[^-]*\d[^-]*$", "", why)  # '-WTI 4%대 하락 90달러 밑으로' 같은 등락 꼬리
+            out.append((name, why))
+    return out
 
 
 def move_reason(name, c):
@@ -684,6 +718,10 @@ def main():
     data["cal_tomorrow"] = calendar_next(now)
     data["notes"] = briefing_notes(now)
     data["strong"] = strong_picks(now)
+    try:
+        data["ind_reasons"] = indicator_reasons(data)
+    except Exception as e:
+        print("지표 이유 실패:", type(e).__name__, e, file=sys.stderr)
     text = build_script(data)
     plain = re.sub(f"{PAUSE}+", " ", text).replace(SLOW, "").replace(SLOW_END, "").replace(" \n", "\n").strip()  # 피드 설명·원고 파일용
     TXT.write_text(plain, encoding="utf-8")
