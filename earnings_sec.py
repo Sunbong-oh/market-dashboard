@@ -20,7 +20,7 @@ WATCH = {
     "SNDK": "샌디스크", "WDC": "웨스턴디지털", "SMCI": "슈퍼마이크로", "MRVL": "마벨", "STX": "씨게이트",
     "TSLA": "테슬라", "GOOGL": "알파벳", "MSFT": "마이크로소프트", "META": "메타", "AAPL": "애플", "AMZN": "아마존",
     "NFLX": "넷플릭스", "ORCL": "오라클", "PLTR": "팔란티어", "SPCX": "스페이스X", "VRT": "버티브",
-    "ASML": "ASML", "TSM": "TSMC",
+    "ASML": "ASML", "TSM": "TSMC", "CRWV": "코어위브",
 }
 FOREIGN = {"ASML", "TSM", "ARM"}
 
