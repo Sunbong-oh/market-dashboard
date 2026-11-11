@@ -172,6 +172,7 @@ DAILY_THEME = ("<style>#bt{display:none!important}</style>"
                "<script>try{localStorage.removeItem('theme')}catch(e){}delete document.documentElement.dataset.theme</script>")
 GRID3 = """<style>.panel.kr{display:none!important}  /* 사이트에서는 뉴스 칸을 보이지 않는다 (돈이 되는 뉴스는 2026-10-23 사용자 요청으로 없앰) */
 @media (max-width:640px){
+.ind-h{padding-left:12px!important}
 .grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
 .g3 .card{padding:11px 11px 10px!important;border-radius:12px}
 .g3 .card header{flex-direction:column;align-items:flex-start;gap:0}
