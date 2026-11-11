@@ -36,19 +36,37 @@ SECTOR_KO = {
 }
 
 
+UNIVERSE_CACHE = Path(__file__).with_name("newhighs_universe.json")  # 마지막으로 받은 명단 (나스닥이 GitHub 서버를 막는 날 대신 씀)
+
+
 def universe():
-    """[(티커, 영문명, 시총)] — 시총 내림차순. 우선주·워런트 등 특수 표기는 뺀다."""
-    j = d.fetch_json(SCREENER, {"Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"})
-    out = []
-    for r in j["data"]["rows"]:
+    """[(티커, 영문명, 시총)] — 시총 내림차순. 우선주·워런트 등 특수 표기는 뺀다.
+    나스닥 스크리너가 GitHub 서버를 막는 날(2026-11-11 HTTP 403)에는 마지막으로 받아 둔 명단을 쓴다.
+    받는 데 성공하면 그 명단을 newhighs_universe.json 에 덮어쓴다(PC 에서 돌리면 최신으로 갱신)."""
+    try:
+        j = d.fetch_json(SCREENER, {"Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"})
+        out = []
+        for r in j["data"]["rows"]:
+            try:
+                cap = float(r.get("marketCap") or 0)
+            except ValueError:
+                continue
+            sym = (r.get("symbol") or "").strip().replace("/", "-")
+            if cap >= MIN_CAP and sym and "^" not in sym and " " not in sym:
+                out.append((sym, r.get("name", ""), cap))
+        out.sort(key=lambda x: -x[2])
+        if len(out) > 300:
+            UNIVERSE_CACHE.write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+        return out
+    except Exception as e:
+        print("나스닥 스크리너 실패 → 저장해 둔 명단 사용:", type(e).__name__, e, file=sys.stderr)
         try:
-            cap = float(r.get("marketCap") or 0)
-        except ValueError:
-            continue
-        sym = (r.get("symbol") or "").strip().replace("/", "-")
-        if cap >= MIN_CAP and sym and "^" not in sym and " " not in sym:
-            out.append((sym, r.get("name", ""), cap))
-    return sorted(out, key=lambda x: -x[2])
+            out = [tuple(x) for x in json.loads(UNIVERSE_CACHE.read_text(encoding="utf-8"))]
+        except (OSError, ValueError):
+            raise e
+        if len(out) < 300:
+            raise e
+        return out
 
 
 def fetch_bars(item, tries=3):

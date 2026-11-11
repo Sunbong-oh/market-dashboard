@@ -5,6 +5,7 @@
 !/.github/
 !/trigger/
 !/newhighs.py
+!/newhighs_universe.json
 !/company_ko.py
 !/market_calendar.json
 !/newsimpact.py
