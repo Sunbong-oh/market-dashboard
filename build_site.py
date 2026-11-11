@@ -1482,14 +1482,10 @@ def _strong_title(its):
 
 def kr_until(it):
     """한국시장 강세종목을 홈에서 내릴 시각 (한국도 아시아 시장: 일본·중국·홍콩과 같은 규칙).
-    - 장 마감(15:30) 뒤에 올린 것(전날 장 자료): 올린 뒤 첫 평일 09:00 (다음 날 장이 열리면 내린다)
-    - 장중(15:30 전)에 올린 것(그날 자료): 그날 15:30
-    posted(KST) 가 없으면 등록일 다음 평일 09:00."""
+    한국 종목은 장 마감(15:30) 뒤에 올린다(장중에 말해도 분석만 해 두고 15:30 이후 게시, 사용자 지시 2026-11-11).
+    그래서 올린 뒤 첫 평일 09:00(다음 날 장이 열릴 때)에 내린다. posted(KST) 가 없으면 등록일 다음 평일 09:00."""
     if it.get("posted"):
-        t = datetime.strptime(it["posted"][:16], "%Y-%m-%d %H:%M")
-        if t.weekday() < 5 and t.strftime("%H:%M") < "15:30":
-            return f"{t.date()}T15:30:00+09:00"
-        d = t.date() + timedelta(days=1)
+        d = datetime.strptime(it["posted"][:10], "%Y-%m-%d").date() + timedelta(days=1)
     else:
         d = datetime.strptime(it["date"], "%Y-%m-%d").date() + timedelta(days=1)
     while d.weekday() >= 5:
