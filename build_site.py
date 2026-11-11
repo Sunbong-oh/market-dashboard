@@ -265,7 +265,8 @@ def embed_html(html, btc_live=False):
     if btc_live:
         i = html.lower().rfind("</body>")
         html = html[:i] + BTC_LIVE + html[i:] if i >= 0 else html + BTC_LIVE
-    tag = '<base target="_top">'
+    # 휴대폰 글자 크기를 키운 기기에서 카드가 조금이라도 넘치면 안쪽 화면이 옆으로 끌려가 왼쪽 글자가 잘렸다 → 가로 이동을 막는다
+    tag = '<base target="_top"><style>html,body{overflow-x:hidden!important;max-width:100%}</style>'
     m = re.search(r"<head[^>]*>", html, re.I)
     return html[:m.end()] + tag + html[m.end():] if m else tag + html
 
