@@ -2307,7 +2307,8 @@ EARN_CSS = """
 .earn h2 .pvb{display:inline-block;font-size:12px;font-weight:800;color:#fff;background:var(--muted);border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:2px}
 .earn .vd{font-size:15px;font-weight:800;color:var(--up);margin:4px 0 8px}
 .earn table{width:100%;border-collapse:collapse;font-size:14px}.earn td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
-.earn td:first-child{color:var(--muted);font-weight:700;white-space:nowrap}.earn td.v{font-weight:800;white-space:nowrap}
+.earn td:first-child{color:var(--muted);font-weight:700;white-space:nowrap}.earn td.v{font-weight:800}.earn td.c{overflow-wrap:anywhere}
+.home{max-width:100%;overflow-x:clip}
 .earn td.c{color:var(--muted);font-size:12.5px;line-height:1.45}.earn .j{color:var(--text);font-size:13px}
 .earn h3{font-size:14.5px;margin:12px 0 4px}.earn ul{margin:0;padding-left:18px;line-height:1.55;font-size:14px}
 .earn .src{font-size:12px;color:var(--muted);margin-top:8px}.earn .src a{color:var(--muted)}
