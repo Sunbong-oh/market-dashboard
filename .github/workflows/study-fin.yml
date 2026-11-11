@@ -4,7 +4,8 @@ name: 재무제표 공부 자료 (DART)
 # study_fin.py 가 OpenDART 에서 상장사별 최근 정기보고서(분기·반기·사업) 숫자를 받아 study-fin 브랜치에 저장하고,
 # site.yml 이 그 브랜치를 사이트의 /study/fin/ 에 붙인다.
 # 필요: 저장소 Secret DART_API_KEY (opendart.fss.or.kr 인증키).
-# PER·PBR: 이어서 KB증권 Open API 현재가(IVU10140)로 그날 종가 기준 값을 넣는다. Secret KB_OPENAPI_APP_KEY·KB_OPENAPI_APP_SECRET (없으면 건너뜀).
+# PER·PBR(KB증권 Open API 현재가 IVU10140)은 KB 가 GitHub 해외 서버를 막아서 여기서 받지 않고, 회사 PC 실행기에서 도는
+# study-fin-kb.yml(평일 16:30)이 이 브랜치의 자료에 따로 넣는다(2026-11-11).
 # DART 하루 한도(2만 회)를 다른 작업과 나눠 쓰도록 한 번에 6,000회까지만, 시간은 DART 55분·KB 25분까지만 쓰고 저장한다
 # (100곳마다 중간 저장). 처음 전체 채우기는 하루 반쯤 걸린다.
 # 대상: 최근 180일 안에 정기보고서를 낸 코스피·코스닥 상장사(스팩 제외). 실행 결과는 study-fin 브랜치 log.json.
@@ -40,14 +41,11 @@ jobs:
       - name: DART 에서 받기
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY || secrets.DART_KEY || secrets.OPENDART_API_KEY || vars.DART_API_KEY }}
-          # 시크릿 이름이 조금 달라도 찾도록 흔한 이름을 차례로 본다 (kb-market-report 와 같은 방식)
-          KB_OPENAPI_APP_KEY: ${{ secrets.KB_OPENAPI_APP_KEY || secrets.KB_APP_KEY || secrets.KB_APPKEY || secrets.KB_OPENAPI_KEY || vars.KB_OPENAPI_APP_KEY }}
-          KB_OPENAPI_APP_SECRET: ${{ secrets.KB_OPENAPI_APP_SECRET || secrets.KB_APP_SECRET || secrets.KB_APPSECRET || secrets.KB_OPENAPI_SECRET || vars.KB_OPENAPI_APP_SECRET }}
           PYTHONIOENCODING: utf-8
         run: |
           mkdir -p _fin
           if git fetch -q --depth 1 origin study-fin; then git archive FETCH_HEAD | tar -x -C _fin; fi
-          python study_fin.py --data _fin --kb --budget "${{ github.event.inputs.budget || '6000' }}"
+          python study_fin.py --data _fin --budget "${{ github.event.inputs.budget || '6000' }}"
       - name: study-fin 브랜치에 저장
         if: ${{ !cancelled() && hashFiles('_fin/index.json') != '' }}   # 앞 단계가 중간에 실패해도 받은 만큼은 저장
         run: |

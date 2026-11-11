@@ -467,11 +467,20 @@ def main():
     ap.add_argument("--data", required=True)
     ap.add_argument("--budget", type=int, default=6000)
     ap.add_argument("--kb", action="store_true", help="DART 다음에 KB증권 PER·PBR 도 받는다")
+    ap.add_argument("--kb-only", action="store_true", help="DART 는 건너뛰고 이미 저장된 fin/*.json 에 KB증권 PER·PBR 만 넣는다(회사 PC 실행기용)")
     ap.add_argument("--minutes", type=float, default=55, help="DART 받기 시간 상한(분) — 워크플로 제한 전에 저장하고 끝낸다")
     ap.add_argument("--kb-minutes", type=float, default=25, help="KB PER·PBR 받기 시간 상한(분)")
     ap.add_argument("--workers", type=int, default=6, help="동시에 받는 회사 수")
     ap.add_argument("--stale", type=int, default=45, help="이보다 오래된 자료는 남는 호출로 다시 받는다(자금조달 갱신)")
     a = ap.parse_args()
+    if a.kb_only:  # KB 가격만: DART 키 없이, 이미 받아 둔 자료(study-fin 브랜치)에 PER·PBR·주가를 넣는다
+        data = os.path.abspath(a.data)
+        lp = os.path.join(data, "log.json")
+        log = json.load(open(lp, encoding="utf-8")) if os.path.exists(lp) else {}
+        log["kb"] = kb_prices(data, datetime.now(KST), a.kb_minutes)
+        with open(lp, "w", encoding="utf-8") as fp:
+            json.dump(log, fp, ensure_ascii=False, indent=1)
+        return
     key = os.environ.get("DART_API_KEY", "").strip()
     if not key:
         raise SystemExit("DART_API_KEY 가 없습니다 (저장소 Settings → Secrets → Actions 에 추가).")

@@ -1,13 +1,14 @@
 name: KB증권 해외주식 시세
 
 # KB증권 Open API 해외주식 현재가(GSS10030)·일봉(GSC10060)을 받아 kb-px 브랜치에 저장한다(kb_overseas.py).
-# Claude 작업 환경에서는 KB 서버가 연결을 끊어서(IP 제한 추정) 같은 키가 되는 Actions 에서 받는다.
+# KB 가 해외 IP 를 막아서(GitHub 해외 서버·Claude 작업 환경 모두) 한국 IP 인 회사 PC 실행기에서 받는다(2026-11-11).
+# PC 는 평일 08:10~17:00 에만 켜져 있어 예약을 08:20 으로 늦췄다(전과 같은 미국 마감 값).
 # 결과: https://raw.githubusercontent.com/sunbong-oh/market-dashboard/kb-px/us/<티커>.json  (목록 index.json, 실행 결과 log.json)
 # 리포트 작업 중 새 종목이 필요하면 workflow_dispatch 로 tickers 에 "NVDA,BRK.B:NYS" 처럼 넣고 돌린다(1~2분).
 # 조회 TR 만 쓴다. 주문·정정·취소·잔고 TR 은 부르지 않는다.
 on:
   schedule:
-    - cron: "20 21 * * 1-5"   # 화~토 06:20 KST (미국 정규장 마감 뒤) — 기본 목록(kb_overseas_tickers.txt + 강세종목)
+    - cron: "20 23 * * 1-5"   # 화~토 08:20 KST (PC 가 켜진 직후, 미국 정규장 마감 뒤) — 기본 목록(kb_overseas_tickers.txt + 강세종목)
   workflow_dispatch:
     inputs:
       tickers:
@@ -27,21 +28,26 @@ concurrency:
 
 jobs:
   px:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # PC 에 설치된 gh·Git 의 bash 를 이 작업 안에서만 경로에 더한다 (파이썬은 PC 것을 그대로 씀)
+      - name: 경로 설정
+        shell: cmd
+        run: |
+          echo C:\Program Files\GitHub CLI>> "%GITHUB_PATH%"
+          echo C:\Program Files\Git\bin>> "%GITHUB_PATH%"
       - name: KB 에서 받기
         env:
           KB_OPENAPI_APP_KEY: ${{ secrets.KB_OPENAPI_APP_KEY || secrets.KB_APP_KEY || secrets.KB_APPKEY || secrets.KB_OPENAPI_KEY || vars.KB_OPENAPI_APP_KEY }}
           KB_OPENAPI_APP_SECRET: ${{ secrets.KB_OPENAPI_APP_SECRET || secrets.KB_APP_SECRET || secrets.KB_APPSECRET || secrets.KB_OPENAPI_SECRET || vars.KB_OPENAPI_APP_SECRET }}
           KB_TICKERS: ${{ github.event.inputs.tickers }}
           PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
+        shell: bash
         run: |
           mkdir -p _kbpx
           if git fetch -q --depth 1 origin kb-px; then git archive FETCH_HEAD | tar -x -C _kbpx; fi
@@ -49,6 +55,7 @@ jobs:
           python kb_overseas.py --data _kbpx $ONLY
       - name: kb-px 브랜치에 저장
         if: ${{ !cancelled() && hashFiles('_kbpx/log.json') != '' }}
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
