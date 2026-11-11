@@ -68,6 +68,19 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
   +100% 과열에선 실적 가속이면 눌림(+23.8%, 23건) → 그래서 매도 신호는 +200%에서만. 🔴·🟠면 홈 신호등 줄에도.
 - 켜지면 할 일은 `ACTIONS`(사용자가 바꾸면 여기만). 기준값을 바꾸면 페이지의 과거 성적도 같이 바뀐다. 텔레그램 알림은 보내지 않는다(규칙상 실적 카드·시간외만).
 
+## 회사 PC 실행기 (KB증권 Open API) — 2026-11-11 시작
+- 이유: KB증권이 해외 IP 접속을 막아 GitHub 해외(미국) 서버에서 KB 접속이 시간 초과로 끊긴다(11/9~). 회사 PC(한국 IP)에서는 된다(kb-market-report `kb-pc-probe.yml` 수동 실행으로 확인).
+- PC: 컴퓨터 이름 `KVID-101007`(윈도 계정 se10025). **평일 08:10에 켜지고 17:00에 꺼진다**(사용자 말). Python 3.14·Git 설치됨. `gh` 는 `C:\Program Files\GitHub CLI` 에 있지만 PC 경로(PATH)에 없어서 작업 파일에서 `GITHUB_PATH` 에 더한다.
+- GitHub 실행기(self-hosted runner): kb-market-report 저장소에 등록, 이름 `KVID-101007`, 라벨 `self-hosted, windows`, 폴더 `C:\Users\se10025\actions-runner`.
+  · 윈도 서비스로는 안 켜진다(회사 PC 권한) → 서비스는 Disabled, `run.cmd` 를 창으로 켠다. 로그인할 때 자동으로 뜨게 `start_runner.bat`(actions-runner 폴더) 을 시작 프로그램 폴더(`shell:startup`)에 넣어 두었다. 같은 실행기를 두 군데서 켜면 `session already exists` 오류.
+  · 실행기는 한 번에 작업 하나만 한다. 장중 수급 작업이 08:10~16:05 내내 점유하므로 그 시간에는 다른 KB 작업을 PC에서 못 돌린다.
+- PC 실행기로 옮긴 것: **장중 수급 `live-snapshot.yml`**(`runs-on: [self-hosted, windows]`, 단계는 `shell: cmd`). PC가 꺼져 있으면 작업이 대기하고, 그 시간엔 홈페이지 수급이 갱신되지 않는다.
+- **장마감 리포트**(`close-report.yml`)는 GitHub 서버에서 그대로 돌되 KB에 직접 접속하지 않는다: 장중 수급 작업이 저장한 flow-live 의 오늘 마지막 기록(15:30 이후)으로 화면 사진 3장·스냅샷을 만든다(`report.py`, 옛 방식은 `--live-server`). 기록이 오늘 것이 아니면 KB 서버 방식으로 돌아간다.
+- 아직 GitHub 해외 서버에서 KB를 쓰는 작업(막힐 수 있음): `kb-px.yml`(06:20, 미국 종목 시세), `site.yml`(위험신호 일봉, 안 되면 네이버로 대체), `study-fin.yml`(21:40, 종목 현재가). 이것들은 PC가 꺼져 있는 시간이라, 옮기려면 시각을 PC 시간(예: kb-px 08:20, study-fin 16:30)으로 바꿔야 한다.
+- 장중 수급 작업은 KB가 안 될 때 네이버·다음 값으로 대신 채운다(08:00부터, `live_snapshot.py` `fallback_market`). 지금은 PC 실행기에서 도므로 PC가 꺼진 시간은 비어 있다.
+- 52주 신고가: 나스닥 스크리너 API 가 GitHub 서버를 403 으로 막는 날이 있어 `newhighs_universe.json`(마지막으로 받은 명단)으로 계산한다. 가끔 회사 PC 에서 `python newhighs.py` 를 돌려 이 파일을 갱신해 커밋한다(월 1회 정도).
+- 문제가 생기면: GitHub 실행기 화면(Settings → Actions → Runners)에서 Idle/Active 인지, `kb-pc-probe.yml` 을 수동 실행해 KB 연결·`gh`·Python 이 되는지 본다.
+
 ## 실적 속보 카드 (earnings_flash/)
 - 파일 `earnings_flash/<YYYYMMDD(발표 KST 날짜)>-<한글 회사명>.json`. 형식은 기존 카드(메타·테슬라·넷플릭스)와 같게:
   day, time(KST), company, period, verdict, rows[[항목, 값, 비교, 판정]], guidance[], sym[[야후심볼, 표시 이름]], sources[[제목, URL]], px.
