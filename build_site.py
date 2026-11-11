@@ -1481,20 +1481,24 @@ def _strong_title(its):
 
 
 def kr_until(it):
-    """한국시장 강세종목을 홈에서 내릴 시각: 올린 시각(posted, KST) 다음에 오는 첫 장 마감(평일 15:30).
-    posted 가 없으면 등록일 다음 평일 15:30 (일찍 내리지 않게)."""
+    """한국시장 강세종목을 홈에서 내릴 시각 (한국도 아시아 시장: 일본·중국·홍콩과 같은 규칙).
+    - 장 마감(15:30) 뒤에 올린 것(전날 장 자료): 올린 뒤 첫 평일 09:00 (다음 날 장이 열리면 내린다)
+    - 장중(15:30 전)에 올린 것(그날 자료): 그날 15:30
+    posted(KST) 가 없으면 등록일 다음 평일 09:00."""
     if it.get("posted"):
         t = datetime.strptime(it["posted"][:16], "%Y-%m-%d %H:%M")
-        d = t.date() if t.strftime("%H:%M") < "15:30" else t.date() + timedelta(days=1)
+        if t.weekday() < 5 and t.strftime("%H:%M") < "15:30":
+            return f"{t.date()}T15:30:00+09:00"
+        d = t.date() + timedelta(days=1)
     else:
         d = datetime.strptime(it["date"], "%Y-%m-%d").date() + timedelta(days=1)
     while d.weekday() >= 5:
         d += timedelta(days=1)
-    return f"{d}T15:30:00+09:00"
+    return f"{d}T09:00:00+09:00"
 
 
 def strong_gone(it):
-    """홈에서 내리는 시각: 한국시장 종목은 올린 뒤 첫 장 마감(kr_until), 아시아(일본·중국·홍콩)는 등록일 09:00, 미국은 등록일 22:30 KST
+    """홈에서 내리는 시각: 한국시장 종목은 kr_until(전날 장 뒤 올린 것은 다음 날 09:00), 아시아(일본·중국·홍콩)는 등록일 09:00, 미국은 등록일 22:30 KST
     (그날 밤 미국장이 열리기 전에 '전일' 리포트를 내린다. 그 뒤 새 리포트가 없으면 칸이 빈다)."""
     if "한국" in (it.get("region") or ""):
         return kr_until(it)
