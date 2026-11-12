@@ -1,4 +1,5 @@
-"""홈: 네이버 기준 실시간 수급(KB 화면과 비교용) · 글로벌 지수 (2026-11-12 시작).
+"""별도 페이지 /naver/ : 네이버 기준 실시간 수급(KB 화면과 비교용) · 글로벌 지수 (2026-11-12 시작).
+홈·메뉴에는 연결하지 않는다(사용자 지시 2026-11-12: 홈은 그대로 두고 따로 만들어 비교).
 
 자료는 kb-market-report 의 naver_flow.py(naver-flow.yml, GitHub 서버)가 평일 08:30~17:20 1분마다
 naver-live 브랜치 naver.json 에 올린다. 화면은 보는 사람 브라우저가 1분마다 읽어 다시 그린다(KB 접속 없음).
@@ -12,8 +13,6 @@ NAVER_SRC = ("https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/nave
 KB_SRC = ("https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/snapshot.json",)
 
 CSS = """<style>
-.home>#naver,.home>#world{order:0}
-.close-first .home>#naver,.close-first .home>#world{order:-1}
 .nvb{background:#fff;color:#1c2330;border:1px solid #e3e6ec;border-radius:14px;padding:16px 18px;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif}
 .nvb+.nvb{margin-top:12px}
 .nvb h3{margin:0 0 4px;font-size:17px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -113,7 +112,7 @@ def home(fut_css: str, fut_js: str) -> str:
     js = JS.replace("__SRC__", json.dumps(NAVER_SRC)).replace("__KB__", json.dumps(KB_SRC))
     return (f'{CSS}{fut_css}'
             '<section class="sec" id="naver"><div class="sec-h"><h2>🟢 네이버 기준 수급 <small style="font-size:13px;color:var(--muted);font-weight:600"></small></h2>'
-            '<span style="font-size:12.5px;color:var(--muted)">KB와 비교용</span></div>'
+            '</div>'
             '<div class="nvb nv-inv"><p class="note">네이버 수급을 불러오는 중…</p></div>'
             '<div class="nvb"><div class="box fut nv-fut"><h3>외국인 수급 × 지수 교차차트 (분 단위)</h3><div></div></div>'
             '</div>'
@@ -121,3 +120,26 @@ def home(fut_css: str, fut_js: str) -> str:
             '<section class="sec" id="world" hidden><div class="sec-h"><h2>🌏 글로벌 지수</h2><span class="wt" style="font-size:12.5px;color:var(--muted)"></span></div>'
             '<div class="wg"></div><p style="font-size:12px;color:var(--muted);margin:8px 2px 0">미국·일본·중국·홍콩·대만 대표 지수 · 그래프는 최근 약 한 달(일별 종가) · 출처 네이버 증권</p></section>'
             f'{fut_js}{js}')
+
+
+PAGE = """<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>실시간 수급 (네이버)</title><meta name="robots" content="noindex">
+<style>:root{--muted:#6b7385}
+body{margin:0;background:#f4f5f7;color:#1c2330;font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif}
+.top{background:#1c2330;color:#fff;padding:14px 16px}.top b{color:#ffd43b;font-size:18px}.top div{font-size:12.5px;color:#c9d1de;margin-top:3px}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+.sec{margin-top:22px}.sec:first-child{margin-top:0}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 10px}.sec-h h2{margin:0;font-size:20px}
+footer{margin:28px 0 8px;color:#6b7385;font-size:12.5px;line-height:1.6}
+</style></head><body>
+<div class="top"><b>📈 실시간 수급 · 네이버</b><div>KB증권 없이 네이버 증권 자료만으로 만든 비교용 페이지</div></div>
+<div class="wrap">__BODY__
+<footer>자료: 네이버 증권(투자자별 매매동향·분봉·해외지수). GitHub 서버가 평일 08:30~17:20 1분마다 받아 올립니다.
+참고용 자료이며 투자 판단의 근거가 아닙니다. 투자 결과의 책임은 투자자 본인에게 있습니다.</footer></div></body></html>"""
+
+
+def build(out, fut_css: str, fut_js: str) -> None:
+    d = out / "naver"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "index.html").write_text(PAGE.replace("__BODY__", home(fut_css, fut_js)), encoding="utf-8")

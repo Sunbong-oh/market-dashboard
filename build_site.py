@@ -2538,7 +2538,6 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None, 
             f'<section class="sec" id="daily">{s1}</section>'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
-            f'{naver_live.home(FUT_CSS, FUT_JS)}'
             f'{play_page.home_section(kospi_hist or [], VISIT_API, VISIT_NS)}{quiz_home(news_quiz(now, target, strong))}{tools_home()}</div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
@@ -2645,6 +2644,7 @@ def main():
     play_page.build(OUT, page, now, VISIT_API, VISIT_NS)
     play_page.build_lab(OUT, page)
     risk = risk_page.build(OUT, page, now)
+    naver_live.build(OUT, FUT_CSS, FUT_JS)  # 홈·메뉴와 연결하지 않은 별도 페이지 /naver/
     build_home(now, daily, close, live, target, us, strong, play_page.kospi_history(), risk)
     print(json.dumps({"out": str(OUT), "daily": daily and daily["day"], "close": close and close["day"], "target": target and target["day"],
                       "us": us and us["day"], "study": study,
