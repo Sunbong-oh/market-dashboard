@@ -113,6 +113,7 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 ## 실적발표 종목 (/reports/) 한 줄 설명
 - 종목명 아래 설명은 `company_ko.py` 의 `KR_COMPANY`(종목코드 → 한 줄, 약 40자)에서 온다. 새 보고서 종목이 생기면 한 줄 추가하고 merge 한다.
 - 없는 종목은 화면이 보고서 HTML 의 '주요 사업' 첫 문장을 대신 보여 준다(길면 잘림).
+- 카드 모양(사용자 지시 2026-11-12 '실적발표카드처럼'): index.json 의 `lines`(kb surge_report `card_lines` = 홈 실적 급증 카드와 같은 ▶ 줄: 전분기 대비·컨센 대비[어닝 서프라이즈]·매출·전년 동기)가 있으면 빨간 띠 카드로 그린다(`REPORT_JS`, `.rp.hot`). 없으면 옛 한 줄 모양.
 
 ## 오늘의 주식 퀴즈 (홈, 계산기·공부 바로 위)
 - 날마다 4문제: **오늘의 소식** 3개 + 주식 상식(`quiz/questions.json`) 또는 용어(`study/terms.json`) 1개. 보는 사람 브라우저가 한국 날짜로 골라 자정에 바뀐다.
