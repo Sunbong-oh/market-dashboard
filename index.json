@@ -1,0 +1,380 @@
+[
+{
+"ticker": "AAOI",
+"krx_cd": "NAS",
+"name": "어플라이드 옵토일렉트로닉스",
+"price": 71.94,
+"pct": 6.56,
+"days": 600,
+"fetched": "2026-10-27 05:26 KST"
+},
+{
+"ticker": "AAPL",
+"krx_cd": "NAS",
+"name": "애플",
+"price": 349.51,
+"pct": 5.31,
+"days": 600,
+"fetched": "2026-11-05 07:39 KST"
+},
+{
+"ticker": "AMZN",
+"krx_cd": "NAS",
+"name": "아마존닷컴",
+"price": 266.03,
+"pct": 6.12,
+"days": 600,
+"fetched": "2026-11-05 07:39 KST"
+},
+{
+"ticker": "BABA",
+"krx_cd": "NYS",
+"name": "알리바바 그룹 홀딩(ADR)",
+"price": 108.07,
+"pct": 2.64,
+"days": 600,
+"fetched": "2026-11-06 09:11 KST"
+},
+{
+"ticker": "BE",
+"krx_cd": "NYS",
+"name": "블룸 에너지",
+"price": 214.004,
+"pct": 9.05,
+"days": 600,
+"fetched": "2026-11-04 06:05 KST"
+},
+{
+"ticker": "BLNK",
+"krx_cd": "NAS",
+"name": "블링크 차징",
+"price": 0.4262,
+"pct": 6.42,
+"days": 600,
+"fetched": "2026-11-03 06:17 KST"
+},
+{
+"ticker": "CHPT",
+"krx_cd": "NYS",
+"name": "차지포인트 홀딩스",
+"price": 9.88,
+"pct": 3.56,
+"days": 600,
+"fetched": "2026-11-03 06:17 KST"
+},
+{
+"ticker": "CIEN",
+"krx_cd": "NYS",
+"name": "시에나",
+"price": 335.93,
+"pct": 4.89,
+"days": 600,
+"fetched": "2026-10-27 05:26 KST"
+},
+{
+"ticker": "COHR",
+"krx_cd": "NYS",
+"name": "코히어런트",
+"price": 230.14,
+"pct": -1.86,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "CRWV",
+"krx_cd": "NAS",
+"name": "코어위브",
+"price": 57.89,
+"pct": -4.74,
+"days": 409,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "DD",
+"krx_cd": "NYS",
+"name": "듀폰",
+"price": 155.61,
+"pct": 0.0,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "EEM",
+"krx_cd": "AMX",
+"name": "ISHARES MSCI EMERGING MARKETS",
+"price": 62.0,
+"pct": 0.29,
+"days": 600,
+"fetched": "2026-10-27 17:48 KST"
+},
+{
+"ticker": "ETN",
+"krx_cd": "NYS",
+"name": "이턴 코퍼레이션",
+"price": 391.51,
+"pct": 6.95,
+"days": 600,
+"fetched": "2026-11-04 06:05 KST"
+},
+{
+"ticker": "EVGO",
+"krx_cd": "NAS",
+"name": "EV GO",
+"price": 1.84,
+"pct": 0.0,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "EWT",
+"krx_cd": "AMX",
+"name": "ISHARES MSCI TAIWAN CAPPED",
+"price": 105.73,
+"pct": 0.11,
+"days": 600,
+"fetched": "2026-10-27 17:48 KST"
+},
+{
+"ticker": "EWY",
+"krx_cd": "AMX",
+"name": "ISHARES MSCI SOUTH KOREA CAPPED",
+"price": 154.58,
+"pct": 1.22,
+"days": 600,
+"fetched": "2026-10-27 17:48 KST"
+},
+{
+"ticker": "GEV",
+"krx_cd": "NYS",
+"name": "GE 버노바",
+"price": 806.04,
+"pct": -0.27,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "GOOGL",
+"krx_cd": "NAS",
+"name": "알파벳 A",
+"price": 288.93,
+"pct": 3.18,
+"days": 600,
+"fetched": "2026-11-05 07:39 KST"
+},
+{
+"ticker": "IONQ",
+"krx_cd": "NYS",
+"name": "아이온큐",
+"price": 33.35,
+"pct": -2.08,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "KBH",
+"krx_cd": "NYS",
+"name": "KB 홈",
+"price": 50.04,
+"pct": 0.0,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "LITE",
+"krx_cd": "NAS",
+"name": "루멘텀 홀딩스",
+"price": 639.0,
+"pct": -1.4,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "LLY",
+"krx_cd": "NYS",
+"name": "일라이 릴리",
+"price": 1448.7,
+"pct": 0.79,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "META",
+"krx_cd": "NAS",
+"name": "메타 플랫폼스(페이스북)",
+"price": 630.0,
+"pct": 1.44,
+"days": 600,
+"fetched": "2026-11-05 07:39 KST"
+},
+{
+"ticker": "MSFT",
+"krx_cd": "NAS",
+"name": "마이크로소프트",
+"price": 521.34,
+"pct": 0.12,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "MU",
+"krx_cd": "NAS",
+"name": "마이크론 테크놀로지",
+"price": 912.0,
+"pct": 0.92,
+"days": 600,
+"fetched": "2026-10-27 17:48 KST"
+},
+{
+"ticker": "NBIS",
+"krx_cd": "NAS",
+"name": "네비우스 그룹",
+"price": 153.0,
+"pct": -1.09,
+"days": 559,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "NVDA",
+"krx_cd": "NAS",
+"name": "엔비디아",
+"price": 200.13,
+"pct": -3.17,
+"days": 600,
+"fetched": "2026-11-05 07:39 KST"
+},
+{
+"ticker": "NVO",
+"krx_cd": "NYS",
+"name": "노보노디스크(ADR)",
+"price": 40.8,
+"pct": -0.71,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "NVT",
+"krx_cd": "NYS",
+"name": "엔벤트 일렉트릭",
+"price": 140.15,
+"pct": 4.18,
+"days": 600,
+"fetched": "2026-10-29 05:13 KST"
+},
+{
+"ticker": "OKLO",
+"krx_cd": "NYS",
+"name": "오클로",
+"price": 25.71,
+"pct": -0.58,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "PANW",
+"krx_cd": "NAS",
+"name": "팔로 알토 네트웍스",
+"price": 334.5,
+"pct": 0.01,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "QQQ",
+"krx_cd": "NAS",
+"name": "INVESCO QQQ TRUST",
+"price": 686.61,
+"pct": -0.55,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "SERV",
+"krx_cd": "NAS",
+"name": "서브 로보틱스",
+"price": 3.165,
+"pct": 0.0,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "SNDK",
+"krx_cd": "NAS",
+"name": "샌디스크",
+"price": 1258.107,
+"pct": 0.2,
+"days": 422,
+"fetched": "2026-10-27 17:48 KST"
+},
+{
+"ticker": "SOXX",
+"krx_cd": "NAS",
+"name": "ISHARES SEMICONDUCTOR",
+"price": 490.6103,
+"pct": -0.25,
+"days": 600,
+"fetched": "2026-10-27 17:48 KST"
+},
+{
+"ticker": "SPCX",
+"krx_cd": "NAS",
+"name": "스페이스X",
+"price": 139.9,
+"pct": 0.11,
+"days": 106,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "SPY",
+"krx_cd": "AMX",
+"name": "SS SPDR S&P 500 TRUST",
+"price": 757.72,
+"pct": -0.28,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "TSLA",
+"krx_cd": "NAS",
+"name": "테슬라",
+"price": 388.3,
+"pct": -0.65,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "TSM",
+"krx_cd": "NYS",
+"name": "TSMC(ADR)",
+"price": 423.0278,
+"pct": -0.32,
+"days": 600,
+"fetched": "2026-10-27 17:48 KST"
+},
+{
+"ticker": "ULTA",
+"krx_cd": "NAS",
+"name": "울타 뷰티",
+"price": 659.08,
+"pct": 0.0,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "VRT",
+"krx_cd": "NYS",
+"name": "버티브 홀딩스",
+"price": 206.01,
+"pct": -0.24,
+"days": 600,
+"fetched": "2026-11-12 11:16 KST"
+},
+{
+"ticker": "WDC",
+"krx_cd": "NAS",
+"name": "웨스턴 디지털",
+"price": 355.72,
+"pct": -0.12,
+"days": 600,
+"fetched": "2026-10-27 17:48 KST"
+}
+]
