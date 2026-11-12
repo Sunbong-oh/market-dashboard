@@ -704,7 +704,7 @@ function futChart(el,d,live){
  if(hf&&S==='fut'){var RATIO=100,span=Math.max(sf.hi-sf.lo,(sg.hi-sg.lo)/RATIO),fm=(sf.hi+sf.lo)/2,gm=(sg.hi+sg.lo)/2;
   var mk=function(lo,hi){return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
   sf=mk(fm-span/2,fm+span/2);sg=mk(gm-span*RATIO/2,gm+span*RATIO/2)}
- var path=function(ps,y){return 'M'+ps.map(function(p){return x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)}).join(' L')};
+ var path=function(ps,y){var o="",q=null;ps.forEach(function(p){o+=(q===null||p[0]-q>5?" M":" L")+x(p[0]).toFixed(1)+","+y(p[1]).toFixed(1);q=p[0]});return o.trim()};
  var n0=function(v){return Math.round(v).toLocaleString('ko-KR')},sg0=function(v){return (v>0?'+':v<0?'-':'')+n0(Math.abs(v))};
  var f2=function(v){return v.toLocaleString('ko-KR',{minimumFractionDigits:2,maximumFractionDigits:2})};
  var step=[15,30,60,90].filter(function(s){return END/s<=6})[0]||90,tk=[];
