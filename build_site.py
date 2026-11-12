@@ -2437,8 +2437,10 @@ def earn_card(e, key):
     src = " · ".join(f'<a href="{escape(u)}" target="_blank" rel="noopener">{escape(t)}</a>' for t, u in e.get("sources") or [])
     ts = f'{e["day"]}T{e.get("time") or "00:00"}:00+09:00'
     return (f'<div class="earn" data-day="{escape(e["day"])}" data-ts="{escape(ts)}" data-key="{escape(key)}"><h2>📊 실적 속보 · <span class="cn">{escape(e["company"])}</span>'
-            f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time", ""))} 발표</small></h2>'
-            f'<div class="vd">{escape(e.get("verdict", ""))}</div><table>{rows}</table>{earn_px_html(e)}'
+            f'<small>{escape(e["period"])} · {escape(e["day"][5:].replace("-", "/"))} {escape(e.get("time_label") or (e.get("time", "") + " 발표"))}</small></h2>'
+            f'<div class="vd">{escape(e.get("verdict", ""))}</div>'
+            + (f'<div class="rptw"><a class="rpt" href="{escape(e["report"])}" target="_blank" rel="noopener">📑 종목 보고서 보기</a><span class="rpt-tap">&lt;-- 터치!!</span></div>' if e.get("report") else "")
+            + f'<table>{rows}</table>{earn_px_html(e)}'
             + (f"<h3>향후 가이던스</h3><ul>{guide}</ul>" if guide else "")
             + (f'<div class="src">출처: {src}</div>' if src else "") + "</div>")
 
