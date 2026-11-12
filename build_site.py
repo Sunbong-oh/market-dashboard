@@ -1691,6 +1691,7 @@ REPORT_CSS = """
 .rp-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px}
 /* 카드 요약 줄(lines)이 있는 종목: 홈의 실적 급증 카드와 같은 모양 (빨간 띠 · ▶ 줄 · 어닝 서프라이즈 빨강) */
 .rp.hot{border-left-color:#e03131;display:block;padding:14px 16px}
+.rp.hot.shock{border-left-color:var(--down)}
 .rp.hot .hd{font-size:18px;font-weight:800;line-height:1.35}.rp.hot .hd small{font-size:13.5px;color:var(--text);opacity:.8;font-weight:700;margin-left:6px}
 .rp.hot .ds{margin:4px 0 6px}
 .rp .ln{font-size:14.5px;font-weight:800;margin:3px 0;line-height:1.5;word-break:keep-all}.rp .ln .cs{font-weight:900}.rp .ln .sp{color:var(--up)}.rp .ln .sh{color:var(--down)}
@@ -1706,7 +1707,8 @@ REPORT_JS = r"""<script>
  function draw(rows){if(!rows||!rows.length){box.innerHTML='<p class="err">아직 만든 보고서가 없습니다. 실적 급증 카드가 나가면 몇 분 뒤 여기에 생깁니다.</p>';return}
   var last='',h='';rows.forEach(function(r){if(r.day!==last){last=r.day;h+='<div class="rp-day">'+e(r.day)+'</div>'}
    var chg=r.turn?'<b class="up">흑자전환</b>':(r.chg!=null?'<b class="up">'+(r.chg>0?'+':'')+r.chg.toFixed(1)+'%%</b>':'');
-   if((r.lines||[]).length){h+='<div class="rp hot"><div class="hd">🚀 영업이익 급증 · '+e(r.name)+'<small>'+e(r.code)+(r.period?' · '+e(r.period)+' 잠정':'')+'</small></div>'+
+   if((r.lines||[]).length){var sk=r.kind==='shock';  /* kind 'shock' = 컨센 대비 어닝 쇼크 종목(직접 올린 분기보고서 분석) */
+    h+='<div class="rp hot'+(sk?' shock':'')+'"><div class="hd">'+(sk?'📉 어닝 쇼크':'🚀 영업이익 급증')+' · '+e(r.name)+'<small>'+e(r.code)+(r.period?' · '+e(r.period)+(sk?'':' 잠정'):'')+'</small></div>'+
     '<div class="ds" data-day="'+e(r.day)+'" data-code="'+e(r.code)+'">'+e(DESC[r.code]||'')+'</div>'+
     r.lines.map(function(l){return '<div class="ln">▶ '+tag(e(l))+'</div>'}).join('')+
     '<a class="go" href="'+e(rp(r.pdf))+'" target="_blank" rel="noopener">📑 보고서 열기</a></div>';return}
