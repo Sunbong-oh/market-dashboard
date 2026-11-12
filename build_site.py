@@ -30,6 +30,7 @@ import dashboard as d
 import study_page
 import play_page
 import risk_page
+import naver_live
 from company_ko import KR_COMPANY, describe, sector_ko
 
 ROOT = Path(__file__).resolve().parent
@@ -738,7 +739,7 @@ function futChart(el,d,live){
   '<b style="color:#495057">━ '+NM+'</b> (좌) '+f2(last)+'<br><span style="font-size:12px">'+(S==='fut'?'※ 주간장 기준(08:45~15:45) · 야간장 미포함 — MTS·HTS 투자자동향(야간 포함)과 다를 수 있음':
   '※ 정규장 당일 누적(억원) · 두 선은 각자 범위에 맞춰 그림'+(hf?'':' · 외국인 현물 분 단위 기록은 10/27 장부터 쌓여요'))+'</span></p>'+svg+
   '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 1분마다 기록, 화면은 1~2분마다 자동 갱신':
-  (hf?'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)':'외국인 분 단위 추이는 회사 PC 기록이 있는 날부터 함께 그려집니다'))+'</p>';
+  (d.note||(hf?'회사 PC 서버가 08:45~15:45 1분마다 기록한 값 (서버가 꺼져 있던 시간은 비어 있음)':'외국인 분 단위 추이는 회사 PC 기록이 있는 날부터 함께 그려집니다')))+'</p>';
  return true}
 </script>"""
 
@@ -2537,6 +2538,7 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None, 
             f'<section class="sec" id="daily">{s1}</section>'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
+            f'{naver_live.home(FUT_CSS, FUT_JS)}'
             f'{play_page.home_section(kospi_hist or [], VISIT_API, VISIT_NS)}{quiz_home(news_quiz(now, target, strong))}{tools_home()}</div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
