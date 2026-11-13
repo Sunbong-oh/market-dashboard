@@ -1,0 +1,60 @@
+name: 재무제표 공부 KB 가격 (회사 PC 실행기)
+
+# study-fin 브랜치의 종목 자료(fin/*.json)에 KB증권 Open API 현재가(IVU10140)로 PER·PBR·주가를 넣는다.
+# KB 가 GitHub 해외 서버를 막아서 한국 IP 인 회사 PC 실행기에서 돌린다(평일 16:30 KST, PC 가 꺼지는 17:00 전에 끝남).
+# DART 숫자는 study-fin.yml(GitHub 서버)이 받는다. 둘이 같은 브랜치를 쓰므로 같은 concurrency 그룹으로 겹치지 않게 한다.
+on:
+  schedule:
+    - cron: "30 7 * * 1-5"   # 평일 16:30 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: study-fin
+  cancel-in-progress: false
+
+jobs:
+  kb:
+    runs-on: [self-hosted, windows]
+    timeout-minutes: 40
+    env:
+      KB_OPENAPI_APP_KEY: ${{ secrets.KB_OPENAPI_APP_KEY || secrets.KB_APP_KEY || secrets.KB_APPKEY || secrets.KB_OPENAPI_KEY || vars.KB_OPENAPI_APP_KEY }}
+      KB_OPENAPI_APP_SECRET: ${{ secrets.KB_OPENAPI_APP_SECRET || secrets.KB_APP_SECRET || secrets.KB_APPSECRET || secrets.KB_OPENAPI_SECRET || vars.KB_OPENAPI_APP_SECRET }}
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      # PC 에 설치돼 있지만 경로에 없는 gh·Git 의 bash 를 이 작업 안에서만 경로에 더한다
+      - name: 경로 설정
+        shell: cmd
+        run: |
+          echo C:\Program Files\GitHub CLI>> "%GITHUB_PATH%"
+          echo C:\Program Files\Git\bin>> "%GITHUB_PATH%"
+      - name: KB 가격 넣기
+        shell: bash
+        run: |
+          mkdir -p _fin
+          git fetch -q --depth 1 origin study-fin || { echo "study-fin 브랜치가 없어 건너뜀"; exit 0; }
+          git archive FETCH_HEAD | tar -x -C _fin
+          python study_fin.py --data _fin --kb-only
+      - name: study-fin 브랜치에 저장
+        if: ${{ !cancelled() && hashFiles('_fin/index.json') != '' }}
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/fin-kb.index"
+          rm -f "$GIT_INDEX_FILE"
+          git --work-tree=_fin add -A -f .
+          commit=$(git commit-tree "$(git write-tree)" -m "study-fin: KB 가격 $(date -u -d '+9 hours' +%Y-%m-%d)")
+          git push --force origin "$commit:refs/heads/study-fin"
+      - name: 사이트 다시 만들기
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run site.yml --repo "${{ github.repository }}" --ref main
