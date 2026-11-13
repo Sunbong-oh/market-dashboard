@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+ <channel>
+  <title>출근길 미국 증시 브리핑</title>
+  <link>https://sunbong-oh.github.io/market-dashboard/</link>
+  <atom:link href="https://sunbong-oh.github.io/market-dashboard/podcast/feed.xml" rel="self" type="application/rss+xml"/>
+  <language>ko-kr</language>
+  <description>평일 아침 7시, 나스닥·주요 지표·AI 기업 급등락·전일 강세종목·52주 신고가를 음성으로 짚어 드립니다. 투자 판단의 참고용입니다.</description>
+  <itunes:author>market-dashboard</itunes:author>
+  <itunes:explicit>false</itunes:explicit>
+  <itunes:image href="https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/main/assets/pod-morning.png"/>
+  <image><url>https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/main/assets/pod-morning.png</url><title>출근길 미국 증시 브리핑</title><link>https://sunbong-oh.github.io/market-dashboard/</link></image>
+  <itunes:block>Yes</itunes:block>
+  <lastBuildDate>Sat, 14 Nov 2026 06:57:56 +0900</lastBuildDate>
+  <item>
+   <title>11/14(토) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 0.91% 하락, 2만 5100에 마감했습니다.</description>
+   <pubDate>Sat, 14 Nov 2026 06:57:56 +0900</pubDate>
+   <guid isPermaLink="false">6ff27559-9960-51f3-b418-621cb5015869</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-14-0657.mp3" length="1293840" type="audio/mpeg"/>
+   <itunes:duration>216</itunes:duration>
+  </item>
+  <item>
+   <title>11/13(금) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 0.39% 하락, 2만 5400에 마감했습니다.</description>
+   <pubDate>Fri, 13 Nov 2026 06:57:46 +0900</pubDate>
+   <guid isPermaLink="false">349a2e18-fb55-56b6-b981-4f350f3b781b</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-13-0657.mp3" length="2021472" type="audio/mpeg"/>
+   <itunes:duration>337</itunes:duration>
+  </item>
+  <item>
+   <title>11/12(목) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 1.60% 상승, 2만 5500에 마감했습니다.</description>
+   <pubDate>Thu, 12 Nov 2026 06:57:40 +0900</pubDate>
+   <guid isPermaLink="false">3fb81d4a-864e-591c-bcf3-a5d641d8ec49</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-12-0657.mp3" length="1519344" type="audio/mpeg"/>
+   <itunes:duration>253</itunes:duration>
+  </item>
+  <item>
+   <title>11/11(수) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 0.74% 하락, 2만 5100에 마감했습니다.</description>
+   <pubDate>Wed, 11 Nov 2026 06:57:53 +0900</pubDate>
+   <guid isPermaLink="false">21808861-048b-517c-ae55-a0d4888bf689</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-11-0657.mp3" length="1246608" type="audio/mpeg"/>
+   <itunes:duration>208</itunes:duration>
+  </item>
+  <item>
+   <title>11/10(화) 미국 증시 브리핑 (07:46 업데이트)</title>
+   <description> 먼저 나스닥입니다. 나스닥은 2.74% 상승, 2만 5300에 마감했습니다.</description>
+   <pubDate>Tue, 10 Nov 2026 07:46:47 +0900</pubDate>
+   <guid isPermaLink="false">ad21d865-0367-5939-bcbc-8eecae929000</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-10-0746.mp3" length="1410192" type="audio/mpeg"/>
+   <itunes:duration>235</itunes:duration>
+  </item>
+  <item>
+   <title>11/7(토) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 1.09% 상승, 2만 4600에 마감했습니다.</description>
+   <pubDate>Sat, 07 Nov 2026 06:58:28 +0900</pubDate>
+   <guid isPermaLink="false">55c2f8df-d302-5a9a-b779-d2715f4b27bc</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-07-0658.mp3" length="1731744" type="audio/mpeg"/>
+   <itunes:duration>289</itunes:duration>
+  </item>
+  <item>
+   <title>11/6(금) 미국 증시 브리핑 (07:21 업데이트)</title>
+   <description> 먼저 나스닥입니다. 나스닥은 5.52% 하락, 2만 4300에 마감했습니다.</description>
+   <pubDate>Fri, 06 Nov 2026 07:21:32 +0900</pubDate>
+   <guid isPermaLink="false">2418a753-09a7-59fa-ac83-ce2e1392fff3</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-06-0721.mp3" length="1364688" type="audio/mpeg"/>
+   <itunes:duration>227</itunes:duration>
+  </item>
+  <item>
+   <title>11/5(목) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 1.44% 상승, 2만 5700에 마감했습니다.</description>
+   <pubDate>Thu, 05 Nov 2026 06:58:18 +0900</pubDate>
+   <guid isPermaLink="false">7b0dd030-ec0e-57e2-9285-e9f01aac6175</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-05-0658.mp3" length="1915632" type="audio/mpeg"/>
+   <itunes:duration>319</itunes:duration>
+  </item>
+  <item>
+   <title>11/4(수) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 0.83% 상승, 2만 5400에 마감했습니다.</description>
+   <pubDate>Wed, 04 Nov 2026 06:58:30 +0900</pubDate>
+   <guid isPermaLink="false">ce99b01a-4cc4-5f6c-80be-ad4709654a6e</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-04-0658.mp3" length="2124432" type="audio/mpeg"/>
+   <itunes:duration>354</itunes:duration>
+  </item>
+  <item>
+   <title>11/3(화) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 1.07% 하락, 2만 5200에 마감했습니다.</description>
+   <pubDate>Tue, 03 Nov 2026 06:58:30 +0900</pubDate>
+   <guid isPermaLink="false">10a4364a-36ca-5c93-b446-6bce9a3ec8ea</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-11-03-0658.mp3" length="1412352" type="audio/mpeg"/>
+   <itunes:duration>235</itunes:duration>
+  </item>
+  <item>
+   <title>10/31(토) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 2.86% 하락, 2만 5400에 마감했습니다.</description>
+   <pubDate>Sat, 31 Oct 2026 10:32:03 +0900</pubDate>
+   <guid isPermaLink="false">434ecd36-723d-5512-bc7e-11b2321451d2</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-10-31-1032.mp3" length="969984" type="audio/mpeg"/>
+   <itunes:duration>162</itunes:duration>
+  </item>
+  <item>
+   <title>10/30(금) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 1.38% 하락, 2만 6200에 마감했습니다.</description>
+   <pubDate>Fri, 30 Oct 2026 10:53:28 +0900</pubDate>
+   <guid isPermaLink="false">631189cd-b376-595e-b821-1acb449b9ce9</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-10-30-1053.mp3" length="1359216" type="audio/mpeg"/>
+   <itunes:duration>227</itunes:duration>
+  </item>
+  <item>
+   <title>10/29(목) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 0.27% 상승, 2만 6500에 마감했습니다.</description>
+   <pubDate>Thu, 29 Oct 2026 06:58:33 +0900</pubDate>
+   <guid isPermaLink="false">1d5c9484-e4fc-53c6-a72f-7676a1d4c258</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-10-29-0658.mp3" length="2543760" type="audio/mpeg"/>
+   <itunes:duration>424</itunes:duration>
+  </item>
+  <item>
+   <title>10/28(수) 미국 증시 브리핑</title>
+   <description> 먼저 나스닥입니다. 나스닥은 1.18% 상승, 2만 6500에 마감했습니다.</description>
+   <pubDate>Wed, 28 Oct 2026 06:58:51 +0900</pubDate>
+   <guid isPermaLink="false">ee4e7bb0-4fa3-5c0c-ab4e-8b9c75363845</guid>
+   <enclosure url="https://sunbong-oh.github.io/market-dashboard/podcast/episodes/2026-10-28-0658.mp3" length="1801440" type="audio/mpeg"/>
+   <itunes:duration>300</itunes:duration>
+  </item>
+ </channel>
+</rss>
