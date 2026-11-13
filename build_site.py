@@ -2326,6 +2326,8 @@ EARN_CSS = """
 .earn table{width:100%;border-collapse:collapse;font-size:14px}.earn td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
 .earn td:first-child{color:var(--muted);font-weight:700;white-space:nowrap}.earn td.v{font-weight:800}.earn td.c{overflow-wrap:anywhere}
 .home{max-width:100%;overflow-x:clip}
+@media(max-width:560px){.earn table,.earn tbody{display:block}.earn tr{display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.earn td{border-top:0;padding:1px 4px}.earn td.v{text-align:right}.earn td.c{grid-column:1/-1;padding-top:2px}.earn td.c .j{margin-right:6px}.earn td.c .j+br{display:none}}
 .earn td.c{color:var(--muted);font-size:12.5px;line-height:1.45}.earn .j{color:var(--text);font-size:13px}
 .earn h3{font-size:14.5px;margin:12px 0 4px}.earn ul{margin:0;padding-left:18px;line-height:1.55;font-size:14px}
 .earn .src{font-size:12px;color:var(--muted);margin-top:8px}.earn .src a{color:var(--muted)}
