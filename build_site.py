@@ -725,7 +725,7 @@ function futChart(el,d,live){
   '<text x="'+(L-6)+'" y="'+(T+12)+'" text-anchor="end">'+f2(sf.hi)+'</text><text x="'+(L-6)+'" y="'+(B+4)+'" text-anchor="end">'+f2(sf.lo)+'</text>'+
   '<path d="'+path(bars,sf.y)+'" fill="none" stroke="#1c2330" stroke-width="1.4" stroke-linejoin="round" opacity=".7"/>'+fsvg+'</svg>';
  var ch=prev!=null?last-prev:null,pct=ch!=null&&prev?ch/prev*100:0,cls=ch>0?'up':ch<0?'dn':'';
- var back=hf?fl.filter(function(p){return p[0]<=fl[fl.length-1][0]-30}):[],d30=back.length?fg-back[back.length-1][1]:null;
+ var back=hf?fl.filter(function(p){return p[0]<=fl[fl.length-1][0]-30}):[],d30=back.length&&fl[fl.length-1][0]-30-back[back.length-1][0]<=5?fg-back[back.length-1][1]:null;  /* 30분 전 기록이 5분 넘게 비어 있으면(수집이 끊긴 날) 건너뛴 값을 '30분 변화'로 보이지 않게 */
  var gc=fg>0?'up':fg<0?'dn':'';
  var badge='<div class="badge2">'+(fg!=null?'<div class="fg '+gc+'"><span class="k">'+FN+' 누적'+(S==='fut'?' · 주간장':'')+(hf?'':' (마감)')+'</span><b>'+sg0(fg)+'억</b>'+
   '<span class="c">'+(fg>0?'순매수':fg<0?'순매도':'')+(d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+'억 '+(d30>0?'사는 중':d30<0?'파는 중':''):'')+'</span></div>':'')+
@@ -834,7 +834,18 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
     오늘 마지막 스냅샷(장마감 수급·외국인 선물 기록)을 그대로 보여 준다 */
  var DAY='__DAY__';
  function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='08:00'&&(k.hm<='16:10'||DAY!==k.d)}
- function apply(j){if(!j||j.date!==kst().d||!j.data||!j.data['/api/market'])return;
+ /* 16:10 뒤 오늘 장마감 리포트로 바뀐 때: 그 리포트에 외국인 분 단위 선이 없고(PC 수집이 중간에 끊긴 날) flow-live 에 오늘 기록이 있으면
+    그 기록으로 빨간 선만 채운다(지수·마감 합계는 리포트 값 그대로). 15:01 같은 마지막 기록 뒤는 비고, 마감 합계는 점으로 찍는다 */
+ function after(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>'16:10'&&DAY===k.d}
+ function fill(j){if(!j||j.date!==kst().d||!j.data)return;
+  var f=j.data['/api/futures?minutes=1'],fb=document.getElementById('futbox'),c=fb&&fb.lastChild;
+  if(!f||!c||!c._d||!window.futChart)return;
+  var fl=(f.flows||[]).filter(function(r){return r['외국인']!=null});if(fl.length<2)return;
+  var d=c._d,have=(d.flows||[]).filter(function(r){return r['외국인']!=null}).length;if(have>=fl.length)return;
+  var nd=Object.assign({},d,{flows:f.flows.slice()}),cf=d.current_flows||{},bl=(d.bars||[]).slice(-1)[0],lt=fl[fl.length-1].t;
+  if(cf['외국인']!=null&&bl&&bl.t>lt)nd.flows.push({t:bl.t,'외국인':cf['외국인']});
+  fb.hidden=!futChart(c,nd,false)}
+ function apply(j,only){if(only)return fill(j);if(!j||j.date!==kst().d||!j.data||!j.data['/api/market'])return;
   window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');
   var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
   try{refreshFast();refreshSlow()}catch(e){}
@@ -843,11 +854,11 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
   if(f&&fb&&window.futChart){fb.hidden=!futChart(fb.lastChild,f,true)}
   try{parent!==window&&parent.postMessage({liveClose:j.time,fut:f||null},'*')}catch(e){}}
  /* 리포트 페이지는 window.fetch를 스냅샷 읽기로 바꿔 두므로 XMLHttpRequest로 가져온다 */
- function load(i){i=i||0;if(i>=src.length)return;var x=new XMLHttpRequest();
+ function load(i,only){i=i||0;if(i>=src.length)return;var x=new XMLHttpRequest();
   x.open('GET',src[i]+(i?'?t='+Date.now():''));if(!i)x.setRequestHeader('Accept','application/vnd.github.raw');
-  x.onload=function(){if(x.status!==200)return load(i+1);try{apply(JSON.parse(x.responseText))}catch(e){}};
-  x.onerror=function(){load(i+1)};x.send()}
- function tick(){if(on()&&!document.hidden)load(0)}
+  x.onload=function(){if(x.status!==200)return load(i+1,only);try{apply(JSON.parse(x.responseText),only)}catch(e){}};
+  x.onerror=function(){load(i+1,only)};x.send()}
+ function tick(){if(document.hidden)return;if(on())load(0);else if(after())load(0,true)}
  tick();setInterval(tick,75000);document.addEventListener('visibilitychange',tick)})();
 </script>""" % json.dumps(SNAP_SRC)
 
