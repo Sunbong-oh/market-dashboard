@@ -706,6 +706,8 @@ function futChart(el,d,live){
   var mk=function(lo,hi){return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
   sf=mk(fm-span/2,fm+span/2);sg=mk(gm-span*RATIO/2,gm+span*RATIO/2)}
  var path=function(ps,y){var o="",q=null;ps.forEach(function(p){o+=(q===null||p[0]-q>5?" M":" L")+x(p[0]).toFixed(1)+","+y(p[1]).toFixed(1);q=p[0]});return o.trim()};
+ /* 기록이 5분 넘게 빈 구간은 실선 대신 옅은 점선으로 이어 준다(끊어 버리면 듬성듬성 기록된 날 점들만 흩어져 보인다) */
+ var link=function(ps,y){var o="",q=null;ps.forEach(function(p){if(q&&p[0]-q[0]>5)o+=" M"+x(q[0]).toFixed(1)+","+y(q[1]).toFixed(1)+" L"+x(p[0]).toFixed(1)+","+y(p[1]).toFixed(1);q=p});return o.trim()};
  var n0=function(v){return Math.round(v).toLocaleString('ko-KR')},sg0=function(v){return (v>0?'+':v<0?'-':'')+n0(Math.abs(v))};
  var f2=function(v){return v.toLocaleString('ko-KR',{minimumFractionDigits:2,maximumFractionDigits:2})};
  var step=[15,30,60,90].filter(function(s){return END/s<=6})[0]||90,tk=[];
@@ -718,6 +720,7 @@ function futChart(el,d,live){
   fsvg=(z0?'<line x1="'+L+'" y1="'+yz.toFixed(1)+'" x2="'+R+'" y2="'+yz.toFixed(1)+'" stroke="#e03131" stroke-dasharray="4 4" opacity=".45"/>':'')+
    '<text x="'+(R+6)+'" y="'+(T+12)+'" fill="#e03131">'+sg0(sg.hi)+'</text><text x="'+(R+6)+'" y="'+(B+4)+'" fill="#e03131">'+sg0(sg.lo)+'</text>'+
    (z0&&yz-T>=24&&B-yz>=20?'<text x="'+(R+6)+'" y="'+(yz+5).toFixed(1)+'" fill="#e03131">0</text>':'')+
+   (link(fl,sg.y)?'<path d="'+link(fl,sg.y)+'" fill="none" stroke="#e03131" stroke-width="2" stroke-dasharray="3 5" opacity=".55"/>':'')+
    '<path d="'+path(fl,sg.y)+'" fill="none" stroke="#e03131" stroke-width="3.2" stroke-linejoin="round"/>'+
    '<circle cx="'+x(fl[fl.length-1][0]).toFixed(1)+'" cy="'+sg.y(fl[fl.length-1][1]).toFixed(1)+'" r="5" fill="#e03131"/>'}
  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+NM+'과 외국인 선물 순매수 누적 교차 차트" style="font:15px \'Malgun Gothic\',sans-serif;fill:#6b7385;display:block">'+
