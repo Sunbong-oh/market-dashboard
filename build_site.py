@@ -836,8 +836,8 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
  function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='08:00'&&(k.hm<='16:10'||DAY!==k.d)}
  /* 16:10 뒤 오늘 장마감 리포트로 바뀐 때: 그 리포트에 외국인 분 단위 선이 없고(PC 수집이 중간에 끊긴 날) flow-live 에 오늘 기록이 있으면
     그 기록으로 빨간 선만 채운다(지수·마감 합계는 리포트 값 그대로). 15:01 같은 마지막 기록 뒤는 비고, 마감 합계는 점으로 찍는다 */
- function after(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>'16:10'&&DAY===k.d}
- function fill(j){if(!j||j.date!==kst().d||!j.data)return;
+ function after(){return !on()}  /* 실시간 표시가 꺼진 때(장 마감 뒤·주말·휴일) */
+ function fill(j){if(!j||j.date!==DAY||!j.data)return;  /* 이 페이지가 보여 주는 장마감 날짜와 같은 날의 기록일 때만 */
   var f=j.data['/api/futures?minutes=1'],fb=document.getElementById('futbox'),c=fb&&fb.lastChild;
   if(!f||!c||!c._d||!window.futChart)return;
   var fl=(f.flows||[]).filter(function(r){return r['외국인']!=null});if(fl.length<2)return;
