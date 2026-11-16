@@ -1832,6 +1832,16 @@ HOME_CSS = """
 .sec-h h2{margin:0}.sec-h a{font-size:13px;color:var(--muted)}
 iframe.embed{display:block;width:100%;border:0;border-radius:14px;background:var(--card);min-height:400px}
 @media (max-width:520px){iframe.embed{width:calc(100% + 32px);margin:0 -16px;border-radius:0}}
+#usmv{order:-2}
+.mv{background:var(--card);border:1px solid var(--line);border-left:4px solid #F2A900;border-radius:14px;padding:12px 14px}
+.mv-r{padding:8px 0;border-top:1px solid var(--line)}.mv-r:first-child{border-top:0;padding-top:2px}
+.mv-h{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.mv-n{font-size:16px}.mv-s{font-size:12.5px;color:var(--muted);font-weight:700}
+.mv-p{margin-left:auto;font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.3px}.mv-p.up{color:var(--up)}.mv-p.down{color:var(--down)}
+.mv-d{font-size:13px;color:var(--muted);margin-top:1px}
+.mv-r ul{margin:4px 0 0;padding-left:16px;font-size:13px;line-height:1.5;color:var(--text)}.mv-r li{margin:2px 0;overflow-wrap:anywhere}
+.mv-more{margin-top:2px;border-top:1px solid var(--line)}.mv-more summary{cursor:pointer;font-size:13.5px;font-weight:800;padding:9px 0 3px;color:var(--text)}
+.mv-more .mv-r:first-of-type{border-top:0}
+.mv-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
 """
 FIT_JS = """<script>
 /* 높이는 본문 내용 기준(documentElement.scrollHeight는 iframe 높이 이하로 줄지 않아, 내용이 줄면 회색 빈칸이 남는다) */
@@ -2426,6 +2436,41 @@ EARN_LIVE_JS = r"""<script>
 </script>""" % json.dumps([list(g) for g in EARN_LIVE_SRC])
 
 
+# 미국 프리마켓·애프터마켓 동향 카드: afterhours.py 가 급등락 종목(정규장 종가 대비 빅테크 ±3%, 그 외 시총 $100억↑ ±5%)을
+# market-dashboard us-movers 브랜치 movers.json 으로 올리면 보는 사람 브라우저가 읽어 그린다(사이트 다시 만들 필요 없음).
+# 2종목만 펼쳐 두고 나머지는 접는다. 프리마켓 카드는 정규장 개장(09:30 ET)에, 애프터마켓 카드는 다음 거래일 프리마켓 시작(04:00 ET)에 내려간다
+# (시각은 movers.json 의 until — afterhours.py 가 미국 동부시간으로 계산해 서머타임도 맞다).
+MOVERS_SRC = ("https://api.github.com/repos/Sunbong-oh/market-dashboard/contents/movers.json?ref=us-movers",
+              "https://raw.githubusercontent.com/Sunbong-oh/market-dashboard/us-movers/movers.json")
+MOVERS_SHOW = 2
+MOVERS_JS = r"""<script>
+(function(){var SRC=__SRC__,SHOW=__SHOW__,box=document.getElementById('usmv');if(!box)return;
+ function e(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function n2(v){return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+ function row(i){var up=i.pct>0;
+  return '<div class="mv-r"><div class="mv-h"><b class="mv-n">'+e(i.name)+'</b><span class="mv-s">'+e(i.sym)+'</span>'+
+   '<span class="mv-p '+(up?'up':'down')+'">'+(up?'+':'')+Number(i.pct).toFixed(1)+'%</span></div>'+
+   '<div class="mv-d">$'+n2(i.px)+(i.cap?' · 시총 $'+Number(i.cap).toLocaleString('en-US')+'B':'')+'</div>'+
+   ((i.why||[]).length?'<ul>'+i.why.map(function(w){return '<li>'+e(w)+'</li>'}).join('')+'</ul>':'')+'</div>'}
+ function draw(j){var now=Date.now()/1000,its=(j&&j.items)||[];
+  if(!its.length||now>=j.until||now<j.start-3600){box.hidden=true;box.innerHTML='';return}  /* 개장 후(프리)·다음 프리마켓 시작 후(애프터)엔 내린다 */
+  var wasOpen=!!box.querySelector('details[open]'),pre=j.session==='pre',u=String(j.updated||''),
+   at=u.length>=16?u.slice(5,7)+'/'+u.slice(8,10)+' '+u.slice(11,16):'';
+  var top=its.slice(0,SHOW),rest=its.slice(SHOW);
+  box.innerHTML='<div class="sec-h"><h2>'+(pre?'🌅':'🌙')+' '+e(j.label||(pre?'프리마켓':'애프터마켓'))+' 동향</h2>'+(at?'<span class="mv-s">'+e(at)+' 기준 · 한국시간</span>':'')+'</div>'+
+   '<div class="mv">'+top.map(row).join('')+
+   (rest.length?'<details class="mv-more"'+(wasOpen?' open':'')+'><summary>나머지 '+rest.length+'종목 더 보기</summary>'+rest.map(row).join('')+'</details>':'')+
+   '<div class="mv-note">출처: 야후 파이낸스 5분봉 · 정규장 종가 대비 등락 · 빅테크 ±'+(j.th_big||3)+'%, 그 외 시총 $100억↑ ±'+(j.th||5)+'% · 시간외는 거래가 적어 가격이 튈 수 있습니다. 매수·매도 권유가 아닙니다.</div></div>';
+  box.hidden=false}
+ function get(g,i,cb){if(i>=g.length)return cb(null);
+  fetch(i?g[i]+'?t='+Date.now():g[i],{headers:i?{}:{Accept:'application/vnd.github.raw'},cache:'no-store'})
+  .then(function(r){if(!r.ok)throw 0;return r.json()}).then(cb).catch(function(){get(g,i+1,cb)})}
+ function load(){get(SRC,0,draw)}
+ load();setInterval(function(){if(!document.hidden)load()},300000);
+})();
+</script>""".replace("__SRC__", json.dumps(list(MOVERS_SRC))).replace("__SHOW__", str(MOVERS_SHOW))
+
+
 def earn_px_html(item):
     """실적 발표 후 주가 반응 [{l,s,t,p,c,ref,d1}] (earnings_px.py · kb-market-report 실적 감시가 쓰는 형식)."""
     rows = (item or {}).get("px") or []
@@ -2550,12 +2595,13 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None, 
             f'{ad_strip()}'
             f'{podcast_home()}'
             f'<section class="sec" id="issue" hidden></section>'
+            f'<section class="sec" id="usmv" hidden></section>'
             f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}'
             f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
             f'{play_page.home_section(kospi_hist or [], VISIT_API, VISIT_NS)}{quiz_home(news_quiz(now, target, strong))}{tools_home()}</div>'
-            f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{VCNT_JS}')
+            f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{MOVERS_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
                                     encoding="utf-8")
 
