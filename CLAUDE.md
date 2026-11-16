@@ -84,6 +84,8 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 아직 GitHub 해외 서버에서 KB를 쓰는 작업(막힐 수 있음): `kb-px.yml`(06:20, 미국 종목 시세), `site.yml`(위험신호 일봉, 안 되면 네이버로 대체), `study-fin.yml`(21:40, 종목 현재가). 이것들은 PC가 꺼져 있는 시간이라, 옮기려면 시각을 PC 시간(예: kb-px 08:20, study-fin 16:30)으로 바꿔야 한다.
 - 장중 수급 작업은 KB가 안 될 때 네이버·다음 값으로 대신 채운다(08:00부터, `live_snapshot.py` `fallback_market`). 지금은 PC 실행기에서 도므로 PC가 꺼진 시간은 비어 있다.
 - 52주 신고가: 나스닥 스크리너 API 가 GitHub 서버를 403 으로 막는 날이 있어 `newhighs_universe.json`(마지막으로 받은 명단)으로 계산한다. 가끔 회사 PC 에서 `python newhighs.py` 를 돌려 이 파일을 갱신해 커밋한다(월 1회 정도).
+- **수집 감시(2026-11-16 시작)**: kb-market-report `live-watchdog.yml`(`live_watchdog.py`)이 평일 08:15~16:10 에 GitHub 서버에서 5분마다 flow-live 가 최신인지 본다. 6분 넘게 갱신이 없으면 ① 수집 작업이 없을 때 다시 띄우고 ② 실행 중인데 10분↑ 값이 없고 12분 넘게 돌았으면 취소 후 다시 띄우고 ③ 대기만 하고 PC 실행기가 안 받으면 알림만 보낸다. 모두 텔레그램으로 알린다(휴장일은 건너뜀). 계기: 11/16 아침 예약·루틴이 안 떠 10:14 까지 수집이 시작 안 됨(PC 는 8시에 켜졌지만 시킬 쪽이 없었음). 수동 시험: Actions 에서 `live-watchdog` 실행(dry=1 이면 띄우기·알림 없이 상태만).
+  · 여전히 PC 실행기 ① 창이 켜져 있어야 한다(창을 닫으면 수집이 멈추고 감시는 알림만 한다). 고정 휴장일은 `live_watchdog.py` HOLIDAYS 를 매년 갱신.
 - 문제가 생기면: GitHub 실행기 화면(Settings → Actions → Runners)에서 Idle/Active 인지, `kb-pc-probe.yml` 을 수동 실행해 KB 연결·`gh`·Python 이 되는지 본다.
 
 ## 실적 속보 카드 (earnings_flash/)
@@ -96,7 +98,7 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - main 에 올라가면 earnings-flash.yml 이 카드 이미지를 텔레그램으로 보낸다. 발표 후 12시간 지난 카드는 보내지 않는다.
 
 ## 텔레그램·메시지 규칙 (사용자 지시)
-- 텔레그램은 실적 카드를 새로 만들거나 고쳤을 때, 시간외 급등락 알림(afterhours.py)만 보낸다. 지난 소식은 보내지 않는다.
+- 텔레그램은 실적 카드를 새로 만들거나 고쳤을 때, 시간외 급등락 알림(afterhours.py), 장중 수급 수집 멈춤 알림(live_watchdog.py, 사용자 지시 2026-11-16)만 보낸다. 지난 소식은 보내지 않는다.
 - 자동 점검 작업에서 할 일이 없으면 '·' 한 글자만 남긴다(상태 보고 금지).
 - 빅테크 실적은 나오는 즉시 홈페이지에 올린다.
 
