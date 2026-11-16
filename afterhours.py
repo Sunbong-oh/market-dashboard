@@ -67,7 +67,7 @@ def gh(method, path, body=None):
     token = os.environ.get("GITHUB_TOKEN")
     req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/{path}", method=method,
                                  data=json.dumps(body).encode() if body is not None else None,
-                                 headers={"Accept": "application/vnd.github+json", "User-Agent": "us-movers",
+                                 headers={"Accept": "application/vnd.github+json", "User-Agent": "us-movers", "Content-Type": "application/json",
                                           **({"Authorization": f"Bearer {token}"} if token else {})})
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.loads(r.read() or b"{}")
