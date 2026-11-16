@@ -7,12 +7,17 @@
 - 주기: 애프터마켓(16:00~20:00 미국 동부)은 한국시간 08시 전까지 5분마다, 그 뒤엔 정시마다.
         프리마켓(04:00~09:30 미국 동부)은 정시마다.
   afterhours.yml 이 세션 시작 직전에 실행하면 세션이 끝날 때까지 돌다가 끝난다.
+- 홈페이지: 확인할 때마다 지금 기준을 넘은 종목 전부를 us-movers 브랜치 movers.json 에 올린다(바뀐 게 있을 때만).
+  홈 '프리마켓·애프터마켓 동향' 카드(build_site.py MOVERS_JS)가 읽는다 — 2종목만 펼치고 나머지는 접음,
+  프리마켓 카드는 개장(09:30 ET)에, 애프터마켓 카드는 다음 거래일 프리마켓 시작(04:00 ET)에 내려간다.
 
   python afterhours.py            # 지금(또는 90분 안에 시작하는) 세션을 끝까지 감시
   python afterhours.py --once     # 한 번만 확인 (--dry 면 보내지 않고 출력)
 """
 import argparse
+import base64
 import json
+import os
 import sys
 import time
 import urllib.parse
@@ -31,6 +36,8 @@ TH, TH_BIG, STEP = 5.0, 3.0, 3.0
 BIGTECH = {"AAPL": "애플", "MSFT": "마이크로소프트", "NVDA": "엔비디아", "GOOGL": "알파벳", "AMZN": "아마존",
            "META": "메타", "TSLA": "테슬라", "AVGO": "브로드컴", "NFLX": "넷플릭스", "ORCL": "오라클", "AMD": "AMD",
            "PLTR": "팔란티어", "TSM": "TSMC", "SPCX": "스페이스X"}
+REPO = os.environ.get("GITHUB_REPOSITORY", "Sunbong-oh/market-dashboard")
+BOARD_BRANCH, BOARD_PATH = "us-movers", "movers.json"    # 홈페이지 '프리마켓·애프터마켓 동향' 카드가 읽는 파일 (build_site.py MOVERS_SRC)
 WINDOWS = {"post": ((16, 0), (20, 0), "애프터마켓"), "pre": ((4, 0), (9, 30), "프리마켓")}
 
 
@@ -42,6 +49,28 @@ def window_at(now_et):
         if start.weekday() < 5 and start - timedelta(minutes=90) <= now_et < end:
             return name, start, end
     return None
+
+
+def session_bounds(name, start):
+    """(끝, 홈 카드를 내리는 시각). 프리마켓은 정규장 개장(09:30 ET)에, 애프터마켓은 다음 거래일 프리마켓 시작(04:00 ET)에 내린다."""
+    h, m = WINDOWS[name][1]
+    end = start.replace(hour=h, minute=m, second=0, microsecond=0)
+    if name == "pre":
+        return end, end
+    nxt = start + timedelta(days=1)
+    while nxt.weekday() >= 5:
+        nxt += timedelta(days=1)
+    return end, nxt.replace(hour=WINDOWS["pre"][0][0], minute=WINDOWS["pre"][0][1], second=0, microsecond=0)
+
+
+def gh(method, path, body=None):
+    token = os.environ.get("GITHUB_TOKEN")
+    req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/{path}", method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Accept": "application/vnd.github+json", "User-Agent": "us-movers",
+                                          **({"Authorization": f"Bearer {token}"} if token else {})})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read() or b"{}")
 
 
 def get(url, timeout=20):
@@ -105,6 +134,8 @@ class Watch:
     def __init__(self, dry=False):
         self.dry = dry
         self.alerted = {}                      # 심볼 -> 마지막으로 알린 등락률
+        self.why = {}                          # 심볼 -> 관련 뉴스 (홈 카드용)
+        self.board = None                      # 마지막으로 올린 홈 카드 내용 (같으면 다시 올리지 않는다)
         uni = newhighs.universe()
         self.names = {s: newhighs.short_name(s, n) for s, n, _ in uni}
         self.caps = {s: c for s, _, c in uni}
@@ -117,23 +148,63 @@ class Watch:
             return False
         return last is None or (pct > 0) != (last > 0) or abs(pct) >= abs(last) + STEP
 
+    def publish(self, name, start, cur):
+        """지금 기준을 넘은 종목 전부를 us-movers 브랜치 movers.json 으로 올린다 → 홈페이지 카드. 바뀐 게 있을 때만."""
+        end, until = session_bounds(name, start)
+        items = []
+        for sym, pct, px, _ in sorted(cur, key=lambda h: (h[0] not in BIGTECH, -abs(h[1])))[:30]:
+            cap = self.caps.get(sym)
+            items.append({"sym": sym, "name": BIGTECH.get(sym) or self.names.get(sym, sym), "pct": round(pct, 2),
+                          "px": round(px, 2), "cap": round(cap / 1e9) if cap else None, "big": sym in BIGTECH,
+                          "why": self.why.get(sym, [])})
+        doc = {"session": name, "label": WINDOWS[name][2], "start": int(start.timestamp()), "until": int(until.timestamp()),
+               "th": TH, "th_big": TH_BIG, "items": items}
+        if doc == self.board:
+            return
+        doc["updated"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+        text = json.dumps(doc, ensure_ascii=False)
+        if self.dry:
+            print("홈 카드:", text[:1200])
+            self.board = {k: v for k, v in doc.items() if k != "updated"}
+            return
+        try:
+            try:
+                gh("GET", f"branches/{BOARD_BRANCH}")
+            except Exception:
+                gh("POST", "git/refs", {"ref": f"refs/heads/{BOARD_BRANCH}", "sha": gh("GET", "git/ref/heads/main")["object"]["sha"]})
+            body = {"message": f"us-movers {doc['updated']}", "branch": BOARD_BRANCH,
+                    "content": base64.b64encode(text.encode()).decode()}
+            try:
+                body["sha"] = gh("GET", f"contents/{BOARD_PATH}?ref={BOARD_BRANCH}")["sha"]
+            except Exception:
+                pass                           # 처음이면 파일이 아직 없다
+            gh("PUT", f"contents/{BOARD_PATH}", body)
+            self.board = {k: v for k, v in doc.items() if k != "updated"}
+        except Exception as e:
+            print("홈 카드 저장 실패:", type(e).__name__, e, file=sys.stderr, flush=True)
+
     def check(self, name, start):
         label = WINDOWS[name][2]
-        hits = []
+        cur = []                               # 지금 기준을 넘은 종목 전부 (홈 카드용)
         for sym, (last2, t, close) in quotes(self.syms).items():
             if t < start.timestamp() or not close:
                 continue                       # 이번 세션 체결이 아직 없다
             pcts = [(p / close - 1) * 100 for p in last2]
             pct = pcts[-1]
             th = TH_BIG if sym in BIGTECH else TH
-            if all(abs(x) >= th and (x > 0) == (pct > 0) for x in pcts) and self.due(sym, pct):
-                hits.append((sym, pct, last2[-1], t))
+            if all(abs(x) >= th and (x > 0) == (pct > 0) for x in pcts):
+                cur.append((sym, pct, last2[-1], t))
+        hits = [h for h in cur if self.due(h[0], h[1])]
+        pool = ThreadPoolExecutor(max_workers=4)
+        fresh = [h[0] for h in hits] + [h[0] for h in cur if h[0] not in self.why and h[0] not in {x[0] for x in hits}]
+        self.why.update(dict(zip(fresh, pool.map(news, fresh))))       # 알림 종목은 새로, 나머지는 처음 한 번만
+        self.publish(name, start, cur)
         if not hits:
             return 0
         hits.sort(key=lambda h: (h[0] not in BIGTECH, -abs(h[1])))
         now = datetime.now(KST)
         lines = [f"🌙 미국 {label} 급등락 · {now:%m/%d %H:%M} (한국시간)", ""]
-        reasons = dict(zip([h[0] for h in hits], ThreadPoolExecutor(max_workers=4).map(news, [h[0] for h in hits])))
+        reasons = {h[0]: self.why.get(h[0]) for h in hits}
         for sym, pct, px, t in hits:
             nm = BIGTECH.get(sym) or self.names.get(sym, sym)
             cap = self.caps.get(sym)

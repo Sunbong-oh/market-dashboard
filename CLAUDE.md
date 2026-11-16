@@ -102,6 +102,12 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 자동 점검 작업에서 할 일이 없으면 '·' 한 글자만 남긴다(상태 보고 금지).
 - 빅테크 실적은 나오는 즉시 홈페이지에 올린다.
 
+## 프리마켓·애프터마켓 동향 카드 (홈, 2026-11-16 사용자 지시)
+- 텔레그램 '미국 프리마켓/애프터마켓 급등락' 알림(afterhours.py)과 같은 종목·뉴스를 홈에도 보여 준다. 알림을 보낼 때마다가 아니라 확인할 때마다 지금 기준을 넘은 종목 전부를
+  us-movers 브랜치 `movers.json`(session·label·start·until·items[{sym,name,pct,px,cap,big,why[]}])에 올리고(바뀔 때만), 보는 사람 브라우저가 읽어 그린다(`MOVERS_JS`, 5분마다 새로 고침 — 사이트를 다시 만들 필요 없음).
+- 2종목(`MOVERS_SHOW`)만 펼치고 나머지는 '나머지 N종목 더 보기'로 접는다. 프리마켓 카드는 정규장 개장(09:30 ET)에 내리고, 애프터마켓 카드는 다음 거래일 프리마켓 시작(04:00 ET)까지 보여 준다
+  (`until` 은 afterhours.py 가 미국 동부시간으로 계산해 서머타임도 맞다). 기준(빅테크 ±3%, 그 외 시총 $100억↑ ±5%)은 텔레그램과 같다.
+
 ## 재무제표 공부 (/study/)
 - 내용은 `study/terms.json`(용어) · `study/industries.json`(업종별 체크리스트) · `study/cases.json`(사례노트), 페이지 코드는 `study_page.py`.
 - 사용자가 "[재무제표 공부] 용어 추가해줘" / "사례 추가해줘" 글을 붙여 넣거나 그렇게 말하면 해당 JSON 끝에 항목을 넣고 merge 한다.
