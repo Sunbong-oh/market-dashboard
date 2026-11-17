@@ -850,7 +850,7 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
   fb.hidden=!futChart(c,nd,false)}
  function apply(j,only){if(only)return fill(j);if(!j||j.date!==kst().d||!j.data||!j.data['/api/market'])return;
   window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');
-  var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
+  var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':kst().hm<'09:00'?'⏳ 개장 전 · 정규장 09:00 시작 · 지수는 어제 종가, 수급은 개장 후 채워져요 ('+j.time+' 기준)':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
   try{refreshFast();refreshSlow()}catch(e){}
   var f=j.data['/api/futures?minutes=1'],fb=document.getElementById('futbox');
   if(f&&window.futIdx){f=Object.assign({},f,{idx:futIdx(j.data['/api/indices/intraday'])})}
