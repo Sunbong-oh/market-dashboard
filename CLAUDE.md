@@ -86,6 +86,12 @@ GitHub Pages 주식 홈페이지(https://sunbong-oh.github.io/market-dashboard/)
 - 52주 신고가: 나스닥 스크리너 API 가 GitHub 서버를 403 으로 막는 날이 있어 `newhighs_universe.json`(마지막으로 받은 명단)으로 계산한다. 가끔 회사 PC 에서 `python newhighs.py` 를 돌려 이 파일을 갱신해 커밋한다(월 1회 정도).
 - **수집 감시(2026-11-16 시작)**: kb-market-report `live-watchdog.yml`(`live_watchdog.py`)이 평일 08:15~16:10 에 GitHub 서버에서 5분마다 flow-live 가 최신인지 본다. 6분 넘게 갱신이 없으면 ① 수집 작업이 없을 때 다시 띄우고 ② 실행 중인데 10분↑ 값이 없고 12분 넘게 돌았으면 취소 후 다시 띄우고 ③ 대기만 하고 PC 실행기가 안 받으면 알림만 보낸다. 모두 텔레그램으로 알린다(휴장일은 건너뜀). 계기: 11/16 아침 예약·루틴이 안 떠 10:14 까지 수집이 시작 안 됨(PC 는 8시에 켜졌지만 시킬 쪽이 없었음). 수동 시험: Actions 에서 `live-watchdog` 실행(dry=1 이면 띄우기·알림 없이 상태만).
   · 여전히 PC 실행기 ① 창이 켜져 있어야 한다(창을 닫으면 수집이 멈추고 감시는 알림만 한다). 고정 휴장일은 `live_watchdog.py` HOLIDAYS 를 매년 갱신.
+- **PC 지킴이(2026-11-18)**: GitHub 예약(5분 감시·07:50 예약)이 장중에 거의 안 돌아(11/16·11/18 아침 수집 지각) PC 에서 직접 감시한다. kb-market-report `pc_live_guard.py` 가 평일 08:10~16:10 에 1분마다 ① 닫힌 실행기 창(actions-runner·2·3)을 run.cmd 로 다시 켜고 ② flow-live 가 5분 넘게 안 갱신되면 수집(live-snapshot)을 다시 띄운다(작업 없음→그냥, 12분↑ 진행 중·8분↑ 대기→`force=true` 로 죽은 작업 취소 후 시작, 7분에 한 번, 휴장일 건너뜀). 기록 `%TEMP%\pc_live_guard.log`.
+  · 설치(PC 에서 한 번): `gh auth login`(완료, 토큰 범위 repo·workflow) → 시작 프로그램 폴더(`shell:startup`)에 `start_guard.bat`(= 저장소 `pc_start_live.bat`: PC 가 켜질 때 gh 로 최신 `pc_live_guard.py` 를 받아 1분 뒤 실행). 받는 명령: `"C:\Program Files\GitHub CLI\gh.exe" api repos/Sunbong-oh/kb-market-report/contents/pc_start_live.bat -H "Accept: application/vnd.github.raw" > "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\start_guard.bat"`.
+  · 회사 PC 의 curl 은 인증서 해지 확인 오류(CRYPT_E_NO_REVOCATION_CHECK)로 실패한다 → 내려받기는 gh 로 한다. `.bat` 을 메모장으로 만들면 `.txt` 가 붙으니 위 명령으로 만든다.
+  · 한계: PC 가 꺼지거나 절전이면 지킴이도 멈춘다(그때는 GitHub 5분 감시가 텔레그램으로 알리지만 예약이 드물게 돈다). 지킴이는 텔레그램을 보내지 않는다.
+  · 수집 작업(`live-snapshot.yml`)은 동시 실행이 하나뿐이라, PC 가 꺼지면 '진행 중'으로 남은 죽은 작업(11/17 13:47 작업이 19시간 남음)이 새 작업을 막는다 → `force=true` 로 띄우면 취소하고 시작한다(워크플로 입력 `force`).
+  · 홈 장중 수급 배너: 09:00 전에는 '⏳ 개장 전'(KB 가 어제 종가·수급 0 을 내려 줌)으로 표시한다.
 - 문제가 생기면: GitHub 실행기 화면(Settings → Actions → Runners)에서 Idle/Active 인지, `kb-pc-probe.yml` 을 수동 실행해 KB 연결·`gh`·Python 이 되는지 본다.
 
 ## 실적 속보 카드 (earnings_flash/)
