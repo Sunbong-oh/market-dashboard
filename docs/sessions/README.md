@@ -12,5 +12,6 @@
 | 전일 강세종목 | `05_전일강세종목.md` | `CLAUDE.md, docs/sessions/공통.md, docs/sessions/05_전일강세종목.md 를 읽고 전일 강세종목 리포트 운영을 이어서 해줘.` |
 | Brian's Memo | `06_메모.md` | `CLAUDE.md, docs/sessions/공통.md, docs/sessions/06_메모.md 를 읽고 Brian's memo 운영을 이어서 해줘.` |
 | 재무제표 공부 | `07_재무제표공부.md` | `CLAUDE.md, docs/sessions/공통.md, docs/sessions/07_재무제표공부.md 를 읽고 재무제표 공부 페이지 운영을 이어서 해줘.` |
+| 저점신호 | `08_저점신호.md` | `CLAUDE.md, docs/sessions/공통.md, docs/sessions/08_저점신호.md 를 읽고 저점신호(폭락장 지수 저점 점검) 운영을 이어서 해줘.` |
 
 문서 밖의 칸(목표주가 변동, 놀이터, 퀴즈, 광고, 위험신호 등)은 `CLAUDE.md` 의 해당 절을 본다. 세션을 끝낼 때는 **그 세션의 '지금 상태·할 일' 절을 최신으로 고쳐 두면** 다음 대화가 바로 이어진다.
