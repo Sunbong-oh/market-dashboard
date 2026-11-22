@@ -12,7 +12,7 @@
   홈 '오늘의 주식 퀴즈' — quiz/questions.json(주식 상식) + study/terms.json(용어) 에서 날마다 3문제
   /play/        놀이터 (게임 9가지·등급·오늘의 미션) + 홈 '코스피 오를까 내릴까?' 투표 — play_page.py
   /risk/        위험신호 (반도체 소부장 나 홀로 급등 경보) — risk_page.py
-  /bottom/      저점신호 (폭락장 지수 저점: 풋콜·VIX 다이버전스·자금시장·외국인 풋매도) — bottom_page.py
+  /bottom/      저점신호기 (폭락장 지수 저점: 풋콜·VIX 다이버전스·자금시장·외국인 풋매도) — bottom_page.py
   /study/       재무제표 공부 (활용법·5분 체크·업종별·용어사전·사례노트) — study/*.json (study_page.py)
 """
 import json
@@ -104,7 +104,7 @@ NAV_STYLE = ("position:sticky;top:0;z-index:9999;display:flex;gap:4px;align-item
 NAV_LINK = "color:#e6e9ef;text-decoration:none;padding:6px 10px;border-radius:8px"
 NAV_ON = NAV_LINK + ";background:#f08c00;color:#fff"
 MENU = (("", "홈"), ("daily/", "오전 데일리"), ("target/", "목표주가 변동"), ("reports/", "실적발표 종목"),
-        ("us/", "해외주식"), ("strong/", "전일 강세종목"), ("memo/", "Brian's memo"), ("close/", "장마감 리포트"), ("bottom/", "저점신호"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
+        ("us/", "해외주식"), ("strong/", "전일 강세종목"), ("memo/", "Brian's memo"), ("close/", "장마감 리포트"), ("bottom/", "저점신호기"), ("study/", "재무제표 공부"), ("play/", "놀이터"),
         # 아티팩트로 만든 계산기 (새 탭으로 열린다). 주소를 바꾸면 메뉴와 홈 카드가 함께 바뀐다.
         ("https://claude.ai/artifact/DQyDxi1Tj5ZZn4xHiwW3dX", "연금 계산기"),
         ("https://claude.ai/artifact/WSirn5BiFzgjdjQyeM2Evt", "라이프 플랜"))
