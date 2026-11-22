@@ -196,20 +196,26 @@ def body(spx, ks, asof, src):
 
 
 def home(spx):
-    """홈 맨 위 한 줄 (risk_page.home 과 같은 모양)."""
+    """홈 저점신호기 칸: 첫 줄 이름, 다음 줄 판정과 수치 (사용자 요청 2026-11-22: 이름 저점신호기, 글씨 크게).
+    order:-2 는 실적속보 제목(#earn-h, order:-2)보다 위에 오게 한다(HTML 에서 먼저 나오므로 같은 값이면 앞).
+    """
+    if not spx:
+        return ""
     s = spx["signals"]
     lv = level(s)
     t, _ = LV[lv]
     bg = {"go_cap": "#2E7D4F", "go_div": "#2E7D4F", "veto": "#C8102E", "fear": "#FDE7D6", "wait": "#FAF8F3"}[lv]
     fg = "#fff" if lv in ("go_cap", "go_div", "veto") else "#3D3A35"
     pc = s["capitulation"].get("latest_pc_eqetp_5d")
-    if not spx:
-        return ""
-    return (f'<a href="bottom/" class="sec" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;text-decoration:none;'
-            f'background:{bg};color:{fg};border:1px solid #E6E0D2;border-left:6px solid #F2A900;border-radius:10px;padding:9px 12px;'
-            f'margin:0 0 14px;font:700 14px/1.4 \'Noto Sans KR\',sans-serif"><span>📉 저점신호</span><b style="font-size:15px">{t}</b>'
-            f'<span style="font-weight:500;opacity:.85">풋콜 {_f(pc, "{:.2f}")} · VIX {_f(spx["rows"][-1].get("vix_high"), "{:.1f}")} · 자금 {_f(s["funding_filter"]["cp_tbill_5d"])}%p</span>'
-            f'<span style="margin-left:auto;font-weight:800">자세히 →</span></a>')
+    return (f'<a href="bottom/" class="sec" style="display:block;text-decoration:none;'
+            f'background:{bg};color:{fg};border:1px solid #E6E0D2;border-left:8px solid #F2A900;border-radius:12px;padding:14px 16px;'
+            f'order:-2;margin:0 0 14px;font-family:\'Noto Sans KR\',sans-serif;line-height:1.45">'
+            f'<span style="display:flex;align-items:center;gap:8px;font-size:21px;font-weight:900">📉 저점신호기'
+            f'<span style="margin-left:auto;font-size:16px;font-weight:800">자세히 →</span></span>'
+            f'<span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:8px">'
+            f'<b style="font-size:20px;font-weight:900">{t}</b>'
+            f'<span style="font-size:17px;font-weight:500;opacity:.9">풋콜 {_f(pc, "{:.2f}")} · VIX {_f(spx["rows"][-1].get("vix_high"), "{:.1f}")} · 자금 {_f(s["funding_filter"]["cp_tbill_5d"])}%p</span>'
+            f'</span></a>')
 
 
 def build(out, page, now=None):
