@@ -107,6 +107,13 @@ def script(html: str, item: dict) -> tuple[str, str]:
     return text, desc
 
 
+# 한 회차(MP3 파일)의 크기 한도. GitHub raw 는 10MiB(10,485,760바이트)를 넘는 파일을 audio/mpeg 가 아닌 application/octet-stream 으로 내려 줘서,
+# 팟캐스트 앱이 그 회차를 못 받는다(2026-11-22 13.4MB 회차가 앱에 안 보임). 그래서 긴 메모는 문단 사이에서 여러 회차(1/2부…)로 나눈다.
+TARGET_BYTES = 7_500_000   # 이만큼 넘으면 다음 문단부터 새 회차(기본 음성 48kbps 로 약 21분)
+LIMIT_BYTES = 9_000_000    # 어떤 경우에도 넘지 않는 한도(약 25분)
+MIN_TAIL_BYTES = 1_500_000  # 마지막 회차가 이보다 작으면 앞 회차에 합친다(한도 안일 때)
+
+
 # ---------- 음성 (조각마다 다시 시도) ----------
 async def _piece(text: str, rate: str) -> bytes:
     """한 조각을 읽는다. 실패하면 잠깐 쉬고 3번까지 다시, 그래도 안 되면 문장으로 쪼개 읽고 안 되는 문장만 건너뛴다.
@@ -131,7 +138,8 @@ async def _piece(text: str, rate: str) -> bytes:
     return b"".join([await _piece(x, rate) for x in sents if x.strip()])
 
 
-def synth_robust(text: str, path: Path) -> int | None:
+def synth_robust(text: str, path: Path) -> tuple[int, list[Path]] | None:
+    """음성을 만들어 (비트레이트 kbps, [파일 경로…])로 돌려준다. 길면 문단 사이에서 여러 파일로 나눈다(TARGET_BYTES). 실패하면 None."""
     import asyncio
     if not briefing.load_env("ELEVENLABS_API_KEY"):  # 내 목소리가 없으면 기본 음성을 조각마다 다시 시도하며 만든다
         for a, b in briefing.NAME_SPLIT.items():
@@ -140,23 +148,37 @@ def synth_robust(text: str, path: Path) -> int | None:
             text = re.sub(pat, b, text)
         silence = briefing.SILENCE.read_bytes() if briefing.SILENCE.exists() else b""
 
-        async def run() -> bytes:
-            buf = bytearray()
+        async def run() -> list[bytes]:
+            parts: list[bytearray] = [bytearray()]
             for piece in re.split(f"({PAUSE}+)", text):
+                cur = parts[-1]
                 if piece.startswith(PAUSE):
-                    if buf:
-                        buf += silence * len(piece)
+                    if cur:
+                        cur += silence * len(piece)
+                        if len(cur) >= TARGET_BYTES:  # 문단이 끝났고 충분히 찼으면 여기서 한 회차를 닫는다
+                            parts.append(bytearray())
                     continue
                 if re.search(r"[0-9A-Za-z가-힣]", piece):
-                    buf += await _piece(piece.strip(), briefing.RATE)
-            return bytes(buf)
+                    cur += await _piece(piece.strip(), briefing.RATE)
+                    if len(cur) >= LIMIT_BYTES:  # 문단 하나가 아주 길어도 한도는 넘지 않게
+                        parts.append(bytearray())
+            if len(parts) > 1 and len(parts[-1]) < MIN_TAIL_BYTES and len(parts[-2]) + len(parts[-1]) <= LIMIT_BYTES:
+                tail = parts.pop()
+                parts[-1] += tail
+            return [bytes(x) for x in parts if len(x) > 10000]
 
-        path.write_bytes(asyncio.run(run()))
-        if path.stat().st_size > 10000:
-            print(f"음성: 기본 음성({briefing.VOICE})")
-            return briefing.EDGE_KBPS
-        return None
-    return synth(text, path)
+        chunks = asyncio.run(run())
+        if not chunks:
+            return None
+        out = []
+        for i, b in enumerate(chunks, 1):
+            f = path.with_name(f"{path.stem}_{i}.mp3")
+            f.write_bytes(b)
+            out.append(f)
+        print(f"음성: 기본 음성({briefing.VOICE}) · {len(out)}개 파일 ({', '.join(f'{f.stat().st_size / 1e6:.1f}MB' for f in out)})")
+        return briefing.EDGE_KBPS, out
+    kbps = synth(text, path)  # 내 목소리(ElevenLabs): 나누지 않는다(지금은 안 씀)
+    return (kbps, [path]) if kbps else None
 
 
 # ---------- 피드 ----------
@@ -204,7 +226,9 @@ def main() -> int:
         eps = json.loads(meta_p.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         eps = []
-    by_memo = {e["memo"]: e for e in eps}
+    by_memo: dict[str, list[dict]] = {}  # 메모 하나가 여러 회차(1/2부…)일 수 있다
+    for e in eps:
+        by_memo.setdefault(e["memo"], []).append(e)
     made = 0
     for item in index:
         f = item["file"]
@@ -216,39 +240,51 @@ def main() -> int:
             continue
         text, desc = script(src.read_text(encoding="utf-8"), item)
         digest = hashlib.sha1(text.encode()).hexdigest()[:10]
-        old = by_memo.get(f)
-        if old and old.get("hash") == digest and (ep_dir / old["file"]).exists() and not text_only:
+        old = by_memo.get(f) or []
+        # 글이 그대로이고 파일이 다 있고 한도 안이면 건너뛴다(예전에 한도를 넘게 만든 회차는 다시 만든다)
+        if old and all(o.get("hash") == digest and (ep_dir / o["file"]).exists() and o.get("bytes", 0) <= LIMIT_BYTES for o in old) and not text_only:
             continue
         plain = re.sub(f"{PAUSE}+", " ", text).strip()
         print(f"\n=== {f}: 원고 {len(plain)}자 (약 {len(plain) / 330:.1f}분)")
         if text_only:
             print(plain)
             continue
-        name = f"{f.rsplit('.', 1)[0]}-{digest}.mp3"
+        stem = f.rsplit(".", 1)[0]
         tmp = pod / "_tmp.mp3"
-        kbps = synth_robust(text, tmp)
-        if not kbps:
+        res = synth_robust(text, tmp)
+        if not res:
             print("음성 생성 실패:", f)
             continue
-        shutil.move(tmp, ep_dir / name)
-        if old and old["file"] != name:
-            (ep_dir / old["file"]).unlink(missing_ok=True)
+        kbps, files = res
+        n = len(files)
         d = datetime.fromisoformat(item["date"])
-        pub = (old or {}).get("pub") or datetime(d.year, d.month, d.day, 21, 0, tzinfo=KST).isoformat()
-        by_memo[f] = dict(memo=f, file=name, hash=digest, pub=pub,
-                          title=f"{d.month}/{d.day} {item['title']}", desc=desc,
-                          bytes=(ep_dir / name).stat().st_size, secs=mp3_seconds(ep_dir / name, kbps),
-                          guid=str(uuid.uuid5(uuid.NAMESPACE_URL, name)))
+        base = datetime.fromisoformat((old[0].get("pub") if old else None) or datetime(d.year, d.month, d.day, 21, 0, tzinfo=KST).isoformat())
+        new_eps = []
+        for i, src_f in enumerate(files, 1):
+            name = f"{stem}-{digest}.mp3" if n == 1 else f"{stem}-{digest}-p{i}.mp3"
+            shutil.move(src_f, ep_dir / name)
+            # 앱은 최신순으로 보여 주므로 1부가 위에 오게 1부일수록 발행 시각을 늦게 둔다
+            pub = (base + timedelta(minutes=n - i)).isoformat() if n > 1 else base.isoformat()
+            new_eps.append(dict(memo=f, file=name, hash=digest, pub=pub, part=i, parts=n,
+                                title=f"{d.month}/{d.day} {item['title']}" + (f" ({i}/{n}부)" if n > 1 else ""),
+                                desc=desc if n == 1 else f"({i}/{n}부) {desc}",
+                                bytes=(ep_dir / name).stat().st_size, secs=mp3_seconds(ep_dir / name, kbps),
+                                guid=str(uuid.uuid5(uuid.NAMESPACE_URL, name))))
+            print("음성:", name, f"{new_eps[-1]['bytes'] / 1e6:.1f}MB", new_eps[-1]["secs"], "초")
+        for o in old:  # 이름이 바뀐 옛 파일은 지운다
+            if o["file"] not in {e["file"] for e in new_eps}:
+                (ep_dir / o["file"]).unlink(missing_ok=True)
+        by_memo[f] = new_eps
         made += 1
-        print("음성:", name, by_memo[f]["secs"], "초")
     if text_only:
         return 0
     live = {i["file"] for i in index}
-    for f, e in list(by_memo.items()):  # 홈페이지에서 지운 메모는 피드에서도 뺀다
+    for f, es in list(by_memo.items()):  # 홈페이지에서 지운 메모는 피드에서도 뺀다
         if f not in live:
-            (ep_dir / e["file"]).unlink(missing_ok=True)
+            for e in es:
+                (ep_dir / e["file"]).unlink(missing_ok=True)
             del by_memo[f]
-    eps = sorted(by_memo.values(), key=lambda e: (e["pub"], e["memo"]), reverse=True)
+    eps = sorted((e for es in by_memo.values() for e in es), key=lambda e: (e["pub"], e["memo"]), reverse=True)
     meta_p.write_text(json.dumps(eps, ensure_ascii=False, indent=1), encoding="utf-8")
     write_feed(pod, eps)
     print(f"\n피드: {len(eps)}회차 (이번에 새로 만든 것 {made})")
