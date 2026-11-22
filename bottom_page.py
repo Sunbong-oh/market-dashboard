@@ -229,13 +229,13 @@ def build(out, page, now=None):
         ks = bottom_signals.compute("^KS11", start, pre_days=40, kr_flow_dir="github")
     except Exception as e:
         print("저점신호 계산 실패:", e)
-        (d / "index.html").write_text(page("📉 저점신호", '<p class="err">시세를 받지 못해 이번에는 계산하지 못했습니다.</p>',
+        (d / "index.html").write_text(page("📉 저점신호기", '<p class="err">시세를 받지 못해 이번에는 계산하지 못했습니다.</p>',
                                            "../", "bottom/", "BOTTOM SIGNAL", "폭락장 지수 저점 점검"), encoding="utf-8")
         return None
     asof = [r for r in spx["rows"] if r.get("index_close") is not None][-1]["date"]
     src = f"자료: Cboe 풋콜 통계, Yahoo Finance 일봉(^GSPC·^KS11·^VIX), FRED(금융CP·T-bill·하이일드), KB증권 Open API(외국인 풋옵션) · 기준 {asof} · 계산 Brian's 투자노트"
     html = f"<style>{RISK_CSS}{EXTRA_CSS}</style>{body(spx, ks, asof, src)}"
-    (d / "index.html").write_text(page("📉 저점신호", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}"), encoding="utf-8")
+    (d / "index.html").write_text(page("📉 저점신호기", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}"), encoding="utf-8")
     st = {"asof": asof, "spx": level(spx["signals"]), "kospi": level(ks["signals"]), "computed": f"{now:%Y-%m-%d %H:%M}"}
     (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     print("저점신호:", st)
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     asof = spx["rows"][-1]["date"]
     src = f"자료: Cboe 풋콜 통계, Yahoo Finance 일봉(^GSPC·^KS11·^VIX), FRED(금융CP·T-bill·하이일드) · 기준 {asof} · 계산 Brian's 투자노트"
     html = f"<style>{RISK_CSS}{EXTRA_CSS}</style>{body(spx, ks, asof, src)}"
-    out = build_site.page("📉 저점신호", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}")
+    out = build_site.page("📉 저점신호기", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}")
     out = out.replace(build_site.VISIT_JS, "")
     open("bottom_preview.html", "w", encoding="utf-8").write(out)
     print("ok", len(out), level(spx["signals"]), level(ks["signals"]))
