@@ -53,12 +53,12 @@ LV = {
     "veto": ("🔴 바닥 신호 무효 (자금시장 경색)", "투매형이나 다이버전스 조건은 맞았지만, 금융CP − T-bill 스프레드가 1%p를 넘어 금융 시스템이 막혀 있다는 뜻이라 믿지 않습니다. 2008년 3·7·11월에는 이 상태의 신호가 모두 중간 저점이었습니다."),
     "veto_kr": ("🔴 바닥 신호 무효 (외국인 하방 옵션 우세)", "투매형이나 다이버전스 조건은 맞았지만, 외국인이 코스피200 옵션에서 하방(콜 매도+풋 매수)을 상방(콜 매수+풋 매도)보다 훨씬 크게 잡고 있어 바닥으로 보지 않습니다(사용자 경험칙)."),
     "fear": ("🟠 공포 확산 중", "가격이 1차 폭락 저점을 깨면서 VIX와 풋콜도 더 높아졌습니다. 아직 바닥 모양이 아닙니다. 새 고점을 다음 비교 기준으로 삼습니다."),
-    "wait": ("🟡 재시험 대기", "1차 폭락 뒤 아직 저점을 다시 깨지 않았습니다. 다시 깰 때 VIX·풋콜이 기준선보다 낮은지 봅니다."),
+    "wait": ("🟡 바닥 확인 중", "1차 폭락 뒤 아직 저점을 다시 깨지 않았습니다. 다시 깰 때 VIX·풋콜이 기준선보다 낮은지 봅니다."),
 }
 
 ORDER = ["fear", "wait", "go_cap", "go_div", "veto", "veto_kr"]  # 단계 표에 보이는 순서
 LV_COLOR = {"go_cap": "#2E7D4F", "go_div": "#2E7D4F", "veto": "#C8102E", "veto_kr": "#C8102E", "fear": "#E67E22", "wait": "#F2A900"}
-LV_SHORT = {"fear": "공포 확산 중", "wait": "재시험 대기", "go_cap": "투매형 바닥 가능성", "go_div": "다이버전스 바닥 가능성", "veto": "바닥 신호 무효(자금시장 경색)", "veto_kr": "바닥 신호 무효(외국인 하방 옵션 우세)"}
+LV_SHORT = {"fear": "공포 확산 중", "wait": "바닥 확인 중", "go_cap": "투매형 바닥 가능성", "go_div": "다이버전스 바닥 가능성", "veto": "바닥 신호 무효(자금시장 경색)", "veto_kr": "바닥 신호 무효(외국인 하방 옵션 우세)"}
 BLINK_CSS = ("@keyframes bsblink{0%,100%{opacity:1}50%{opacity:.25}}"
              "@media(prefers-reduced-motion:reduce){.bsb{animation:none!important}}")
 
@@ -164,7 +164,7 @@ def summary(lv, spx, kr=None, fut=()):
         last = last_close(spx)
         line = f'<b>지금 선물:</b> {fut_text(fut)}. 위 판정은 마지막 미국장 마감 숫자 기준이라 오늘 밤 장이 끝나야 바뀝니다.'
         if lv == "fear" and new and last * (1 + es[1] / 100) > new["close"] * (1 + REBOUND):
-            line += f' 선물대로 S&amp;P500이 끝나면 신저점({new["close"]:,.1f})보다 {REBOUND * 100:.0f}% 넘게 올라 <b>공포 확산이 멈추고 \'재시험 대기\'로 바뀝니다</b>.'
+            line += f' 선물대로 S&amp;P500이 끝나면 신저점({new["close"]:,.1f})보다 {REBOUND * 100:.0f}% 넘게 올라 <b>공포 확산이 멈추고 \'바닥 확인 중\'으로 바뀝니다</b>.'
         out.append(line)
     return out
 
@@ -179,7 +179,7 @@ def home_line(spx):
     return f'S&amp;P500이 1차 저점({_d(ref["date"])})보다 {abs(pct):.1f}% 위, 아직 다시 깨지 않았습니다.'
 
 
-REBOUND = 0.02  # 신저점 뒤 종가가 그 저점보다 2% 넘게 오르면 '공포 확산 중'을 끝내고 '재시험 대기'로 본다(가정, 사용자 지시 2026-11-23)
+REBOUND = 0.02  # 신저점 뒤 종가가 그 저점보다 2% 넘게 오르면 '공포 확산 중'을 끝내고 '바닥 확인 중'으로 본다(가정, 사용자 지시 2026-11-23)
 FUT = [("ES=F", "S&P500 선물"), ("NQ=F", "나스닥 선물")]
 
 
@@ -264,7 +264,7 @@ def flip_hint(lv, spx, fut):
     new = spx["signals"]["divergence"].get("new_low")
     es = next((f for f in fut if f[0].startswith("S&P")), None)
     if lv == "fear" and new and es and last_close(spx) * (1 + es[1] / 100) > new["close"] * (1 + REBOUND):
-        return " → 이대로 끝나면 '재시험 대기'로 바뀝니다"
+        return " → 이대로 끝나면 '바닥 확인 중'으로 바뀝니다"
     return ""
 
 
