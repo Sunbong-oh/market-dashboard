@@ -34,6 +34,11 @@ EXTRA_CSS = """
 .rk .lad.cur i{width:34px;height:34px;animation:bsblink 1.2s ease-in-out infinite}
 .rk .lad.cur .t{font-size:21px;font-weight:900}
 .rk .lad .s{font-size:13.5px;color:var(--mut);margin-top:3px;line-height:1.55}
+.rk .sit{margin:12px 0 4px;padding:12px 14px;background:#fff;border:1px solid var(--ln);border-radius:6px}
+.rk .sit h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#3D3A35}
+.rk .sit h3 small{font-weight:500;color:var(--mut);font-size:12px;margin-left:6px}
+.rk .sit p{margin:0 0 7px;font-size:14px;line-height:1.7}
+.rk .sit p:last-child{margin:0}
 .rk .lad .now{display:inline-block;font-size:12px;font-weight:800;color:#fff;background:#3D3A35;border-radius:3px;padding:1px 6px;vertical-align:3px}
 @media(max-width:640px){.rk .cov,.rk .two{grid-template-columns:1fr}.rk .sw .t{font-size:20px}}
 """
@@ -66,6 +71,83 @@ def ladder(lv):
         else:
             out.append(f'<div class="lad"><i></i><div><div class="t">{escape(name)}</div></div></div>')
     return '<div class="ladw">' + "".join(out) + "</div>"
+
+
+def _pct(a, b):
+    return (a / b - 1) * 100
+
+
+def where(j):
+    """(지금 종가, 날짜, 1차 저점 대비 %, ref, new) — 상황 설명용."""
+    d = j["signals"]["divergence"]
+    ref, new = d.get("ref_low") or {}, d.get("new_low") or {}
+    last = [r for r in j["rows"] if r.get("index_close") is not None][-1]
+    return last["index_close"], last["date"], _pct(last["index_close"], ref["close"]) if ref else None, ref, new
+
+
+def fear_word(ref, new):
+    """1차 폭락 때와 비교해 겁(VIX 장중 고점·풋콜 5일 고점)이 커졌는지 한 마디로."""
+    up_v, up_p = new.get("vix_high", 0) >= ref.get("vix_high", 0), new.get("pc5", 0) >= ref.get("pc5", 0)
+    if up_v and up_p:
+        return "겁은 1차 때보다 더 커졌습니다"
+    if not up_v and not up_p:
+        return "겁은 1차 때보다 작아졌습니다"
+    return "겁은 VIX와 풋콜이 서로 엇갈립니다"
+
+
+def situation(name, j, us=True, eun="은"):
+    """지수 하나의 '지금 상황' 문장들 (사용자 요청 2026-11-23: 상황 설명이 필요). 숫자는 계산 결과 그대로."""
+    last, day, pct, ref, new = where(j)
+    if not ref:
+        return [f"{name}: 비교할 1차 폭락 저점을 찾지 못했습니다."]
+    r = f'1차 폭락 저점({_d(ref["date"])} 종가 {ref["close"]:,.1f})'
+    out = []
+    if new:
+        np_ = _pct(new["close"], ref["close"])
+        txt = f'<b>{name}</b>{eun} {_d(new["date"])} 종가 {new["close"]:,.1f}로 {r}을 <b>{abs(np_):.1f}% 밑돌았습니다</b>.'
+        if new["date"] != day:
+            txt += f' 지금({_d(day)})은 {last:,.1f}로 1차 저점보다 {abs(pct):.1f}% {"위" if pct >= 0 else "아래"}입니다.'
+        out.append(txt)
+        out.append(f'가격은 더 빠졌는데 {fear_word(ref, new)}: VIX 장중 고점 {ref["vix_high"]:.1f} → {new["vix_high"]:.1f}, '
+                   f'풋콜 5일 평균 {ref["pc5"]:.3f} → {new["pc5"]:.3f}' + ("" if us else " (미국 기준)") + '.')
+    else:
+        out.append(f'<b>{name}</b>{eun} 지금({_d(day)}) {last:,.1f}로 {r}보다 <b>{abs(pct):.1f}% 위</b>에 있습니다. 그 저점을 아직 다시 깨지 않았습니다.')
+    return out
+
+
+def summary(lv, spx):
+    """판정별 정리 문장(다음에 무엇을 보면 되는지)."""
+    s = spx["signals"]
+    ref, new = s["divergence"].get("ref_low") or {}, s["divergence"].get("new_low") or {}
+    pv = max(new.get("vix_high") or 0, ref.get("vix_high") or 0)
+    pp = max(new.get("pc5") or 0, ref.get("pc5") or 0)
+    pc = s["capitulation"].get("latest_pc_eqetp_5d")
+    fu = s["funding_filter"]
+    fund = {"ok": "정상이라 금융 시스템이 막혔다는 신호는 없습니다",
+            "caution": "주의 구간이라 신호가 나와도 한 번 더 확인합니다",
+            "fail": "1%p를 넘어 금융 시스템이 막혀 있다는 뜻입니다"}[fu["state"]]
+    out = []
+    if pc is not None:
+        out.append(f'풋콜 5일 평균은 지금 {pc:.3f}입니다. ' + (f'투매 기준 1.0까지 {1 - pc:.3f} 남았습니다.' if pc < 1
+                   else '투매 기준 1.0을 넘었습니다. 이제 VIX가 장중 고점에서 15% 이상 꺾이는지 봅니다.'))
+    out.append(f'자금시장(금융CP − T-bill)은 {fu["cp_tbill_5d"]:.2f}%p로 {fund}.')
+    lvl = (new or ref).get("close")
+    nxt = {
+        "fear": f'가격이 빠질수록 겁도 커지는 중이라 아직 바닥 모양이 아닙니다. 다음에 S&amp;P500이 {lvl:,.1f}를 또 깰 때 VIX 장중 고점이 {pv:.1f} 아래, 풋콜 5일 평균이 {pp:.3f} 아래에 머물면 다이버전스 바닥 가능성으로 바뀝니다. 그 전에 풋콜이 1.0을 넘고 VIX가 꺾이면 투매형 바닥 가능성입니다.',
+        "wait": f'1차 저점 위에서 지켜보는 단계입니다. 1차 저점이 진짜 바닥일 수도 있고, 다시 내려와 시험할 수도 있습니다(어느 쪽인지는 아직 알 수 없습니다). 다시 내려와 {lvl:,.1f}를 깰 때 VIX 장중 고점이 {pv:.1f}, 풋콜 5일 평균이 {pp:.3f}보다 낮으면 다이버전스 바닥 가능성입니다.',
+    }.get(lv, LV[lv][1])
+    out.append("<b>정리:</b> " + nxt)
+    return out
+
+
+def home_line(spx):
+    """홈 칸 한 줄 상황: 1차 저점 대비 위치와 겁의 크기."""
+    last, day, pct, ref, new = where(spx)
+    if not ref:
+        return ""
+    if new:
+        return f'S&amp;P500 1차 저점({_d(ref["date"])})보다 {abs(_pct(new["close"], ref["close"])):.1f}% 아래로 내려갔고, {fear_word(ref, new)}.'
+    return f'S&amp;P500이 1차 저점({_d(ref["date"])})보다 {abs(pct):.1f}% 위, 아직 다시 깨지 않았습니다.'
 
 
 def level(s):
@@ -176,6 +258,7 @@ def body(spx, ks, asof, src):
     kref, knew = ks["signals"]["divergence"].get("ref_low") or {}, ks["signals"]["divergence"].get("new_low") or {}
     peak_vix = max((new or ref).get("vix_high") or 0, ref.get("vix_high") or 0)
     peak_pc = max((new or ref).get("pc5") or 0, ref.get("pc5") or 0)
+    sit = "".join(f"<p>{x}</p>" for x in situation("S&amp;P500", spx) + situation("코스피", ks, us=False, eun="는") + summary(lv, spx))
     pf = lambda n: f'<div class="pf"><span>{escape(src)}</span><span>{n}</span></div>'
     kd = (f'<div class="kd"><b>KEY DATA</b>'
           f'<div><span>기준일</span><span>{_d(asof)}</span></div>'
@@ -198,6 +281,7 @@ def body(spx, ks, asof, src):
 <section class="pg"><div class="cov"><div>
 <h2>폭락장 저점 신호</h2>
 {ladder(lv)}
+<div class="sit"><h3>지금 상황<small>기준 {_d(asof)} 미국장 · 코스피 {_d(krows[-1]["date"])}</small></h3>{sit}</div>
 <ul class="sq"><li>바닥은 매도 연료(겁에 질린 매도, 급한 헤지, 강제 청산)가 바닥날 때 나옵니다. 풋콜비율·VIX·자금시장으로 그 연료를 잽니다.</li>
 <li><b>투매형</b>은 한 번에 공포가 터지고 끝나는 바닥(2025년 4월), <b>다이버전스형</b>은 전저점을 깨는데 겁은 1차 때보다 작은 바닥(2011년 10월)입니다.</li>
 <li>예측이 아니라 <b>점검표</b>입니다. 자금시장이 막히면 같은 신호도 믿지 않습니다(2008년 3·7·11월).</li></ul>
@@ -252,7 +336,8 @@ def home(spx):
             f'<span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:8px">'
             f'<b style="font-size:20px;font-weight:900;color:{c}">{t.split(" ", 1)[1]}</b>'
             f'<span style="font-size:17px;font-weight:500;opacity:.9">풋콜 {_f(pc, "{:.2f}")} · VIX {_f(spx["rows"][-1].get("vix_high"), "{:.1f}")} · 자금 {_f(s["funding_filter"]["cp_tbill_5d"])}%p</span>'
-            f'</span><span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:13px">{chips}</span></a>')
+            f'</span><span style="display:block;margin-top:6px;font-size:15px;font-weight:500;color:#6B665D">{home_line(spx)}</span>'
+            f'<span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:13px">{chips}</span></a>')
 
 
 def build(out, page, now=None):
