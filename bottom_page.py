@@ -26,16 +26,46 @@ EXTRA_CSS = """
 .rk td.y{background:#FDF3D7;font-weight:700}
 .rk .lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--mut);margin:6px 0 0}
 .rk .lg i{display:inline-block;width:14px;height:3px;vertical-align:4px;margin-right:5px}
+.rk .ladw{display:flex;flex-direction:column;gap:6px}
+.rk .lad{display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid var(--ln);border-radius:6px;background:#fff;color:#A8A294}
+.rk .lad i{width:18px;height:18px;border-radius:50%;flex:none;background:#D9D4C7}
+.rk .lad .t{font-size:15px;font-weight:700}
+.rk .lad.cur{border-width:2px;padding:12px;color:var(--ink,#3D3A35)}
+.rk .lad.cur i{width:34px;height:34px;animation:bsblink 1.2s ease-in-out infinite}
+.rk .lad.cur .t{font-size:21px;font-weight:900}
+.rk .lad .s{font-size:13.5px;color:var(--mut);margin-top:3px;line-height:1.55}
+.rk .lad .now{display:inline-block;font-size:12px;font-weight:800;color:#fff;background:#3D3A35;border-radius:3px;padding:1px 6px;vertical-align:3px}
 @media(max-width:640px){.rk .cov,.rk .two{grid-template-columns:1fr}.rk .sw .t{font-size:20px}}
 """
 
 LV = {
     "go_cap": ("🟢 투매형 바닥 가능성", "풋콜 5일 평균이 1.0을 넘은 뒤 VIX가 고점에서 꺾였고, 자금시장도 정상입니다. 재시험(다이버전스)이 올 수 있어 나눠서 대응합니다."),
     "go_div": ("🟢 다이버전스 바닥 가능성", "전저점을 깼는데 VIX와 풋콜 고점은 1차 폭락보다 낮고, 자금시장도 정상입니다. 2011년 10월·2022년 10월과 같은 모양입니다."),
-    "veto": ("🔴 신호 있음, 자금시장 경색", "바닥 신호는 나왔지만 금융CP 스프레드가 1%p를 넘었습니다. 2008년 3·7·11월처럼 중간 저점일 가능성이 큽니다."),
+    "veto": ("🔴 바닥 신호 무효 (자금시장 경색)", "투매형이나 다이버전스 조건은 맞았지만, 금융CP − T-bill 스프레드가 1%p를 넘어 금융 시스템이 막혀 있다는 뜻이라 믿지 않습니다. 2008년 3·7·11월에는 이 상태의 신호가 모두 중간 저점이었습니다."),
     "fear": ("🟠 공포 확산 중", "가격이 1차 폭락 저점을 깨면서 VIX와 풋콜도 더 높아졌습니다. 아직 바닥 모양이 아닙니다. 새 고점을 다음 비교 기준으로 삼습니다."),
     "wait": ("🟡 재시험 대기", "1차 폭락 뒤 아직 저점을 다시 깨지 않았습니다. 다시 깰 때 VIX·풋콜이 기준선보다 낮은지 봅니다."),
 }
+
+ORDER = ["fear", "wait", "go_cap", "go_div", "veto"]  # 단계 표에 보이는 순서
+LV_COLOR = {"go_cap": "#2E7D4F", "go_div": "#2E7D4F", "veto": "#C8102E", "fear": "#E67E22", "wait": "#F2A900"}
+LV_SHORT = {"fear": "공포 확산 중", "wait": "재시험 대기", "go_cap": "투매형 바닥 가능성", "go_div": "다이버전스 바닥 가능성", "veto": "바닥 신호 무효(자금시장 경색)"}
+BLINK_CSS = ("@keyframes bsblink{0%,100%{opacity:1}50%{opacity:.25}}"
+             "@media(prefers-reduced-motion:reduce){.bsb{animation:none!important}}")
+
+
+def ladder(lv):
+    """판정 다섯 단계를 모두 보여 주고, 지금 판정만 색깔을 넣어 깜빡이게 한다. 나머지는 회색."""
+    out = []
+    for k in ORDER:
+        label, sub = LV[k]
+        name = label.split(" ", 1)[1]  # 앞의 색 동그라미 이모지는 빼고 점등으로 표시
+        if k == lv:
+            c = LV_COLOR[k]
+            out.append(f'<div class="lad cur" style="border-color:{c}"><i class="bsb" style="background:{c}"></i>'
+                       f'<div><div class="t" style="color:{c}">{escape(name)} <span class="now">지금</span></div><div class="s">{escape(sub)}</div></div></div>')
+        else:
+            out.append(f'<div class="lad"><i></i><div><div class="t">{escape(name)}</div></div></div>')
+    return '<div class="ladw">' + "".join(out) + "</div>"
 
 
 def level(s):
@@ -140,7 +170,6 @@ CASES = [
 def body(spx, ks, asof, src):
     s = spx["signals"]
     lv = level(s)
-    t, sub = LV[lv]
     ref, new = s["divergence"].get("ref_low") or {}, s["divergence"].get("new_low") or {}
     rows = [r for r in spx["rows"] if r.get("vix_close") is not None][-95:]
     krows = [r for r in ks["rows"] if r.get("index_close") is not None][-95:]
@@ -168,7 +197,7 @@ def body(spx, ks, asof, src):
     return f'''<div class="rk">
 <section class="pg"><div class="cov"><div>
 <h2>폭락장 저점 신호</h2>
-<div class="sw {lv.split("_")[0]}"><div class="lamp"></div><div><div class="t">{t}</div><div class="s">{escape(sub)}</div></div></div>
+{ladder(lv)}
 <ul class="sq"><li>바닥은 매도 연료(겁에 질린 매도, 급한 헤지, 강제 청산)가 바닥날 때 나옵니다. 풋콜비율·VIX·자금시장으로 그 연료를 잽니다.</li>
 <li><b>투매형</b>은 한 번에 공포가 터지고 끝나는 바닥(2025년 4월), <b>다이버전스형</b>은 전저점을 깨는데 겁은 1차 때보다 작은 바닥(2011년 10월)입니다.</li>
 <li>예측이 아니라 <b>점검표</b>입니다. 자금시장이 막히면 같은 신호도 믿지 않습니다(2008년 3·7·11월).</li></ul>
@@ -205,20 +234,25 @@ def home(spx):
     s = spx["signals"]
     lv = level(s)
     t, _ = LV[lv]
-    bg = {"go_cap": "#2E7D4F", "go_div": "#2E7D4F", "veto": "#C8102E", "fear": "#FDE7D6", "wait": "#FAF8F3"}[lv]
-    fg = "#fff" if lv in ("go_cap", "go_div", "veto") else "#3D3A35"
+    bg, fg, c = "#fff", "#3D3A35", LV_COLOR[lv]
+    chips = "".join(
+        (f'<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:2px solid {c};color:{c};font-weight:900">'
+         f'<i class="bsb" style="width:10px;height:10px;border-radius:50%;background:{c};animation:bsblink 1.2s ease-in-out infinite"></i>{LV_SHORT[k]}</span>')
+        if k == lv else
+        f'<span style="padding:3px 9px;border-radius:999px;border:1px solid #E6E0D2;color:#B5AFA2;font-weight:500">{LV_SHORT[k]}</span>'
+        for k in ORDER)
     pc = s["capitulation"].get("latest_pc_eqetp_5d")
     if pc is None or pc < HOME_PC_MIN:
         return ""  # 메뉴·/bottom/ 페이지는 그대로
-    return (f'<a href="bottom/" class="sec" style="display:block;text-decoration:none;'
+    return (f'<style>{BLINK_CSS}</style><a href="bottom/" class="sec" style="display:block;text-decoration:none;'
             f'background:{bg};color:{fg};border:1px solid #E6E0D2;border-left:8px solid #F2A900;border-radius:12px;padding:14px 16px;'
             f'order:-2;margin:0 0 14px;font-family:\'Noto Sans KR\',sans-serif;line-height:1.45">'
             f'<span style="display:flex;align-items:center;gap:8px;font-size:21px;font-weight:900">📉 저점신호기'
             f'<span style="margin-left:auto;font-size:16px;font-weight:800">자세히 →</span></span>'
             f'<span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:8px">'
-            f'<b style="font-size:20px;font-weight:900">{t}</b>'
+            f'<b style="font-size:20px;font-weight:900;color:{c}">{t.split(" ", 1)[1]}</b>'
             f'<span style="font-size:17px;font-weight:500;opacity:.9">풋콜 {_f(pc, "{:.2f}")} · VIX {_f(spx["rows"][-1].get("vix_high"), "{:.1f}")} · 자금 {_f(s["funding_filter"]["cp_tbill_5d"])}%p</span>'
-            f'</span></a>')
+            f'</span><span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:13px">{chips}</span></a>')
 
 
 def build(out, page, now=None):
@@ -237,7 +271,7 @@ def build(out, page, now=None):
         return None
     asof = [r for r in spx["rows"] if r.get("index_close") is not None][-1]["date"]
     src = f"자료: Cboe 풋콜 통계, Yahoo Finance 일봉(^GSPC·^KS11·^VIX), FRED(금융CP·T-bill·하이일드), KB증권 Open API(외국인 풋옵션) · 기준 {asof} · 계산 Brian's 투자노트"
-    html = f"<style>{RISK_CSS}{EXTRA_CSS}</style>{body(spx, ks, asof, src)}"
+    html = f"<style>{RISK_CSS}{EXTRA_CSS}{BLINK_CSS}</style>{body(spx, ks, asof, src)}"
     (d / "index.html").write_text(page("📉 저점신호기", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}"), encoding="utf-8")
     st = {"asof": asof, "spx": level(spx["signals"]), "kospi": level(ks["signals"]), "computed": f"{now:%Y-%m-%d %H:%M}"}
     (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
@@ -250,7 +284,7 @@ if __name__ == "__main__":
     spx, ks = json.load(open("bt_spx.json")), json.load(open("bt_ks.json"))
     asof = spx["rows"][-1]["date"]
     src = f"자료: Cboe 풋콜 통계, Yahoo Finance 일봉(^GSPC·^KS11·^VIX), FRED(금융CP·T-bill·하이일드) · 기준 {asof} · 계산 Brian's 투자노트"
-    html = f"<style>{RISK_CSS}{EXTRA_CSS}</style>{body(spx, ks, asof, src)}"
+    html = f"<style>{RISK_CSS}{EXTRA_CSS}{BLINK_CSS}</style>{body(spx, ks, asof, src)}"
     out = build_site.page("📉 저점신호기", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}")
     out = out.replace(build_site.VISIT_JS, "")
     open("bottom_preview.html", "w", encoding="utf-8").write(out)
