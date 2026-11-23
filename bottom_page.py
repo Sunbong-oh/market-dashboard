@@ -59,7 +59,7 @@ BLINK_CSS = ("@keyframes bsblink{0%,100%{opacity:1}50%{opacity:.25}}"
              "@media(prefers-reduced-motion:reduce){.bsb{animation:none!important}}")
 
 
-def ladder(lv):
+def ladder(lv, basis=""):
     """판정 다섯 단계를 모두 보여 주고, 지금 판정만 색깔을 넣어 깜빡이게 한다. 나머지는 회색."""
     out = []
     for k in ORDER:
@@ -68,7 +68,7 @@ def ladder(lv):
         if k == lv:
             c = LV_COLOR[k]
             out.append(f'<div class="lad cur" style="border-color:{c}"><i class="bsb" style="background:{c}"></i>'
-                       f'<div><div class="t" style="color:{c}">{escape(name)} <span class="now">지금</span></div><div class="s">{escape(sub)}</div></div></div>')
+                       f'<div><div class="t" style="color:{c}">{escape(name)} <span class="now">판정</span>{f' <small style="font-size:12px;font-weight:500;color:#6B665D">{escape(basis)}</small>' if basis else ""}</div><div class="s">{escape(sub)}</div></div></div>')
         else:
             out.append(f'<div class="lad"><i></i><div><div class="t">{escape(name)}</div></div></div>')
     return '<div class="ladw">' + "".join(out) + "</div>"
@@ -131,7 +131,7 @@ def kr_opt_text(kr):
     return head + f'하방 쪽 {bear:,}억 · 상방 쪽 {bull:,}억으로 하방이 월등히 크지는 않습니다.'
 
 
-def summary(lv, spx, kr=None):
+def summary(lv, spx, kr=None, fut=()):
     """판정별 정리 문장(다음에 무엇을 보면 되는지)."""
     s = spx["signals"]
     ref, new = s["divergence"].get("ref_low") or {}, s["divergence"].get("new_low") or {}
@@ -155,6 +155,13 @@ def summary(lv, spx, kr=None):
         "wait": f'1차 저점 위에서 지켜보는 단계입니다. 1차 저점이 진짜 바닥일 수도 있고, 다시 내려와 시험할 수도 있습니다(어느 쪽인지는 아직 알 수 없습니다). 다시 내려와 {lvl:,.1f}를 깰 때 VIX 장중 고점이 {pv:.1f}, 풋콜 5일 평균이 {pp:.3f}보다 낮으면 다이버전스 바닥 가능성입니다.',
     }.get(lv, LV[lv][1])
     out.append("<b>정리:</b> " + nxt)
+    es = next((f for f in fut if f[0].startswith("S&P")), None)
+    if es:
+        last = last_close(spx)
+        line = f'<b>지금 선물:</b> {fut_text(fut)}. 위 판정은 마지막 미국장 마감 숫자 기준이라 오늘 밤 장이 끝나야 바뀝니다.'
+        if lv == "fear" and new and last * (1 + es[1] / 100) > new["close"] * (1 + REBOUND):
+            line += f' 선물대로 S&amp;P500이 끝나면 신저점({new["close"]:,.1f})보다 {REBOUND * 100:.0f}% 넘게 올라 <b>공포 확산이 멈추고 \'재시험 대기\'로 바뀝니다</b>.'
+        out.append(line)
     return out
 
 
@@ -168,6 +175,41 @@ def home_line(spx):
     return f'S&amp;P500이 1차 저점({_d(ref["date"])})보다 {abs(pct):.1f}% 위, 아직 다시 깨지 않았습니다.'
 
 
+REBOUND = 0.02  # 신저점 뒤 종가가 그 저점보다 2% 넘게 오르면 '공포 확산 중'을 끝내고 '재시험 대기'로 본다(가정, 사용자 지시 2026-11-23)
+FUT = [("ES=F", "S&P500 선물"), ("NQ=F", "나스닥 선물")]
+
+
+def live_futures():
+    """지금 미국 지수 선물(Yahoo, 전일 정산가 대비 %). [(이름, %, 값, 'MM.DD HH:MM' KST)]. 실패하면 []."""
+    out = []
+    for sym, name in FUT:
+        try:
+            m = json.loads(bottom_signals.fetch(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=1d&interval=5m"))["chart"]["result"][0]["meta"]
+            px, prev = m["regularMarketPrice"], m.get("chartPreviousClose") or m.get("previousClose")
+            t = datetime.fromtimestamp(m["regularMarketTime"], KST)
+            out.append((name, (px / prev - 1) * 100, px, f"{t:%m.%d %H:%M}"))
+        except Exception:
+            pass
+    return out
+
+
+def fut_text(fut):
+    return " · ".join(f"{n} {p:+.1f}%" for n, p, _, _ in fut) + (f" ({fut[0][3]} 한국시간)" if fut else "")
+
+
+def flip_hint(lv, spx, fut):
+    """홈: 공포 확산 중인데 선물대로 끝나면 신저점에서 2% 넘게 반등하는 경우 한마디."""
+    new = spx["signals"]["divergence"].get("new_low")
+    es = next((f for f in fut if f[0].startswith("S&P")), None)
+    if lv == "fear" and new and es and last_close(spx) * (1 + es[1] / 100) > new["close"] * (1 + REBOUND):
+        return " → 이대로 끝나면 '재시험 대기'로 바뀝니다"
+    return ""
+
+
+def last_close(j):
+    return [r for r in j["rows"] if r.get("index_close") is not None][-1]["index_close"]
+
+
 def home_opt(kr):
     """홈 칸: 외국인 하방 옵션 우세일 때만 한 줄 덧붙인다."""
     if not kr or not kr.get("bear_dominant"):
@@ -176,7 +218,7 @@ def home_opt(kr):
             + (f', {kr["time"]} 장중' if kr.get("time") else '') + ') — 바닥 신호가 나와도 무효로 봅니다.')
 
 
-def level(s, kr=None):
+def level(s, kr=None, last=None):
     """kr = 코스피 쪽 kr_foreign_options. 외국인 하방 옵션이 월등히 크면 바닥 신호를 무효로 본다(사용자 경험칙 2026-11-23)."""
     cap, div, fund = s["capitulation"], s["divergence"], s["funding_filter"]["state"]
     kr = kr or s.get("kr_foreign_options")
@@ -188,7 +230,11 @@ def level(s, kr=None):
         return "go_div"
     if cap["met"]:
         return "go_cap"
-    if div.get("new_low"):
+    nl = div.get("new_low")
+    if nl:
+        # 신저점에서 2% 넘게 반등해 끝났으면 공포 확산이 멈춘 것으로 보고 그 저점의 재시험을 기다린다
+        if last is not None and last > nl["close"] * (1 + REBOUND):
+            return "wait"
         return "fear"
     return "wait"
 
@@ -287,14 +333,15 @@ CASES = [
 def body(spx, ks, asof, src):
     s = spx["signals"]
     kr = ks["signals"].get("kr_foreign_options")
-    lv = level(s, kr)
+    lv = level(s, kr, last_close(spx))
+    fut = spx.get("fut") or []
     ref, new = s["divergence"].get("ref_low") or {}, s["divergence"].get("new_low") or {}
     rows = [r for r in spx["rows"] if r.get("vix_close") is not None][-95:]
     krows = [r for r in ks["rows"] if r.get("index_close") is not None][-95:]
     kref, knew = ks["signals"]["divergence"].get("ref_low") or {}, ks["signals"]["divergence"].get("new_low") or {}
     peak_vix = max((new or ref).get("vix_high") or 0, ref.get("vix_high") or 0)
     peak_pc = max((new or ref).get("pc5") or 0, ref.get("pc5") or 0)
-    sit = "".join(f"<p>{x}</p>" for x in situation("S&amp;P500", spx) + situation("코스피", ks, us=False, eun="는") + summary(lv, spx, kr))
+    sit = "".join(f"<p>{x}</p>" for x in situation("S&amp;P500", spx) + situation("코스피", ks, us=False, eun="는") + summary(lv, spx, kr, fut))
     pf = lambda n: f'<div class="pf"><span>{escape(src)}</span><span>{n}</span></div>'
     kd = (f'<div class="kd"><b>KEY DATA</b>'
           f'<div><span>기준일</span><span>{_d(asof)}</span></div>'
@@ -316,7 +363,7 @@ def body(spx, ks, asof, src):
     return f'''<div class="rk">
 <section class="pg"><div class="cov"><div>
 <h2>폭락장 저점 신호</h2>
-{ladder(lv)}
+{ladder(lv, _d(asof) + " 미국장 마감 기준")}
 <div class="sit"><h3>지금 상황<small>기준 {_d(asof)} 미국장 · 코스피 {_d(krows[-1]["date"])}</small></h3>{sit}</div>
 <ul class="sq"><li>바닥은 매도 연료(겁에 질린 매도, 급한 헤지, 강제 청산)가 바닥날 때 나옵니다. 풋콜비율·VIX·자금시장으로 그 연료를 잽니다.</li>
 <li><b>투매형</b>은 한 번에 공포가 터지고 끝나는 바닥(2025년 4월), <b>다이버전스형</b>은 전저점을 깨는데 겁은 1차 때보다 작은 바닥(2011년 10월)입니다.</li>
@@ -352,8 +399,10 @@ def home(spx):
     if not spx:
         return ""
     s = spx["signals"]
-    lv = level(s, spx.get("kr_opt"))
+    lv = level(s, spx.get("kr_opt"), last_close(spx))
     t, _ = LV[lv]
+    asof = [r for r in spx["rows"] if r.get("index_close") is not None][-1]["date"]
+    fut = spx.get("fut") or []
     bg, fg, c = "#fff", "#3D3A35", LV_COLOR[lv]
     chips = "".join(
         (f'<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:2px solid {c};color:{c};font-weight:900">'
@@ -371,8 +420,10 @@ def home(spx):
             f'<span style="margin-left:auto;font-size:16px;font-weight:800">자세히 →</span></span>'
             f'<span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:8px">'
             f'<b style="font-size:20px;font-weight:900;color:{c}">{t.split(" ", 1)[1]}</b>'
+            f'<span style="font-size:13px;color:#6B665D">{_d(asof)} 미국장 마감 기준</span>'
             f'<span style="font-size:17px;font-weight:500;opacity:.9">풋콜 {_f(pc, "{:.2f}")} · VIX {_f(spx["rows"][-1].get("vix_high"), "{:.1f}")} · 자금 {_f(s["funding_filter"]["cp_tbill_5d"])}%p</span>'
-            f'</span><span style="display:block;margin-top:6px;font-size:15px;font-weight:500;color:#6B665D">{home_line(spx)}{home_opt(spx.get("kr_opt"))}</span>'
+            f'</span><span style="display:block;margin-top:6px;font-size:15px;font-weight:500;color:#6B665D">{home_line(spx)}{home_opt(spx.get("kr_opt"))}'
+            + (f'<br>지금 {fut_text(fut)}' if fut else '') + flip_hint(lv, spx, fut) + '</span>'
             f'<span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:13px">{chips}</span></a>')
 
 
@@ -392,11 +443,12 @@ def build(out, page, now=None):
         return None
     asof = [r for r in spx["rows"] if r.get("index_close") is not None][-1]["date"]
     src = f"자료: Cboe 풋콜 통계, Yahoo Finance 일봉(^GSPC·^KS11·^VIX), FRED(금융CP·T-bill·하이일드), KB증권 Open API(외국인 풋옵션) · 기준 {asof} · 계산 Brian's 투자노트"
-    html = f"<style>{RISK_CSS}{EXTRA_CSS}{BLINK_CSS}</style>{body(spx, ks, asof, src)}"
-    (d / "index.html").write_text(page("📉 저점신호기", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}"), encoding="utf-8")
     kr = ks["signals"].get("kr_foreign_options")
     spx["kr_opt"] = kr  # 홈 칸 판정에도 쓴다
-    st = {"asof": asof, "spx": level(spx["signals"], kr), "kospi": level(ks["signals"]), "kr_options": kr, "computed": f"{now:%Y-%m-%d %H:%M}"}
+    spx["fut"] = live_futures()
+    html = f"<style>{RISK_CSS}{EXTRA_CSS}{BLINK_CSS}</style>{body(spx, ks, asof, src)}"
+    (d / "index.html").write_text(page("📉 저점신호기", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}"), encoding="utf-8")
+    st = {"asof": asof, "spx": level(spx["signals"], kr, last_close(spx)), "kospi": level(ks["signals"], None, last_close(ks)), "kr_options": kr, "computed": f"{now:%Y-%m-%d %H:%M}"}
     (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     print("저점신호:", st)
     return spx
