@@ -47,13 +47,14 @@ LV = {
     "go_cap": ("🟢 투매형 바닥 가능성", "풋콜 5일 평균이 1.0을 넘은 뒤 VIX가 고점에서 꺾였고, 자금시장도 정상입니다. 재시험(다이버전스)이 올 수 있어 나눠서 대응합니다."),
     "go_div": ("🟢 다이버전스 바닥 가능성", "전저점을 깼는데 VIX와 풋콜 고점은 1차 폭락보다 낮고, 자금시장도 정상입니다. 2011년 10월·2022년 10월과 같은 모양입니다."),
     "veto": ("🔴 바닥 신호 무효 (자금시장 경색)", "투매형이나 다이버전스 조건은 맞았지만, 금융CP − T-bill 스프레드가 1%p를 넘어 금융 시스템이 막혀 있다는 뜻이라 믿지 않습니다. 2008년 3·7·11월에는 이 상태의 신호가 모두 중간 저점이었습니다."),
+    "veto_kr": ("🔴 바닥 신호 무효 (외국인 하방 옵션 우세)", "투매형이나 다이버전스 조건은 맞았지만, 외국인이 코스피200 옵션에서 하방(콜 매도+풋 매수)을 상방(콜 매수+풋 매도)보다 훨씬 크게 잡고 있어 바닥으로 보지 않습니다(사용자 경험칙)."),
     "fear": ("🟠 공포 확산 중", "가격이 1차 폭락 저점을 깨면서 VIX와 풋콜도 더 높아졌습니다. 아직 바닥 모양이 아닙니다. 새 고점을 다음 비교 기준으로 삼습니다."),
     "wait": ("🟡 재시험 대기", "1차 폭락 뒤 아직 저점을 다시 깨지 않았습니다. 다시 깰 때 VIX·풋콜이 기준선보다 낮은지 봅니다."),
 }
 
-ORDER = ["fear", "wait", "go_cap", "go_div", "veto"]  # 단계 표에 보이는 순서
-LV_COLOR = {"go_cap": "#2E7D4F", "go_div": "#2E7D4F", "veto": "#C8102E", "fear": "#E67E22", "wait": "#F2A900"}
-LV_SHORT = {"fear": "공포 확산 중", "wait": "재시험 대기", "go_cap": "투매형 바닥 가능성", "go_div": "다이버전스 바닥 가능성", "veto": "바닥 신호 무효(자금시장 경색)"}
+ORDER = ["fear", "wait", "go_cap", "go_div", "veto", "veto_kr"]  # 단계 표에 보이는 순서
+LV_COLOR = {"go_cap": "#2E7D4F", "go_div": "#2E7D4F", "veto": "#C8102E", "veto_kr": "#C8102E", "fear": "#E67E22", "wait": "#F2A900"}
+LV_SHORT = {"fear": "공포 확산 중", "wait": "재시험 대기", "go_cap": "투매형 바닥 가능성", "go_div": "다이버전스 바닥 가능성", "veto": "바닥 신호 무효(자금시장 경색)", "veto_kr": "바닥 신호 무효(외국인 하방 옵션 우세)"}
 BLINK_CSS = ("@keyframes bsblink{0%,100%{opacity:1}50%{opacity:.25}}"
              "@media(prefers-reduced-motion:reduce){.bsb{animation:none!important}}")
 
@@ -115,7 +116,20 @@ def situation(name, j, us=True, eun="은"):
     return out
 
 
-def summary(lv, spx):
+def kr_opt_text(kr):
+    """외국인 옵션 방향 한 문장."""
+    if not kr:
+        return ""
+    when = f'{_d(kr["date"])} {kr["time"]} 장중' if kr.get("time") else f'{_d(kr["date"])} 장 마감'
+    head = f'외국인 코스피200 옵션({when}, KB증권): 콜 {kr["call"]:+,}억 · 풋 {kr["put"]:+,}억. '
+    bear, bull = kr["bear"], kr["bull"]
+    if kr["bear_dominant"]:
+        x = f'{bear / bull:.1f}배' if bull else '일방적으로'
+        return head + f'하방 쪽(콜 매도+풋 매수) {bear:,}억이 상방 쪽(콜 매수+풋 매도) {bull:,}억보다 {x} 커서, <b>바닥 신호가 보여도 바닥으로 보지 않습니다</b>.'
+    return head + f'하방 쪽 {bear:,}억 · 상방 쪽 {bull:,}억으로 하방이 월등히 크지는 않습니다.'
+
+
+def summary(lv, spx, kr=None):
     """판정별 정리 문장(다음에 무엇을 보면 되는지)."""
     s = spx["signals"]
     ref, new = s["divergence"].get("ref_low") or {}, s["divergence"].get("new_low") or {}
@@ -131,6 +145,8 @@ def summary(lv, spx):
         out.append(f'풋콜 5일 평균은 지금 {pc:.3f}입니다. ' + (f'투매 기준 1.0까지 {1 - pc:.3f} 남았습니다.' if pc < 1
                    else '투매 기준 1.0을 넘었습니다. 이제 VIX가 장중 고점에서 15% 이상 꺾이는지 봅니다.'))
     out.append(f'자금시장(금융CP − T-bill)은 {fu["cp_tbill_5d"]:.2f}%p로 {fund}.')
+    if kr:
+        out.append(kr_opt_text(kr))
     lvl = (new or ref).get("close")
     nxt = {
         "fear": f'가격이 빠질수록 겁도 커지는 중이라 아직 바닥 모양이 아닙니다. 다음에 S&amp;P500이 {lvl:,.1f}를 또 깰 때 VIX 장중 고점이 {pv:.1f} 아래, 풋콜 5일 평균이 {pp:.3f} 아래에 머물면 다이버전스 바닥 가능성으로 바뀝니다. 그 전에 풋콜이 1.0을 넘고 VIX가 꺾이면 투매형 바닥 가능성입니다.',
@@ -150,10 +166,22 @@ def home_line(spx):
     return f'S&amp;P500이 1차 저점({_d(ref["date"])})보다 {abs(pct):.1f}% 위, 아직 다시 깨지 않았습니다.'
 
 
-def level(s):
+def home_opt(kr):
+    """홈 칸: 외국인 하방 옵션 우세일 때만 한 줄 덧붙인다."""
+    if not kr or not kr.get("bear_dominant"):
+        return ""
+    return (f'<br><b style="color:#C8102E">외국인 옵션 하방 우세</b>(콜 {kr["call"]:+,}억 · 풋 {kr["put"]:+,}억'
+            + (f', {kr["time"]} 장중' if kr.get("time") else '') + ') — 바닥 신호가 나와도 무효로 봅니다.')
+
+
+def level(s, kr=None):
+    """kr = 코스피 쪽 kr_foreign_options. 외국인 하방 옵션이 월등히 크면 바닥 신호를 무효로 본다(사용자 경험칙 2026-11-23)."""
     cap, div, fund = s["capitulation"], s["divergence"], s["funding_filter"]["state"]
+    kr = kr or s.get("kr_foreign_options")
     if (cap["met"] or div["met"]) and fund == "fail":
         return "veto"
+    if (cap["met"] or div["met"]) and kr and kr.get("bear_dominant"):
+        return "veto_kr"
     if div["met"]:
         return "go_div"
     if cap["met"]:
@@ -231,6 +259,11 @@ def check_table(name, j):
         lt, wo = kr.get("latest") or ["", None], kr.get("worst") or ["", None]
         rows.insert(5, ("✅" if kr["hits"] else "⬜", "④ 국내: 외국인 코스피200 풋옵션 하루 순매도",
                         f'{lt[1]:+,}억 ({_d(lt[0])})' + (f' · 최대 {wo[1]:+,}억 ({_d(wo[0])})' if wo[1] is not None else ""), f'{kr["threshold_eok"]:,}억 이하'))
+    ko = s.get("kr_foreign_options")
+    if ko:
+        when = f'{_d(ko["date"])} {ko["time"]}' if ko.get("time") else _d(ko["date"])
+        rows.insert(-1, ("⛔" if ko["bear_dominant"] else "✅", "⑤ 국내: 외국인 옵션 하방(콜 매도+풋 매수) vs 상방",
+                         f'하방 {ko["bear"]:,}억 · 상방 {ko["bull"]:,}억 ({when})', f'하방이 상방의 {ko["ratio"]:.0f}배↑면 바닥 무효'))
     body = "".join(f'<tr><td>{a}</td><td class="l">{escape(b)}</td><td>{escape(c)}</td><td>{escape(d)}</td></tr>' for a, b, c, d in rows)
     return f'<div class="cap">{escape(name)}</div><div class="tw"><table class="chk"><tr><th></th><th>조건</th><th>지금</th><th>기준</th></tr>{body}</table></div>'
 
@@ -251,14 +284,15 @@ CASES = [
 
 def body(spx, ks, asof, src):
     s = spx["signals"]
-    lv = level(s)
+    kr = ks["signals"].get("kr_foreign_options")
+    lv = level(s, kr)
     ref, new = s["divergence"].get("ref_low") or {}, s["divergence"].get("new_low") or {}
     rows = [r for r in spx["rows"] if r.get("vix_close") is not None][-95:]
     krows = [r for r in ks["rows"] if r.get("index_close") is not None][-95:]
     kref, knew = ks["signals"]["divergence"].get("ref_low") or {}, ks["signals"]["divergence"].get("new_low") or {}
     peak_vix = max((new or ref).get("vix_high") or 0, ref.get("vix_high") or 0)
     peak_pc = max((new or ref).get("pc5") or 0, ref.get("pc5") or 0)
-    sit = "".join(f"<p>{x}</p>" for x in situation("S&amp;P500", spx) + situation("코스피", ks, us=False, eun="는") + summary(lv, spx))
+    sit = "".join(f"<p>{x}</p>" for x in situation("S&amp;P500", spx) + situation("코스피", ks, us=False, eun="는") + summary(lv, spx, kr))
     pf = lambda n: f'<div class="pf"><span>{escape(src)}</span><span>{n}</span></div>'
     kd = (f'<div class="kd"><b>KEY DATA</b>'
           f'<div><span>기준일</span><span>{_d(asof)}</span></div>'
@@ -316,7 +350,7 @@ def home(spx):
     if not spx:
         return ""
     s = spx["signals"]
-    lv = level(s)
+    lv = level(s, spx.get("kr_opt"))
     t, _ = LV[lv]
     bg, fg, c = "#fff", "#3D3A35", LV_COLOR[lv]
     chips = "".join(
@@ -336,7 +370,7 @@ def home(spx):
             f'<span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:8px">'
             f'<b style="font-size:20px;font-weight:900;color:{c}">{t.split(" ", 1)[1]}</b>'
             f'<span style="font-size:17px;font-weight:500;opacity:.9">풋콜 {_f(pc, "{:.2f}")} · VIX {_f(spx["rows"][-1].get("vix_high"), "{:.1f}")} · 자금 {_f(s["funding_filter"]["cp_tbill_5d"])}%p</span>'
-            f'</span><span style="display:block;margin-top:6px;font-size:15px;font-weight:500;color:#6B665D">{home_line(spx)}</span>'
+            f'</span><span style="display:block;margin-top:6px;font-size:15px;font-weight:500;color:#6B665D">{home_line(spx)}{home_opt(spx.get("kr_opt"))}</span>'
             f'<span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:13px">{chips}</span></a>')
 
 
@@ -358,7 +392,9 @@ def build(out, page, now=None):
     src = f"자료: Cboe 풋콜 통계, Yahoo Finance 일봉(^GSPC·^KS11·^VIX), FRED(금융CP·T-bill·하이일드), KB증권 Open API(외국인 풋옵션) · 기준 {asof} · 계산 Brian's 투자노트"
     html = f"<style>{RISK_CSS}{EXTRA_CSS}{BLINK_CSS}</style>{body(spx, ks, asof, src)}"
     (d / "index.html").write_text(page("📉 저점신호기", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}"), encoding="utf-8")
-    st = {"asof": asof, "spx": level(spx["signals"]), "kospi": level(ks["signals"]), "computed": f"{now:%Y-%m-%d %H:%M}"}
+    kr = ks["signals"].get("kr_foreign_options")
+    spx["kr_opt"] = kr  # 홈 칸 판정에도 쓴다
+    st = {"asof": asof, "spx": level(spx["signals"], kr), "kospi": level(ks["signals"]), "kr_options": kr, "computed": f"{now:%Y-%m-%d %H:%M}"}
     (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     print("저점신호:", st)
     return spx
