@@ -153,7 +153,7 @@ def putcall_series(dates):
 KR_ARCHIVE_RAW = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/main/archive/{}/%EB%B3%B8%EB%AC%B8_%EC%9E%A5%EB%A7%88%EA%B0%90%EC%88%98%EA%B8%89.txt"
 CALL_RE = r"콜옵션:\s*외국인\s*([+-]?[\d,]+)"
 KR_LIVE_RAW = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/snapshot.json"
-KR_BEAR_RATIO, KR_BEAR_MIN = 2.0, 10  # 외국인 하방 옵션(콜 매도+풋 매수)이 상방(콜 매수+풋 매도)의 2배 이상이고 10억 이상 많으면 '하방 우세'(가정, 사용자 경험칙 2026-11-23)
+KR_BEAR_RATIO, KR_BEAR_MIN = 2.0, 50  # 외국인 하방 옵션(콜 매도+풋 매수)이 50억 이상이고 상방(콜 매수+풋 매도)의 2배 이상이면 '하방 우세'(사용자 경험칙 2026-11-23: 콜 매도 20억·풋 매도 10억 같은 작은 규모는 의미 없음. 50억은 가정)
 PUT_RE = r"풋옵션:\s*외국인\s*([+-]?[\d,]+)\s*/\s*기관\s*([+-]?[\d,]+)\s*/\s*개인\s*([+-]?[\d,]+)"
 
 
@@ -202,7 +202,7 @@ def option_tilt(call, put):
     """외국인 옵션 방향. 하방 = 콜 매도 + 풋 매수, 상방 = 콜 매수 + 풋 매도(억원)."""
     bear = max(-call, 0) + max(put, 0)
     bull = max(call, 0) + max(-put, 0)
-    return bear, bull, bear >= KR_BEAR_RATIO * bull and bear - bull >= KR_BEAR_MIN
+    return bear, bull, bear >= KR_BEAR_MIN and bear >= KR_BEAR_RATIO * bull
 
 
 def kr_put_flow(archive_dir, dates=()):

@@ -126,6 +126,8 @@ def kr_opt_text(kr):
     if kr["bear_dominant"]:
         x = f'{bear / bull:.1f}배' if bull else '일방적으로'
         return head + f'하방 쪽(콜 매도+풋 매수) {bear:,}억이 상방 쪽(콜 매수+풋 매도) {bull:,}억보다 {x} 커서, <b>바닥 신호가 보여도 바닥으로 보지 않습니다</b>.'
+    if bear < kr["min_eok"]:
+        return head + f'하방 쪽 {bear:,}억 · 상방 쪽 {bull:,}억으로 규모가 작아(하방 {kr["min_eok"]}억 미만) 따로 보지 않습니다.'
     return head + f'하방 쪽 {bear:,}억 · 상방 쪽 {bull:,}억으로 하방이 월등히 크지는 않습니다.'
 
 
@@ -263,7 +265,7 @@ def check_table(name, j):
     if ko:
         when = f'{_d(ko["date"])} {ko["time"]}' if ko.get("time") else _d(ko["date"])
         rows.insert(-1, ("⛔" if ko["bear_dominant"] else "✅", "⑤ 국내: 외국인 옵션 하방(콜 매도+풋 매수) vs 상방",
-                         f'하방 {ko["bear"]:,}억 · 상방 {ko["bull"]:,}억 ({when})', f'하방이 상방의 {ko["ratio"]:.0f}배↑면 바닥 무효'))
+                         f'하방 {ko["bear"]:,}억 · 상방 {ko["bull"]:,}억 ({when})', f'하방 {ko["min_eok"]}억↑ & 상방의 {ko["ratio"]:.0f}배↑면 바닥 무효'))
     body = "".join(f'<tr><td>{a}</td><td class="l">{escape(b)}</td><td>{escape(c)}</td><td>{escape(d)}</td></tr>' for a, b, c, d in rows)
     return f'<div class="cap">{escape(name)}</div><div class="tw"><table class="chk"><tr><th></th><th>조건</th><th>지금</th><th>기준</th></tr>{body}</table></div>'
 
