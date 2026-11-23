@@ -121,7 +121,7 @@ def kr_opt_text(kr):
     if not kr:
         return ""
     when = f'{_d(kr["date"])} {kr["time"]} 장중' if kr.get("time") else f'{_d(kr["date"])} 장 마감'
-    head = f'외국인 코스피200 옵션({when}, KB증권): 콜 {kr["call"]:+,}억 · 풋 {kr["put"]:+,}억. '
+    head = f'외국인 코스피200 옵션({when}, {kr.get("src", "KB증권")}): 콜 {kr["call"]:+,}억 · 풋 {kr["put"]:+,}억. '
     bear, bull = kr["bear"], kr["bull"]
     if kr["bear_dominant"]:
         x = f'{bear / bull:.1f}배' if bull else '일방적으로'
