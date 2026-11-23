@@ -95,6 +95,22 @@ def cboe_daily(d):
     return {"eqetp": (ep + xp) / (ec + xc), "total": tp / tc}
 
 
+CBOE_LIVE = "https://cdn-api.cboe.com/api/us/options/market-statistics/cone-current-market-statistics.json"
+
+
+def cboe_live():
+    """Cboe 장중 통계(30분마다, 장 마감 뒤엔 그날 최종): {'date', 'time', 'eqetp', 'total'} 또는 None.
+    일일 파일(daily_options)은 미국 동부 저녁 8시쯤(한국 오전 10시) 나와서, 그 전까지 그날 풋콜을 이 값으로 채운다(잠정).
+    여기 'equity' 는 주식+ETP 합(전체 = equity + index 로 맞아떨어짐)으로 보고 CNN 근사 풋콜(주식+ETP)에 쓴다."""
+    try:
+        j = json.loads(fetch(CBOE_LIVE) or "")
+        eq, tot = j["data"]["equity"][-1], j["data"]["total"][-1]
+        return {"date": j["trading_dt"], "time": eq["time"] + " CT", "ts": j.get("ts"),
+                "eqetp": eq["puts"] / eq["calls"], "total": tot["puts"] / tot["calls"]}
+    except Exception:
+        return None
+
+
 def yahoo(ticker, start, end):
     p1 = int(dt.datetime.fromisoformat(start).replace(tzinfo=dt.timezone.utc).timestamp())
     p2 = int((dt.datetime.fromisoformat(end) + dt.timedelta(days=2)).replace(tzinfo=dt.timezone.utc).timestamp())
@@ -254,6 +270,11 @@ def compute(index="^GSPC", start=None, end=None, ref_low_date=None, kr_flow_dir=
     vix = yahoo("^VIX", pre, end)
     us_days = sorted(vix)  # 풋콜·VIX는 미국 거래일 기준
     pc = putcall_series([d for d in us_days if d >= pre])
+    live_pc = None
+    cl = cboe_live()
+    if cl and cl["date"] not in pc and cl["date"] in vix:  # 일일 파일이 아직 없는 오늘(미국 날짜)을 장중 값으로 채운다
+        pc[cl["date"]] = {"eqetp": cl["eqetp"], "total": cl["total"]}
+        live_pc = cl
     hy = fred("BAMLH0A0HYM2", pre)
     baa = fred("BAA10Y", pre)  # 무디스 Baa-10년, 전체 이력(참고)
     cpf, tb3 = fred("DCPF3M", pre), fred("DTB3", pre)  # 금융CP 3개월 - T-bill 3개월 = 단기자금 스트레스(핵심 필터)
@@ -321,7 +342,7 @@ def compute(index="^GSPC", start=None, end=None, ref_low_date=None, kr_flow_dir=
     vmax = max((r["vix_high"] for r in rows[-10:] if r["vix_high"]), default=None)
 
     # 판정
-    signals = {}
+    signals = {"pc_live": live_pc}  # None 이면 마지막 날도 Cboe 일일 확정값
     # 투매형: 구간 안에서 풋콜 5일 평균이 1.0 이상인 날을 찾고, 그 뒤 10거래일 안에 VIX 종가가 그 무렵 장중 고점보다 15% 이상 내려왔는지 본다
     hits = [r for r in rows if r["pc_eqetp_5d"] is not None and r["pc_eqetp_5d"] >= 1.0]
     cap = {"threshold": 1.0, "latest_pc_eqetp_5d": lp and round(lp["pc_eqetp_5d"], 3), "met": False,
@@ -386,7 +407,11 @@ def compute(index="^GSPC", start=None, end=None, ref_low_date=None, kr_flow_dir=
     if src_kr != "none":
         days = [(d, v["call_foreign"], v["foreign"], None) for d, v in sorted(flow.items()) if v.get("call_foreign") is not None]
         kst = dt.datetime.utcnow() + dt.timedelta(hours=9)
-        last_day = sorted(idx)[-1] if idx else None
+        # 웹 숫자의 날짜: 평일 09:00 이후면 오늘, 그 전(또는 주말)이면 직전 평일(휴장일은 따로 보지 않음)
+        d0 = kst.date() if (kst.weekday() < 5 and kst.strftime("%H%M") >= "0900") else kst.date() - dt.timedelta(days=1)
+        while d0.weekday() >= 5:
+            d0 -= dt.timedelta(days=1)
+        last_day = d0.isoformat()
         web = kr_kbsec_options()  # 앱과 같은 숫자(우선)
         live = None if web else kr_live_options()
         if web and last_day:
