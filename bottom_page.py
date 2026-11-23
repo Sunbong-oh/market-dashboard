@@ -17,6 +17,7 @@ import bottom_signals
 
 KST = timezone(timedelta(hours=9))
 PUBLIC = True  # False 면 메뉴·홈 줄 없이 /bottom/ 주소로만 열린다(build_site.py MENU 도 같이)
+CRASH_NOTE = "저점신호기가 켜졌다는 건 이미 증시가 급락한 상태라는 말입니다."  # 사용자 지시 2026-11-23: 홈 칸·페이지에 꼭 넣을 문구
 HOME_PC_MIN = 0.9  # 홈 저점신호기 칸은 풋콜(Cboe 주식+ETP, CNN 근사) 5일 평균이 이 값 이상일 때만 보인다(사용자 지시 2026-11-23). 신호가 켜져도 이 값 미만이면 숨김(사용자 선택)
 DAYS = 150     # 화면에 쓰는 기간(달력일). 기준 저점은 최근 5거래일을 뺀 직전 60거래일의 최저 종가로 자동 선택
 
@@ -432,6 +433,7 @@ def body(spx, ks, asof, src):
     return f'''<div class="rk">
 <section class="pg"><div class="cov"><div>
 <h2>폭락장 저점 신호</h2>
+<p style="margin:0 0 10px;padding:8px 12px;background:#FBE7B0;border-left:5px solid #F2A900;font-weight:700">⚠️ {CRASH_NOTE}</p>
 {ladder(lv, _d(asof) + " 미국장 마감 기준")}
 <div class="sit"><h3>지금 상황<small>기준 {_d(asof)} 미국장 · 코스피 {_d(krows[-1]["date"])}</small></h3>{sit}</div>
 <ul class="sq"><li>바닥은 매도 연료(겁에 질린 매도, 급한 헤지, 강제 청산)가 바닥날 때 나옵니다. 풋콜비율·VIX·자금시장으로 그 연료를 잽니다.</li>
@@ -487,6 +489,7 @@ def home(spx):
             f'order:-2;margin:0 0 14px;font-family:\'Noto Sans KR\',sans-serif;line-height:1.45">'
             f'<span style="display:flex;align-items:center;gap:8px;font-size:21px;font-weight:900">📉 저점신호기'
             f'<span style="margin-left:auto;font-size:16px;font-weight:800">자세히 →</span></span>'
+            f'<span style="display:block;margin-top:6px;padding:6px 10px;background:#FBE7B0;border-radius:6px;font-size:15px;font-weight:700;color:#3D3A35">⚠️ {CRASH_NOTE}</span>'
             f'<span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:8px">'
             f'<b style="font-size:20px;font-weight:900;color:{c}">{t.split(" ", 1)[1]}</b>'
             f'<span style="font-size:13px;color:#6B665D">{_d(asof)} 미국장 마감 기준</span>'
