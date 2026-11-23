@@ -151,13 +151,41 @@ def putcall_series(dates):
 
 
 KR_ARCHIVE_RAW = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/main/archive/{}/%EB%B3%B8%EB%AC%B8_%EC%9E%A5%EB%A7%88%EA%B0%90%EC%88%98%EA%B8%89.txt"
+CALL_RE = r"콜옵션:\s*외국인\s*([+-]?[\d,]+)"
+KR_LIVE_RAW = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/snapshot.json"
+KR_BEAR_RATIO, KR_BEAR_MIN = 2.0, 10  # 외국인 하방 옵션(콜 매도+풋 매수)이 상방(콜 매수+풋 매도)의 2배 이상이고 10억 이상 많으면 '하방 우세'(가정, 사용자 경험칙 2026-11-23)
 PUT_RE = r"풋옵션:\s*외국인\s*([+-]?[\d,]+)\s*/\s*기관\s*([+-]?[\d,]+)\s*/\s*개인\s*([+-]?[\d,]+)"
 
 
 def _parse_put(txt):
     import re
     m = re.search(PUT_RE, txt or "")
-    return {k: int(v.replace(",", "")) for k, v in zip(("foreign", "inst", "retail"), m.groups())} if m else None
+    if not m:
+        return None
+    out = {k: int(v.replace(",", "")) for k, v in zip(("foreign", "inst", "retail"), m.groups())}
+    c = re.search(CALL_RE, txt or "")
+    out["call_foreign"] = int(c.group(1).replace(",", "")) if c else None
+    return out
+
+
+def kr_live_options():
+    """오늘 장중 외국인 코스피200 콜·풋 순매수(억원): kb-market-report flow-live snapshot.json(KB증권 Open API).
+    결과 (YYYY-MM-DD, HH:MM, 콜, 풋) 또는 None."""
+    try:
+        j = json.loads(fetch(KR_LIVE_RAW) or "{}")
+        mk = j["data"]["/api/market"]
+        f = next(x for x in mk["investors"] if x["name"] == "외국인")
+        d = j["date"]
+        return f"{d[:4]}-{d[4:6]}-{d[6:]}", j.get("time"), int(f["call"]), int(f["put"])
+    except Exception:
+        return None
+
+
+def option_tilt(call, put):
+    """외국인 옵션 방향. 하방 = 콜 매도 + 풋 매수, 상방 = 콜 매수 + 풋 매도(억원)."""
+    bear = max(-call, 0) + max(put, 0)
+    bull = max(call, 0) + max(-put, 0)
+    return bear, bull, bear >= KR_BEAR_RATIO * bull and bear - bull >= KR_BEAR_MIN
 
 
 def kr_put_flow(archive_dir, dates=()):
@@ -338,6 +366,20 @@ def compute(index="^GSPC", start=None, end=None, ref_low_date=None, kr_flow_dir=
             "hits": hits, "met_last_10d": any(d >= (recent[-10][0] if len(recent) >= 10 else recent[0][0]) for d, _ in hits),
             "note": "국내 보조 신호(사용자 경험칙): 외국인이 코스피200 풋옵션을 하루 200억 이상 순매도하기 시작하면 바닥 준비 가능성. 과거 장기 검증은 아직 안 됨",
         }
+    if src_kr != "none":
+        days = [(d, v["call_foreign"], v["foreign"], None) for d, v in sorted(flow.items()) if v.get("call_foreign") is not None]
+        live = kr_live_options()
+        if live and (not days or live[0] > days[-1][0]):
+            days.append((live[0], live[2], live[3], live[1]))
+        if days:
+            d, c, p, t = days[-1]
+            bear, bull, dom = option_tilt(c, p)
+            signals["kr_foreign_options"] = {
+                "date": d, "time": t, "call": c, "put": p, "bear": bear, "bull": bull, "bear_dominant": dom,
+                "ratio": KR_BEAR_RATIO, "min_eok": KR_BEAR_MIN,
+                "recent": [[x[0], x[1], x[2]] + list(option_tilt(x[1], x[2])) for x in days[-5:]],
+                "note": "사용자 경험칙: 외국인 하방 옵션(콜 매도+풋 매수)이 상방(콜 매수+풋 매도)보다 월등히 크면 바닥 신호가 보여도 바닥이 아니다. time 이 있으면 장중 값",
+            }
     return {"index": index, "start": start, "rows": rows, "signals": signals}
 
 
