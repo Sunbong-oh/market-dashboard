@@ -6,6 +6,10 @@
   ③ 자금시장 필터: 금융CP 3개월 − T-bill 3개월 5일 평균 0.5%p 미만일 때만 ①② 신뢰(1.0%p 이상이면 불신)
 """
 import json
+import re
+import subprocess
+import tempfile
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from html import escape
 from risk_page import CSS as RISK_CSS
@@ -179,6 +183,64 @@ REBOUND = 0.02  # 신저점 뒤 종가가 그 저점보다 2% 넘게 오르면 '
 FUT = [("ES=F", "S&P500 선물"), ("NQ=F", "나스닥 선물")]
 
 
+# ── 코스피 PBR (저점 근접 신호, 사용자 지시 2026-11-23: 코스피 PBR 0.8배를 저점 근접 기준으로)
+PBR_NEAR = 0.8
+# KRX 공표 코스피 PBR 은 해외 서버에서 받을 수 없어(정보데이터시스템 403), 직접 계산한다:
+#   시가총액(kb flow-live map.json, 코스피 보통주) ÷ 자본총계(study-fin DART 최근 정기보고서) × 보정계수.
+# 보정계수 = KRX 공표값 ÷ 같은 날 우리 계산값. 2026-11-20 KRX 1.20(한국거래소, 인덱서고 표기) ÷ 우리 1.265 = 0.949.
+# 가끔 KRX 값과 비교해 이 숫자를 고친다(가정).
+PBR_CAL, PBR_CAL_NOTE = 0.949, "2026-11-20 KRX 공표 1.20배에 맞춤"
+MAP_RAW = "https://raw.githubusercontent.com/Sunbong-oh/kb-market-report/flow-live/map.json"
+_PREF = re.compile(r"(\d?우[A-C]?|우\(전환\))$")
+
+
+def kospi_pbr():
+    """{'pbr', 'raw', 'n', 'mcap', 'eq', 'date', 'time'} 또는 None. 실패해도 사이트는 계속 만든다."""
+    try:
+        mp = json.loads(bottom_signals.fetch(MAP_RAW))
+        subprocess.run(["git", "fetch", "-q", "--depth", "1", "origin", "study-fin"], check=True, timeout=180, capture_output=True)
+        idx = json.loads(subprocess.run(["git", "show", "FETCH_HEAD:index.json"], check=True, capture_output=True, timeout=60).stdout)
+        code = {n: c for c, n, m in idx["list"] if m == "코스피"}
+        tmp = Path(tempfile.mkdtemp())
+        arc = subprocess.run(["git", "archive", "FETCH_HEAD", "fin"], check=True, capture_output=True, timeout=180).stdout
+        subprocess.run(["tar", "-x", "-C", str(tmp)], input=arc, check=True, timeout=180)
+        mc = eq = 0.0
+        n = 0
+        for sec in mp["data"]["kospi"]:
+            for st in sec["st"]:
+                nm = st["n"]
+                if _PREF.search(nm) or nm not in code:
+                    continue  # 우선주·ETF 등은 뺀다
+                f = tmp / "fin" / f"{code[nm]}.json"
+                if not f.exists():
+                    continue
+                e = (json.loads(f.read_text(encoding="utf-8")).get("v") or {}).get("eq")
+                if not e or e <= 0:
+                    continue
+                mc += st["v"]
+                eq += e
+                n += 1
+        if not eq:
+            return None
+        d = mp.get("date", "")
+        return {"pbr": mc / eq * PBR_CAL, "raw": mc / eq, "n": n, "mcap": mc, "eq": eq,
+                "date": f"{d[:4]}-{d[4:6]}-{d[6:]}" if len(d) == 8 else d, "time": mp.get("time")}
+    except Exception as e:
+        print("코스피 PBR 계산 실패:", e)
+        return None
+
+
+def pbr_text(pb, kospi_now):
+    """코스피 PBR 한 문장: 지금 값과 0.8배가 되는 코스피 수준."""
+    if not pb:
+        return ""
+    at = kospi_now * PBR_NEAR / pb["pbr"] if kospi_now else None
+    head = f'코스피 PBR은 약 <b>{pb["pbr"]:.2f}배</b>입니다({_d(pb["date"])} {pb["time"] or ""}, 추정). '
+    if pb["pbr"] <= PBR_NEAR:
+        return head + f'<b>저점 근접 기준 {PBR_NEAR}배 이하</b>입니다.'
+    return head + (f'저점 근접 기준 {PBR_NEAR}배는 코스피 약 <b>{at:,.0f}</b>(지금보다 {abs(at / kospi_now - 1) * 100:.0f}% 아래)입니다.' if at else '')
+
+
 def live_futures():
     """지금 미국 지수 선물(Yahoo, 전일 정산가 대비 %). [(이름, %, 값, 'MM.DD HH:MM' KST)]. 실패하면 []."""
     out = []
@@ -307,6 +369,10 @@ def check_table(name, j):
         lt, wo = kr.get("latest") or ["", None], kr.get("worst") or ["", None]
         rows.insert(5, ("✅" if kr["hits"] else "⬜", "④ 국내: 외국인 코스피200 풋옵션 하루 순매도",
                         f'{lt[1]:+,}억 ({_d(lt[0])})' + (f' · 최대 {wo[1]:+,}억 ({_d(wo[0])})' if wo[1] is not None else ""), f'{kr["threshold_eok"]:,}억 이하'))
+    pb = j.get("pbr") if j.get("index") == "^KS11" else None
+    if pb:
+        rows.insert(-1, ("🟢" if pb["pbr"] <= PBR_NEAR else "⬜", "⑥ 국내 저점 근접: 코스피 PBR",
+                         f'{pb["pbr"]:.2f}배 (추정)', f'{PBR_NEAR}배 이하'))
     ko = s.get("kr_foreign_options")
     if ko:
         when = f'{_d(ko["date"])} {ko["time"]}' if ko.get("time") else _d(ko["date"])
@@ -335,18 +401,21 @@ def body(spx, ks, asof, src):
     kr = ks["signals"].get("kr_foreign_options")
     lv = level(s, kr, last_close(spx))
     fut = spx.get("fut") or []
+    pb = spx.get("pbr")
     ref, new = s["divergence"].get("ref_low") or {}, s["divergence"].get("new_low") or {}
     rows = [r for r in spx["rows"] if r.get("vix_close") is not None][-95:]
     krows = [r for r in ks["rows"] if r.get("index_close") is not None][-95:]
     kref, knew = ks["signals"]["divergence"].get("ref_low") or {}, ks["signals"]["divergence"].get("new_low") or {}
     peak_vix = max((new or ref).get("vix_high") or 0, ref.get("vix_high") or 0)
     peak_pc = max((new or ref).get("pc5") or 0, ref.get("pc5") or 0)
-    sit = "".join(f"<p>{x}</p>" for x in situation("S&amp;P500", spx) + situation("코스피", ks, us=False, eun="는") + summary(lv, spx, kr, fut))
+    sit = "".join(f"<p>{x}</p>" for x in situation("S&amp;P500", spx) + situation("코스피", ks, us=False, eun="는") + summary(lv, spx, kr, fut) + ([pbr_text(pb, krows[-1]["index_close"])] if pb else []))
     pf = lambda n: f'<div class="pf"><span>{escape(src)}</span><span>{n}</span></div>'
     kd = (f'<div class="kd"><b>KEY DATA</b>'
           f'<div><span>기준일</span><span>{_d(asof)}</span></div>'
           f'<div><span>S&amp;P500</span><span>{_f(rows[-1]["index_close"], "{:,.1f}")}</span></div>'
           f'<div><span>코스피</span><span>{_f(krows[-1]["index_close"], "{:,.1f}")}</span></div>'
+          + (f'<div><span>코스피 PBR (추정)</span><span>{pb["pbr"]:.2f}배</span></div>' if pb else '') +
+          f''
           f'<div><span>VIX 장중 고점</span><span>{_f(rows[-1]["vix_high"], "{:.1f}")}</span></div>'
           f'<div><span>풋콜 5일 (CNN 근사)</span><span>{_f(s["capitulation"].get("latest_pc_eqetp_5d"), "{:.3f}")}</span></div>'
           f'<div><span>1차 폭락 기준</span><span>{_d(ref.get("date"))}</span></div>'
@@ -423,7 +492,8 @@ def home(spx):
             f'<span style="font-size:13px;color:#6B665D">{_d(asof)} 미국장 마감 기준</span>'
             f'<span style="font-size:17px;font-weight:500;opacity:.9">풋콜 {_f(pc, "{:.2f}")} · VIX {_f(spx["rows"][-1].get("vix_high"), "{:.1f}")} · 자금 {_f(s["funding_filter"]["cp_tbill_5d"])}%p</span>'
             f'</span><span style="display:block;margin-top:6px;font-size:15px;font-weight:500;color:#6B665D">{home_line(spx)}{home_opt(spx.get("kr_opt"))}'
-            + (f'<br>지금 {fut_text(fut)}' if fut else '') + flip_hint(lv, spx, fut) + '</span>'
+            + (f'<br>지금 {fut_text(fut)}' if fut else '') + flip_hint(lv, spx, fut)
+            + (f'<br>코스피 PBR 약 {spx["pbr"]["pbr"]:.2f}배' + (f' <b style="color:#2E7D4F">저점 근접({PBR_NEAR}배 이하)</b>' if spx["pbr"]["pbr"] <= PBR_NEAR else f' (저점 근접 기준 {PBR_NEAR}배 = 코스피 약 {spx["kospi_now"] * PBR_NEAR / spx["pbr"]["pbr"]:,.0f})') if spx.get("pbr") else '') + '</span>'
             f'<span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:13px">{chips}</span></a>')
 
 
@@ -446,9 +516,11 @@ def build(out, page, now=None):
     kr = ks["signals"].get("kr_foreign_options")
     spx["kr_opt"] = kr  # 홈 칸 판정에도 쓴다
     spx["fut"] = live_futures()
+    spx["pbr"] = ks["pbr"] = kospi_pbr()
+    spx["kospi_now"] = last_close(ks)
     html = f"<style>{RISK_CSS}{EXTRA_CSS}{BLINK_CSS}</style>{body(spx, ks, asof, src)}"
     (d / "index.html").write_text(page("📉 저점신호기", html, "../", "bottom/", "BOTTOM SIGNAL", f"폭락장 지수 저점 점검 · 기준 {_d(asof)}"), encoding="utf-8")
-    st = {"asof": asof, "spx": level(spx["signals"], kr, last_close(spx)), "kospi": level(ks["signals"], None, last_close(ks)), "kr_options": kr, "computed": f"{now:%Y-%m-%d %H:%M}"}
+    st = {"asof": asof, "spx": level(spx["signals"], kr, last_close(spx)), "kospi": level(ks["signals"], None, last_close(ks)), "kr_options": kr, "kospi_pbr": spx["pbr"], "computed": f"{now:%Y-%m-%d %H:%M}"}
     (d / "state.json").write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     print("저점신호:", st)
     return spx
