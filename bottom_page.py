@@ -149,7 +149,9 @@ def summary(lv, spx, kr=None, fut=()):
             "fail": "1%p를 넘어 금융 시스템이 막혀 있다는 뜻입니다"}[fu["state"]]
     out = []
     if pc is not None:
-        out.append(f'풋콜 5일 평균은 지금 {pc:.3f}입니다. ' + (f'투매 기준 1.0까지 {1 - pc:.3f} 남았습니다.' if pc < 1
+        live = s.get("pc_live")
+        lnote = (f' (마지막 날 {_d(live["date"])}은 Cboe 장중 통계 {live["eqetp"]:.2f}로 넣은 잠정값, 한국시간 오전 10시쯤 확정값으로 바뀝니다)' if live else '')
+        out.append(f'풋콜 5일 평균은 지금 {pc:.3f}입니다{lnote}. ' + (f'투매 기준 1.0까지 {1 - pc:.3f} 남았습니다.' if pc < 1
                    else '투매 기준 1.0을 넘었습니다. 이제 VIX가 장중 고점에서 15% 이상 꺾이는지 봅니다.'))
     out.append(f'자금시장(금융CP − T-bill)은 {fu["cp_tbill_5d"]:.2f}%p로 {fund}.')
     if kr:
