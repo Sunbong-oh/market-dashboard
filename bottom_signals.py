@@ -181,6 +181,23 @@ def kr_live_options():
         return None
 
 
+KBSEC_INVESTOR = "https://m.kbsec.com/go.able?linkcd=m05040000"
+
+
+def kr_kbsec_options():
+    """KB증권 모바일 웹 '투자자별매매동향'의 외국인 코스피200 콜·풋 순매수(억원). 앱 '시장동향 > 투자자동향'과 같은 숫자다.
+    (2026-11-23 확인: 앱·웹 요약 콜 −97억, 같은 웹 '상세'와 Open API IVSA0070 은 −25억. 요약은 위클리 등 다른 옵션까지 합친 값으로 보인다 — 확인 필요)
+    결과 (콜, 풋) 또는 None. 페이지에 날짜가 없어 날짜는 부르는 쪽이 정한다."""
+    import re
+    try:
+        raw = subprocess.run(["curl", "-s", "-f", "-m", "20", "-A", UA, KBSEC_INVESTOR], capture_output=True, check=True).stdout
+        t = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw.decode("euc-kr", "replace")))
+        num = lambda name: int(re.search(name + r"\s+([+-]?[\d,]+)", t).group(1).replace(",", ""))
+        return num(r"코스피200 콜옵션"), num(r"코스피200 풋옵션")
+    except Exception:
+        return None
+
+
 def option_tilt(call, put):
     """외국인 옵션 방향. 하방 = 콜 매도 + 풋 매수, 상방 = 콜 매수 + 풋 매도(억원)."""
     bear = max(-call, 0) + max(put, 0)
@@ -368,15 +385,25 @@ def compute(index="^GSPC", start=None, end=None, ref_low_date=None, kr_flow_dir=
         }
     if src_kr != "none":
         days = [(d, v["call_foreign"], v["foreign"], None) for d, v in sorted(flow.items()) if v.get("call_foreign") is not None]
-        live = kr_live_options()
-        if live and (not days or live[0] > days[-1][0]):
+        kst = dt.datetime.utcnow() + dt.timedelta(hours=9)
+        last_day = sorted(idx)[-1] if idx else None
+        web = kr_kbsec_options()  # 앱과 같은 숫자(우선)
+        live = None if web else kr_live_options()
+        if web and last_day:
+            during = last_day == kst.date().isoformat() and "0900" <= kst.strftime("%H%M") < "1545"
+            days = [x for x in days if x[0] != last_day] + [(last_day, web[0], web[1], kst.strftime("%H:%M") if during else None)]
+            src_opt = "KB증권 투자자별매매동향"
+        elif live and (not days or live[0] > days[-1][0]):
             days.append((live[0], live[2], live[3], live[1]))
+            src_opt = "KB증권 Open API(장중)"
+        else:
+            src_opt = "KB증권 Open API(장 마감 기록)"
         if days:
             d, c, p, t = days[-1]
             bear, bull, dom = option_tilt(c, p)
             signals["kr_foreign_options"] = {
                 "date": d, "time": t, "call": c, "put": p, "bear": bear, "bull": bull, "bear_dominant": dom,
-                "ratio": KR_BEAR_RATIO, "min_eok": KR_BEAR_MIN,
+                "ratio": KR_BEAR_RATIO, "min_eok": KR_BEAR_MIN, "src": src_opt,
                 "recent": [[x[0], x[1], x[2]] + list(option_tilt(x[1], x[2])) for x in days[-5:]],
                 "note": "사용자 경험칙: 외국인 하방 옵션(콜 매도+풋 매수)이 상방(콜 매수+풋 매도)보다 월등히 크면 바닥 신호가 보여도 바닥이 아니다. time 이 있으면 장중 값",
             }
