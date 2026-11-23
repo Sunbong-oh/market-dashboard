@@ -13,6 +13,7 @@ import bottom_signals
 
 KST = timezone(timedelta(hours=9))
 PUBLIC = True  # False 면 메뉴·홈 줄 없이 /bottom/ 주소로만 열린다(build_site.py MENU 도 같이)
+HOME_PC_MIN = 0.9  # 홈 저점신호기 칸은 풋콜(Cboe 주식+ETP, CNN 근사) 5일 평균이 이 값 이상일 때만 보인다(사용자 지시 2026-11-23). 신호가 켜져도 이 값 미만이면 숨김(사용자 선택)
 DAYS = 150     # 화면에 쓰는 기간(달력일). 기준 저점은 최근 5거래일을 뺀 직전 60거래일의 최저 종가로 자동 선택
 
 EXTRA_CSS = """
@@ -207,6 +208,8 @@ def home(spx):
     bg = {"go_cap": "#2E7D4F", "go_div": "#2E7D4F", "veto": "#C8102E", "fear": "#FDE7D6", "wait": "#FAF8F3"}[lv]
     fg = "#fff" if lv in ("go_cap", "go_div", "veto") else "#3D3A35"
     pc = s["capitulation"].get("latest_pc_eqetp_5d")
+    if pc is None or pc < HOME_PC_MIN:
+        return ""  # 메뉴·/bottom/ 페이지는 그대로
     return (f'<a href="bottom/" class="sec" style="display:block;text-decoration:none;'
             f'background:{bg};color:{fg};border:1px solid #E6E0D2;border-left:8px solid #F2A900;border-radius:12px;padding:14px 16px;'
             f'order:-2;margin:0 0 14px;font-family:\'Noto Sans KR\',sans-serif;line-height:1.45">'
