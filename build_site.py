@@ -856,7 +856,7 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
   fb.hidden=!futChart(c,nd,false)}
  function apply(j,only){if(only)return fill(j);
   if(!j||j.date!==kst().d||!j.data||!j.data['/api/market']){var q=kst(),bb=document.getElementById('snapshot-banner');  /* 장중인데 오늘 기록이 아직 없으면 어제 화면이라고 분명히 알린다 */
-   if(bb&&q.wd>0&&q.wd<6&&q.hm>='09:00'&&q.hm<='16:10'&&DAY!==q.d){bb.textContent='⚠️ 오늘 장중 수급이 아직 안 올라왔어요(수집 대기 중) · 아래는 어제 '+DAY.slice(4,6)+'/'+DAY.slice(6,8)+' 장마감 자료예요';bb.hidden=false}
+   if(bb&&q.wd>0&&q.wd<6&&q.hm>='08:10'&&q.hm<='16:10'&&DAY!==q.d){bb.textContent='⚠️ 오늘 장중 수급이 아직 안 올라왔어요(수집 대기 중) · 아래는 어제 '+DAY.slice(4,6)+'/'+DAY.slice(6,8)+' 장마감 자료예요';bb.hidden=false}
    return}
   window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');
   var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':kst().hm<'09:00'?'⏳ 개장 전 · 정규장 09:00 시작 · 지수는 어제 종가, 수급은 개장 후 채워져요 ('+j.time+' 기준)':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
@@ -879,14 +879,14 @@ LIVE_HOME_JS = """<script>
 (function(){var sec=document.getElementById('close');if(!sec)return;
  var h=sec.querySelector('.sec-h h2'),fr=sec.querySelector('iframe.embed'),day=(sec.dataset.day||'').replace(/-/g,''),note=null,WD='일월화수목금토';
  function kst(){var n=new Date(Date.now()+9*3600e3);return {d:n.toISOString().slice(0,10).replace(/-/g,''),hm:n.toISOString().slice(11,16),wd:n.getUTCDay()}}
- /* 날짜가 바뀐 평일 09:00 전: 어제 장마감 화면 대신 '개장 전' 안내만 보여 준다(2026-11-25 '날짜가 바뀌었는데 어제 거가 보인다').
-    09:00 이후에는 화면 안의 실시간 덮어쓰기가 오늘 값으로 바꾸고, 오늘 값이 아직 없으면 화면 맨 위에 경고를 띄운다 */
- function pre(){var k=kst();return !!day&&k.wd>0&&k.wd<6&&k.d>day&&k.hm<'09:00'}
+ /* 날짜가 바뀐 평일 08:10 전: 어제 장마감 화면 대신 '개장 전' 안내만 보여 준다(2026-11-25 '날짜가 바뀌었는데 어제 거가 보인다', 09:00 은 너무 늦다 → 08:10).
+    08:10(회사 PC 가 켜져 수집이 시작되는 시각) 이후에는 화면 안의 실시간 덮어쓰기가 오늘 값으로 바꾸고, 오늘 값이 아직 없으면 화면 맨 위에 경고를 띄운다 */
+ function pre(){var k=kst();return !!day&&k.wd>0&&k.wd<6&&k.d>day&&k.hm<'08:10'}
  function md(d){var dt=new Date(Date.UTC(+d.slice(0,4),+d.slice(4,6)-1,+d.slice(6,8)));return (+d.slice(4,6))+'/'+(+d.slice(6,8))+'('+WD[dt.getUTCDay()]+')'}
  function paint(){if(!fr)return;
   if(pre()){var k=kst();
    if(!note){note=document.createElement('div');note.className='panel';note.style.cssText='text-align:center;padding:22px 14px;line-height:1.7;font-size:15px';fr.insertAdjacentElement('beforebegin',note)}
-   note.innerHTML='<b style="font-size:17px">⏳ '+md(k.d)+' 개장 전</b><br>정규장은 09:00 에 시작해요. 시장 지수·투자자별 수급은 개장 후에 채워져요.<br><span style="color:var(--muted)">어제 '+md(day)+' 장마감 자료는 오른쪽 위 날짜 링크에서 볼 수 있어요.</span>';
+   note.innerHTML='<b style="font-size:17px">⏳ '+md(k.d)+' 개장 전</b><br>08:10 부터 오늘 화면으로 바뀌어요. 정규장은 09:00 에 시작하고, 지수·투자자별 수급은 개장 후에 채워져요.<br><span style="color:var(--muted)">어제 '+md(day)+' 장마감 자료는 오른쪽 위 날짜 링크에서 볼 수 있어요.</span>';
    fr.style.display='none';if(h)h.textContent='📊 '+md(k.d)+' 개장 전'}
   else if(note){note.remove();note=null;fr.style.display='';if(h)h.textContent='📊 장마감 수급'}}
  addEventListener('message',function(e){var m=e.data;if(!m||!m.liveClose||pre())return;
