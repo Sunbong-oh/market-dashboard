@@ -1,4 +1,4 @@
-"""출근길 음성 브리핑: 오전 데일리(dashboard.py가 남긴 briefing.json)를 4~5분 안팎의 라디오 원고로 바꿔
+"""출근길 음성 브리핑: 오전 데일리(dashboard.py가 남긴 briefing.json)를 5분 안팎(원고 약 2,300자 이상)의 라디오 원고로 바꿔
 한국어 음성(MP3)으로 만들고, 팟캐스트 피드(feed.xml)를 갱신한다.
 
 실행: python briefing.py [--pod DIR] [--notify]
@@ -32,7 +32,7 @@ MP3 = ROOT / "briefing.mp3"
 KST = timezone(timedelta(hours=9))
 
 VOICE = "ko-KR-HyunsuMultilingualNeural"  # 굵은 남성 음성(아나운서 톤)
-RATE = "+15%"  # 1.15배속
+RATE = "+5%"  # 1.05배속(2026-11-24 사용자 '5분은 돼야': +15%면 너무 짧고 빨라 늦춤)
 PITCH = "-8Hz"  # 조금 낮게
 SITE = "https://sunbong-oh.github.io/market-dashboard"
 FEED_URL = f"{SITE}/podcast/feed.xml"
@@ -58,11 +58,12 @@ NAME_SPLIT = {
 }
 PAUSE = "⏸"  # 원고 속 쉼표: 하나에 SILENCE 한 번(0.5초). 항목 제목 뒤 1번, 항목 사이 2번
 AI_MOVE = 5.0  # AI 기업 급등락 기준(전일 대비 %)
+CPM = 505  # 실제 음성으로 1분에 읽는 글자 수(+5% 속도 기준. 11/25 회차: +15%에서 1381자·쉼표 25개 = 162초 → 약 550자/분)
 NH_READ = 15   # 52주 신고가는 시총 큰 순으로 이만큼 이름을 읽고 나머지는 'N종목'으로
 # AI 밸류체인 종목(티커: 읽을 이름). 기사 검색에도 이 이름을 쓴다
 AI_STOCKS = {
     "NVDA": "엔비디아", "MSFT": "마이크로소프트", "GOOGL": "알파벳", "AMZN": "아마존", "META": "메타",
-    "TSLA": "테슬라", "AVGO": "브로드컴", "AMD": "AMD", "MU": "마이크론", "SKHY": "SK하이닉스 ADR",
+    "TSLA": "테슬라", "AAPL": "애플", "AVGO": "브로드컴", "AMD": "AMD", "MU": "마이크론", "SKHY": "SK하이닉스 ADR",
     "TSM": "TSMC", "INTC": "인텔", "ARM": "ARM", "ASML": "ASML", "MRVL": "마벨", "ORCL": "오라클",
     "PLTR": "팔란티어", "CRWV": "코어위브", "NBIS": "네비우스", "IREN": "아이렌", "SMCI": "슈퍼마이크로",
     "DELL": "델", "ANET": "아리스타", "VRT": "버티브", "LITE": "루멘텀", "COHR": "코히런트",
@@ -201,11 +202,48 @@ def build_script(data):
         say(f"{GAP}반도체입니다.{P}필라델피아 반도체 지수는 {pct(c)} {'상승' if c > 0.005 else '하락' if c < -0.005 else '보합'}했습니다.")
         for why in data.get("sox_reasons") or []:
             say(f"관련 기사는, {speakable(why)}" + ("" if why.endswith("?") else "."))
+    big = [(n, AI_ALL[s]) for s, n in BIGTECH if s in AI_ALL]
+    if big:
+        ups = [f"{n} {pct(c, 1)}" for n, c in big if c > 0.005]
+        downs = [f"{n} {pct(c, 1)}" for n, c in big if c < -0.005]
+        line = f"{GAP}빅테크 흐름입니다.{P}"
+        if ups:
+            line += "오른 종목은 " + ", ".join(ups) + ". "
+        if downs:
+            line += "내린 종목은 " + ", ".join(downs) + "."
+        say(line.strip())
+    sec = data.get("sectors") or {}
+    ss = sec.get("sectors") or []
+    if len(ss) >= 4:
+        w = lambda x: f"{x[0]} {pct(x[1], 1)} {updown(x[1], '상승', '하락', '보합')}"
+        say(f"{GAP}업종별 흐름입니다.{P}가장 강했던 업종은 {w(ss[0])}, {w(ss[1])}이었고, "
+            f"가장 약했던 업종은 {w(ss[-1])}, {w(ss[-2])}이었습니다.")
+    if sec.get("ewy") is not None or sec.get("krw"):
+        line = f"{P}한국 관련 지표도 보겠습니다. "
+        if sec.get("ewy") is not None:
+            line += f"미국에 상장된 한국 주식 상장지수펀드, 이더블유와이는 {pct(sec['ewy'], 1)} {updown(sec['ewy'])}습니다. "
+        if sec.get("krw"):
+            line += f"원 달러 환율은 {sec['krw'][0]:.0f}원 근처입니다."
+        say(line.strip())
+    nas_w = (q_of(data, "^IXIC") or {}).get("w1")
+    if nas_w is not None:
+        say(f"{P}나스닥의 최근 1주일 등락률은 {pct(nas_w, 1)} {'상승' if nas_w > 0 else '하락'}입니다.")
 
     # 2) 풋콜 비율(수치만)
     pc = data.get("putcall")
-    if pc:
-        say(f"{GAP}풋콜 비율은 {num(pc['value'])}입니다.")
+    fg = data.get("fear_greed") or {}
+    if pc or fg.get("score") is not None:
+        line = f"{GAP}투자 심리입니다.{P}"
+        if fg.get("score") is not None:
+            line += f"시엔엔 공포 탐욕 지수는 {round(fg['score'])}, {fg.get('rating') or ''} 단계"
+            if fg.get("prev") is not None:
+                a_, b_ = round(fg["score"]), round(fg["prev"])
+                line += (f"로 전날 {b_}에서 {'올랐' if a_ > b_ else '내렸'}습니다. " if a_ != b_ else "로 전날과 같았습니다. ")
+            else:
+                line += "입니다. "
+        if pc:
+            line += f"풋콜 비율은 {num(pc['value'])}입니다."
+        say(line.strip())
 
     # 3) 주요 지표 등락
     parts = []
@@ -250,6 +288,9 @@ def build_script(data):
             s = f"{m['name']} {pct(m['chg'], 1)} {'급등' if m['chg'] > 0 else '급락'}."
             if m.get("why"):
                 s += f" 관련 기사는, {speakable(m['why'])}" + ("" if m["why"].endswith("?") else ".")
+                extra = distinct([h for h in m.get("heads") or [] if reason_score(m["name"], h) > 0], seen=[m["why"]], limit=1)
+                if extra:
+                    s += f" 또, {speakable(extra[0])}" + ("" if extra[0].endswith("?") else ".")
             say(s)
             if notes and m["name"] == at:
                 say(f"{P}자세히 짚어 보겠습니다.{P}{notes}{P}")
@@ -281,6 +322,11 @@ def build_script(data):
                 + (f", 외 {more}종목입니다." if more > 0 else "입니다."))
         else:
             say(f"{GAP}52주 신고가입니다.{P}미국 52주 신고가 종목은 없었습니다.")
+
+    # 7.5) 오늘 한국 증시에 영향을 줄 국내 뉴스(데일리의 '한국 시장 영향 뉴스' 제목)
+    kr = [t for t in data.get("kr") or [] if t][:3]
+    if kr:
+        say(f"{GAP}오늘 한국 증시 관전 포인트입니다.{P}" + f"{P}".join(f"{speakable(t)}." for t in kr))
 
     # 8) 오늘·내일 일정: ★ 핵심 항목만, 수치는 첫 예상치 하나만
     days = []
@@ -358,6 +404,31 @@ def spoken_co(name):
     """영문 회사명의 법인 꼬리(S.A., p.l.c., International 등)를 떼어 짧게 읽는다."""
     return re.sub(r"\s+(and|&)$", "", CO_CUT.sub("", name).strip()) or name
 
+SECTORS = (("XLK", "기술"), ("XLC", "통신 서비스"), ("XLY", "임의소비재"), ("XLF", "금융"), ("XLV", "헬스케어"),
+           ("XLE", "에너지"), ("XLI", "산업재"), ("XLU", "유틸리티"), ("XLP", "필수소비재"))
+
+
+def sector_moves(session_day):
+    """업종 ETF(SPDR 섹터) 등락과 한국 관련 지표(EWY·원달러). {'sectors': [(이름, %)], 'ewy': %, 'krw': (값, %)}"""
+    import dashboard as d
+    from concurrent.futures import ThreadPoolExecutor
+    syms = [(n, s, "price", "", "") for s, n in SECTORS] + [("EWY", "EWY", "price", "", ""), ("원달러", "KRW=X", "price", "", "")]
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        qs = {q["sym"]: q for q in ex.map(d.fetch_quote, syms) if q["ok"]}
+    c = lambda q: (q["pts"][-1][1] / q["pts"][-2][1] - 1) * 100
+    out = dict(sectors=sorted(((n, c(qs[s])) for s, n in SECTORS if s in qs), key=lambda x: -x[1]))
+    if "EWY" in qs:
+        out["ewy"] = c(qs["EWY"])
+    if "KRW=X" in qs:
+        out["krw"] = (qs["KRW=X"]["pts"][-1][1], c(qs["KRW=X"]))
+    return out
+
+
+AI_ALL = {}  # ai_movers 가 채운다: 티커 -> 등락률(빅테크 칸에서 쓴다)
+BIGTECH = (("NVDA", "엔비디아"), ("MSFT", "마이크로소프트"), ("AAPL", "애플"), ("GOOGL", "알파벳"), ("AMZN", "아마존"),
+           ("META", "메타"), ("TSLA", "테슬라"), ("AVGO", "브로드컴"))
+
+
 def ai_movers(session_day):
     """AI 종목 중 전일 대비 AI_MOVE% 이상 움직인 종목(큰 순, 최대 4개)과 이유가 될 만한 오늘 기사 제목."""
     import dashboard as d
@@ -366,9 +437,11 @@ def ai_movers(session_day):
         qs = list(ex.map(d.fetch_quote, [(n, s, "price", "", "") for s, n in AI_STOCKS.items()]))
     day = lambda t: datetime.fromtimestamp(t, d.US_DAY_TZ).date()
     out = []
+    AI_ALL.clear()
     for q in qs:
         if q["ok"] and day(q["pts"][-1][0]) == session_day:  # 그날 거래한 종목만(상장폐지·거래정지 제외)
             c = (q["pts"][-1][1] / q["pts"][-2][1] - 1) * 100
+            AI_ALL[q["sym"]] = c
             if abs(c) >= AI_MOVE:
                 out.append(dict(sym=q["sym"], name=q["name"], chg=c))
     out = sorted(out, key=lambda m: -abs(m["chg"]))[:4]
@@ -475,15 +548,19 @@ def sox_reasons(data):
 
 
 # 증시에 영향을 줄 만한 그날의 소식(유가·지정학·연준·관세·달러 등). 주제마다 한 꼭지씩, 많아야 ISSUE_N개
-ISSUE_N = 5
+ISSUE_N = 10
 ISSUE_QUERIES = (
     ("국제유가 when:1d", r"유가|원유|WTI|브렌트"),
     ("유조선 OR 호르무즈 OR 홍해 when:1d", r"유조선|호르무즈|홍해|선박|해협"),
     ("중동 OR 이란 OR 이스라엘 OR 우크라이나 when:1d", r"중동|이란|이스라엘|우크라|러시아|가자|휴전"),
     ("연준 OR 파월 OR 금리인하 when:1d", r"연준|Fed|파월|금리|FOMC"),
     ("관세 OR 무역협상 OR 수출통제 when:1d", r"관세|무역|수출 ?통제|제재"),
-    ("달러 OR 엔화 OR 환율 when:1d", r"달러|엔화|위안|환율"),
+    ("달러 OR 엔화 when:1d", r"달러 ?(강세|약세|인덱스)|엔화|위안"),  # 원달러 환율은 '한국 관련 지표'에서 읽는다
     ("미국 경제지표 OR 고용 OR 물가 when:1d", r"고용|물가|CPI|PCE|소비|제조업|실업|GDP"),
+    ("월가 when:1d", r"월가|투자자|헤지펀드|자금|매도|매수"),
+    ("중국 경제 OR 중국 증시 when:1d", r"중국|위안|부양"),
+    ("금값 OR 구리 OR 원자재 when:1d", r"금값|금 ?가격|구리|원자재|은값"),
+    ("비트코인 when:1d", r"비트코인|가상자산|암호화폐"),
 )
 ISSUE_SKIP = re.compile(r"코스피|코스닥|특징주|추천|종목|ETF|펀드|부동산|아파트|청약|대출|카드|보험|여행|날씨|한국|국내|K-|"
                         r"이유로|가수|노래|배우|축구|\?$")
@@ -791,6 +868,10 @@ def main():
     except Exception as e:
         print("지표 이유 실패:", type(e).__name__, e, file=sys.stderr)
     try:
+        data["sectors"] = sector_moves(sday)
+    except Exception as e:
+        print("업종 등락 실패:", type(e).__name__, e, file=sys.stderr)
+    try:
         data["sox_reasons"] = sox_reasons(data)
     except Exception as e:
         print("반도체 이유 실패:", type(e).__name__, e, file=sys.stderr)
@@ -802,7 +883,7 @@ def main():
     text = build_script(data)
     plain = re.sub(f"{PAUSE}+", " ", text).replace(SLOW, "").replace(SLOW_END, "").replace(" \n", "\n").strip()  # 피드 설명·원고 파일용
     TXT.write_text(plain, encoding="utf-8")
-    print(f"원고 {len(plain)}자 (약 {len(plain) / 330:.1f}분)\n" + text)
+    print(f"원고 {len(plain)}자 (약 {len(plain) / CPM + text.count(PAUSE) * 0.5 / 60:.1f}분)\n" + text)
     if "--text-only" in sys.argv:
         return
     kbps = synth(text, MP3)
