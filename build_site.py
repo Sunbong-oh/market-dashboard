@@ -854,7 +854,10 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
   var nd=Object.assign({},d,{flows:f.flows.slice()}),cf=d.current_flows||{},bl=(d.bars||[]).slice(-1)[0],lt=fl[fl.length-1].t;
   if(cf['외국인']!=null&&bl&&bl.t>lt)nd.flows.push({t:bl.t,'외국인':cf['외국인']});
   fb.hidden=!futChart(c,nd,false)}
- function apply(j,only){if(only)return fill(j);if(!j||j.date!==kst().d||!j.data||!j.data['/api/market'])return;
+ function apply(j,only){if(only)return fill(j);
+  if(!j||j.date!==kst().d||!j.data||!j.data['/api/market']){var q=kst(),bb=document.getElementById('snapshot-banner');  /* 장중인데 오늘 기록이 아직 없으면 어제 화면이라고 분명히 알린다 */
+   if(bb&&q.wd>0&&q.wd<6&&q.hm>='09:00'&&q.hm<='16:10'&&DAY!==q.d){bb.textContent='⚠️ 오늘 장중 수급이 아직 안 올라왔어요(수집 대기 중) · 아래는 어제 '+DAY.slice(4,6)+'/'+DAY.slice(6,8)+' 장마감 자료예요';bb.hidden=false}
+   return}
   window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');
   var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':kst().hm<'09:00'?'⏳ 개장 전 · 정규장 09:00 시작 · 지수는 어제 종가, 수급은 개장 후 채워져요 ('+j.time+' 기준)':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
   try{refreshFast();refreshSlow()}catch(e){}
@@ -873,10 +876,23 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
 
 
 LIVE_HOME_JS = """<script>
-(function(){var h=document.querySelector('#close .sec-h h2');
- addEventListener('message',function(e){var m=e.data;if(!m||!m.liveClose)return;
-  var hm=new Date(Date.now()+9*3600e3).toISOString().slice(11,16);
-  if(h){h.textContent=(hm>'16:10'?'📊 오늘 장마감 수급 · ':'📊 실시간 수급 · ')+m.liveClose;var a=h.parentNode.querySelector('a');if(a)a.textContent='전일 장마감 보기'}})})();
+(function(){var sec=document.getElementById('close');if(!sec)return;
+ var h=sec.querySelector('.sec-h h2'),fr=sec.querySelector('iframe.embed'),day=(sec.dataset.day||'').replace(/-/g,''),note=null,WD='일월화수목금토';
+ function kst(){var n=new Date(Date.now()+9*3600e3);return {d:n.toISOString().slice(0,10).replace(/-/g,''),hm:n.toISOString().slice(11,16),wd:n.getUTCDay()}}
+ /* 날짜가 바뀐 평일 09:00 전: 어제 장마감 화면 대신 '개장 전' 안내만 보여 준다(2026-11-25 '날짜가 바뀌었는데 어제 거가 보인다').
+    09:00 이후에는 화면 안의 실시간 덮어쓰기가 오늘 값으로 바꾸고, 오늘 값이 아직 없으면 화면 맨 위에 경고를 띄운다 */
+ function pre(){var k=kst();return !!day&&k.wd>0&&k.wd<6&&k.d>day&&k.hm<'09:00'}
+ function md(d){var dt=new Date(Date.UTC(+d.slice(0,4),+d.slice(4,6)-1,+d.slice(6,8)));return (+d.slice(4,6))+'/'+(+d.slice(6,8))+'('+WD[dt.getUTCDay()]+')'}
+ function paint(){if(!fr)return;
+  if(pre()){var k=kst();
+   if(!note){note=document.createElement('div');note.className='panel';note.style.cssText='text-align:center;padding:22px 14px;line-height:1.7;font-size:15px';fr.insertAdjacentElement('beforebegin',note)}
+   note.innerHTML='<b style="font-size:17px">⏳ '+md(k.d)+' 개장 전</b><br>정규장은 09:00 에 시작해요. 시장 지수·투자자별 수급은 개장 후에 채워져요.<br><span style="color:var(--muted)">어제 '+md(day)+' 장마감 자료는 오른쪽 위 날짜 링크에서 볼 수 있어요.</span>';
+   fr.style.display='none';if(h)h.textContent='📊 '+md(k.d)+' 개장 전'}
+  else if(note){note.remove();note=null;fr.style.display='';if(h)h.textContent='📊 장마감 수급'}}
+ addEventListener('message',function(e){var m=e.data;if(!m||!m.liveClose||pre())return;
+  var hm=kst().hm;
+  if(h){h.textContent=(hm>'16:10'?'📊 오늘 장마감 수급 · ':'📊 실시간 수급 · ')+m.liveClose;var a=h.parentNode.querySelector('a');if(a)a.textContent='전일 장마감 보기'}});
+ paint();setInterval(paint,30000);document.addEventListener('visibilitychange',paint)})();
 </script>"""
 
 
@@ -2606,7 +2622,7 @@ def build_home(now, daily, close, live=None, target=None, us=None, strong=None, 
             f'{earnings_home(now)}'
             f'<section class="sec" id="daily">{s1}</section>'
             f'{target_home(target)}{us_home(us)}{STRONG_LOW_JS if strong else ""}'
-            f'<section class="sec" id="close"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
+            f'<section class="sec" id="close" data-day="{close["day"] if close and close.get("embed") else ""}"><div class="sec-h"><h2>📊 장마감 수급</h2>{more3}</div>{s3}</section>'
             f'{play_page.home_section(kospi_hist or [], VISIT_API, VISIT_NS)}{quiz_home(news_quiz(now, target, strong))}{tools_home()}</div>'
             f'{ad_home()}{FIT_JS}{LIVE_HOME_JS}{ISSUE_JS}{EARN_JS}{EARN_LIVE_JS}{MOVERS_JS}{VCNT_JS}')
     (OUT / "index.html").write_text(page(SITE_NAME, body, "", "", hero=False),
