@@ -809,7 +809,7 @@ def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact="", weekly=()
 
 
 # ---------- 음성 브리핑용 데이터 ----------
-BRIEF_EXTRA = (("다우", "^DJI"),)  # 화면에는 없고 음성 브리핑에서만 읽는 지수
+BRIEF_EXTRA = (("다우", "^DJI"), ("필라델피아 반도체", "^SOX"))  # 화면에는 없고 음성 브리핑에서만 읽는 지수
 BRIEF_JSON = OUT.with_name("briefing.json")
 
 

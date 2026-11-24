@@ -1,4 +1,4 @@
-"""출근길 음성 브리핑: 오전 데일리(dashboard.py가 남긴 briefing.json)를 2분 안팎의 라디오 원고로 바꿔
+"""출근길 음성 브리핑: 오전 데일리(dashboard.py가 남긴 briefing.json)를 4~5분 안팎의 라디오 원고로 바꿔
 한국어 음성(MP3)으로 만들고, 팟캐스트 피드(feed.xml)를 갱신한다.
 
 실행: python briefing.py [--pod DIR] [--notify]
@@ -159,7 +159,7 @@ def cleanup_recap(t):
 
 # ---------- 원고 ----------
 def build_script(data):
-    """순서: 나스닥과 이유(+어젯밤 지표 결과) -> 풋콜 -> 주요 지표 -> 실적 -> AI 급등락과 이유(+공통 키워드 해설)
+    """순서: 나스닥과 이유(+어젯밤 지표 결과) -> 필라델피아 반도체(+이유) -> 풋콜 -> 주요 지표(+증시 소식) -> 실적 -> AI 급등락과 이유(+공통 키워드 해설)
     -> 전일 강세종목 리포트 -> 52주 신고가 -> 오늘·내일 일정."""
     now = datetime.fromisoformat(data["now"])
     sday = date.fromisoformat(data["session_day"])
@@ -183,13 +183,24 @@ def build_script(data):
         # 등락률이 핵심이라 먼저, 지수 수준은 '2만 6700'처럼 백 단위로 짧게(긴 숫자는 음성이 끊어 읽는다)
         say(f"{GAP}먼저 나스닥입니다.{P}나스닥은 {pct(c)} {word}, {man_unit(nas['last'])}에 마감했습니다.")
     reasons = [cleanup_recap(data["headline"])] if data.get("headline") else []
-    # 둘째 기사는 국내 증시·ETF 기사가 섞여 들어와 엉뚱한 이유가 되기 쉬워, 대표 시황 기사 제목 하나만 쓴다
+    # 다른 뉴욕증시 마감 기사 중 이유(재료 낱말)가 담긴 제목을 2개까지 더한다(국내 증시·ETF 기사는 뺀다)
+    more = [cleanup_recap(t) for t in data.get("news") or []
+            if IND_WHY.search(t) or re.search(r"차익 ?실현|관세|실적|반도체|AI|금리|유가", t)]
+    more = [t for t in more if not re.search(r"코스피|코스닥|ETF|국내|한국|기업주식정보|뉴욕 증시서|\d+%대 (반등|상승|하락)", t)]
+    reasons += distinct([m for m in more if m], seen=reasons, limit=2)
     reasons = [speakable(r) for r in reasons if r]
     if reasons:
         say(f"{'상승' if nas and chg(nas) > 0 else '하락' if nas and chg(nas) < 0 else '등락'} 이유는 "
             + ", 그리고 ".join(reasons) + ", 이렇게 정리됩니다.")
     for item, val in data.get("cal_done") or []:
         say(release_sentence(item, val))
+
+    sox = q_of(data, "^SOX")
+    if sox:
+        c = chg(sox)
+        say(f"{GAP}반도체입니다.{P}필라델피아 반도체 지수는 {pct(c)} {'상승' if c > 0.005 else '하락' if c < -0.005 else '보합'}했습니다.")
+        for why in data.get("sox_reasons") or []:
+            say(f"관련 기사는, {speakable(why)}" + ("" if why.endswith("?") else "."))
 
     # 2) 풋콜 비율(수치만)
     pc = data.get("putcall")
@@ -218,6 +229,9 @@ def build_script(data):
         c = chg(v)
         say(f"{P}{SLOW}변동성 지수, 빅스는 {num(v['last'])}, 전날보다 {pct(c)} "
             f"{'올랐' if c > 0.005 else '내렸' if c < -0.005 else '변동이 없었'}습니다.{SLOW_END}{P}")
+    issues = data.get("issues") or []
+    if issues:
+        say(f"{GAP}증시에 영향을 줄 만한 소식입니다.{P}" + f"{P}".join(f"{speakable(t)}." for t in issues))
 
     # 4) 실적: 실적 속보(earnings_flash) + 미국 장 전후 발표 대형주
     earn = earnings_sentences(data)
@@ -436,6 +450,60 @@ def indicator_reasons(data):
             why = re.split(r"\s*(?:⋯|…|\.{2,})\s*", why)[0]  # 묶음 기사면 첫 꼭지만
             why = re.sub(r"\s*-\s*[^-]*\d[^-]*$", "", why)  # '-WTI 4%대 하락 90달러 밑으로' 같은 등락 꼬리
             out.append((name, why))
+    return out
+
+
+SOX_MOVE = 2.0  # 필라델피아 반도체가 이만큼(%) 넘게 움직이면 이유 기사를 2개까지 읽는다
+SOX_QUERIES = ("필라델피아 반도체 when:1d", "반도체주 급락 when:1d", "반도체주 급등 when:1d", "엔비디아 마이크론 반도체 when:1d")
+SOX_WHY = re.compile(IND_WHY.pattern + r"|실적|가이던스|수출 ?통제|AI|인공지능|설비투자|메모리|HBM|D램|낸드|엔비디아|마이크론|TSMC|브로드컴|"
+                     r"AMD|인텔|ASML|차익 ?실현|거품|버블|매도|투매|반등")
+
+
+def sox_reasons(data):
+    """필라델피아 반도체 지수가 크게 움직인 날, 이유가 담긴 오늘 국내 기사 제목 최대 2개."""
+    import dashboard as d
+    q = q_of(data, "^SOX")
+    if not q or abs(chg(q)) < SOX_MOVE:
+        return []
+    heads = []
+    for qu in SOX_QUERIES:
+        heads += [n["title"] for n in sorted(d.google_news(qu), key=lambda n: -n["ts"])[:12]]
+    ok = [re.split(r"\s*(?:⋯|…|\.{2,})\s*", t)[0] for t in heads
+          if re.search(r"반도체|칩|SOX", t) and SOX_WHY.search(t) and not NOISE.search(t)
+          and not re.search(r"코스피|코스닥|삼성전자|하이닉스|국내|ETF|추천|장전|시황|\d+월 ?\d+일", t)]
+    return distinct(ok, seen=[data.get("headline") or ""], limit=2)
+
+
+# 증시에 영향을 줄 만한 그날의 소식(유가·지정학·연준·관세·달러 등). 주제마다 한 꼭지씩, 많아야 ISSUE_N개
+ISSUE_N = 5
+ISSUE_QUERIES = (
+    ("국제유가 when:1d", r"유가|원유|WTI|브렌트"),
+    ("유조선 OR 호르무즈 OR 홍해 when:1d", r"유조선|호르무즈|홍해|선박|해협"),
+    ("중동 OR 이란 OR 이스라엘 OR 우크라이나 when:1d", r"중동|이란|이스라엘|우크라|러시아|가자|휴전"),
+    ("연준 OR 파월 OR 금리인하 when:1d", r"연준|Fed|파월|금리|FOMC"),
+    ("관세 OR 무역협상 OR 수출통제 when:1d", r"관세|무역|수출 ?통제|제재"),
+    ("달러 OR 엔화 OR 환율 when:1d", r"달러|엔화|위안|환율"),
+    ("미국 경제지표 OR 고용 OR 물가 when:1d", r"고용|물가|CPI|PCE|소비|제조업|실업|GDP"),
+)
+ISSUE_SKIP = re.compile(r"코스피|코스닥|특징주|추천|종목|ETF|펀드|부동산|아파트|청약|대출|카드|보험|여행|날씨|한국|국내|K-|"
+                        r"이유로|가수|노래|배우|축구|\?$")
+# 증시 재료로 볼 낱말(하나는 있어야 읽는다). '달러'·'이란'만 있는 기사(수출 1조 달러, 이란 사회 기사)는 빠진다
+ISSUE_MARKET = re.compile(r"유가|원유|증시|주가|금리|관세|연준|해협|유조선|선박|공급|감산|증산|수출 ?통제|제재|환율|물가|고용|국채|"
+                          r"전쟁|휴전|공습|피격|봉쇄|협상|합의|파업|셧다운|부채|신용등급|금값|비트코인")
+
+
+def market_issues(data, already=()):
+    """주제별로 오늘 국내 기사 중 증시 재료가 담긴 제목 하나씩(이미 읽은 이유와 겹치면 뺀다)."""
+    import dashboard as d
+    seen, out = [t for t in already if t], []
+    for query, must in ISSUE_QUERIES:
+        heads = [n["title"] for n in sorted(d.google_news(query), key=lambda n: -n["ts"])[:15]]
+        ok = [re.split(r"\s*(?:⋯|…|\.{2,})\s*", t)[0] for t in heads
+              if re.search(must, t) and ISSUE_MARKET.search(t) and not NOISE.search(t) and not ISSUE_SKIP.search(t)]
+        pick = distinct(ok, seen=seen + out, limit=1)
+        out += pick
+        if len(out) >= ISSUE_N:
+            break
     return out
 
 
@@ -722,6 +790,15 @@ def main():
         data["ind_reasons"] = indicator_reasons(data)
     except Exception as e:
         print("지표 이유 실패:", type(e).__name__, e, file=sys.stderr)
+    try:
+        data["sox_reasons"] = sox_reasons(data)
+    except Exception as e:
+        print("반도체 이유 실패:", type(e).__name__, e, file=sys.stderr)
+    try:  # 이미 읽는 이유(나스닥 대표 기사·지표 이유·반도체 이유)와 겹치지 않는 소식만
+        data["issues"] = market_issues(data, [data.get("headline") or ""] + [w for _, w in data.get("ind_reasons") or []]
+                                       + (data.get("sox_reasons") or []))
+    except Exception as e:
+        print("증시 소식 실패:", type(e).__name__, e, file=sys.stderr)
     text = build_script(data)
     plain = re.sub(f"{PAUSE}+", " ", text).replace(SLOW, "").replace(SLOW_END, "").replace(" \n", "\n").strip()  # 피드 설명·원고 파일용
     TXT.write_text(plain, encoding="utf-8")
