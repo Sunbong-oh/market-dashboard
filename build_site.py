@@ -693,6 +693,9 @@ function futChart(el,d,live){
  var bars=(S==='fut'?fbars.map(function(b){return [tm(b.t),b.c]}):IX[S].pts.map(function(p){return [tm(p[0]),p[1]]})).filter(function(p){return ok(p[0])});
  var NM=S==='fut'?'KOSPI200 선물':S,FK=S==='fut'?'외국인':'외국인·'+S,FN=S==='fut'?'외국인 선물':'외국인 '+S+' 현물';
  var fl=(d.flows||[]).filter(function(r){return r[FK]!=null}).map(function(r){return [tm(r.t),r[FK]]}).filter(function(p){return ok(p[0])});
+ /* 마감 동시호가(15:35~15:45)에는 KB 가 수급을 갱신하지 않고 15:45 에 확정값으로 한꺼번에 바뀐다. 평평하게 이어 붙은 15:36~15:44 점은 빼서 빈 구간(점선)으로 보이게 한다 */
+ var fin0=fl.length>0&&fl[fl.length-1][0]>=420,v35=null;fl.forEach(function(p){if(p[0]===410)v35=p[1]});
+ if(fin0&&v35!==null)fl=fl.filter(function(p){return !(p[0]>410&&p[0]<420&&p[1]===v35)});
  if(bars.length<2)return false;
  var hf=fl.length>=2,cf=d.current_flows||{},lf=bars[bars.length-1],last=lf[1];
  var fg=hf?fl[fl.length-1][1]:cf[FK];
@@ -731,10 +734,10 @@ function futChart(el,d,live){
   '<text x="'+(L-6)+'" y="'+(T+12)+'" text-anchor="end">'+f2(sf.hi)+'</text><text x="'+(L-6)+'" y="'+(B+4)+'" text-anchor="end">'+f2(sf.lo)+'</text>'+
   '<path d="'+path(bars,sf.y)+'" fill="none" stroke="#1c2330" stroke-width="1.4" stroke-linejoin="round" opacity=".7"/>'+fsvg+'</svg>';
  var ch=prev!=null?last-prev:null,pct=ch!=null&&prev?ch/prev*100:0,cls=ch>0?'up':ch<0?'dn':'';
- var back=hf?fl.filter(function(p){return p[0]<=fl[fl.length-1][0]-30}):[],d30=back.length&&fl[fl.length-1][0]-30-back[back.length-1][0]<=5?fg-back[back.length-1][1]:null;  /* 30분 전 기록이 5분 넘게 비어 있으면(수집이 끊긴 날) 건너뛴 값을 '30분 변화'로 보이지 않게 */
+ var back=hf?fl.filter(function(p){return p[0]<=fl[fl.length-1][0]-30}):[],d30=!fin0&&back.length&&fl[fl.length-1][0]-30-back[back.length-1][0]<=5?fg-back[back.length-1][1]:null;  /* 30분 전 기록이 5분 넘게 비어 있으면(수집이 끊긴 날) 건너뛴 값을 '30분 변화'로 보이지 않게 */
  var gc=fg>0?'up':fg<0?'dn':'';
  var badge='<div class="badge2">'+(fg!=null?'<div class="fg '+gc+'"><span class="k">'+FN+' 누적'+(S==='fut'?' · 주간장':'')+(hf?'':' (마감)')+'</span><b>'+sg0(fg)+'억</b>'+
-  '<span class="c">'+(fg>0?'순매수':fg<0?'순매도':'')+(d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+'억 '+(d30>0?'사는 중':d30<0?'파는 중':''):'')+'</span></div>':'')+
+  '<span class="c">'+(fg>0?'순매수':fg<0?'순매도':'')+(d30!=null?' · 30분 '+(d30>0?'▲':d30<0?'▼':'')+n0(Math.abs(d30))+'억 '+(d30>0?'사는 중':d30<0?'파는 중':''):'')+(fin0?' · 15:45 마감 확정':'')+'</span></div>':'')+
   (ch!=null?'<div class="fu '+cls+'"><span class="k">'+NM+'</span><b>'+f2(last)+'</b><span class="c"><em class="pc">'+(pct>0?'+':'')+pct.toFixed(2)+'%</em> '+
   (ch>0?'▲':ch<0?'▼':'')+f2(Math.abs(ch))+'</span></div>':'')+'</div>';
  var rest=hf?(d.flows||[]).slice(-1)[0]||{}:cf,oth=['기관계','개인'].filter(function(k){return rest[k]!=null}).map(function(k){return k+' '+sg0(rest[k])}).join(' · ');
