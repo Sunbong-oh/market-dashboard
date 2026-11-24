@@ -706,7 +706,8 @@ function futChart(el,d,live){
  /* 두 축의 비율 고정: 선물 지수 2포인트 = 외국인 200억(1포인트 = 100억). 더 크게 움직인 쪽에 맞춰 둘 다 같은 비율로 */
  if(hf&&S==='fut'){var RATIO=100,span=Math.max(sf.hi-sf.lo,(sg.hi-sg.lo)/RATIO),fm=(sf.hi+sf.lo)/2,gm=(sg.hi+sg.lo)/2;
   var mk=function(lo,hi){return {lo:lo,hi:hi,y:function(a){return B-(B-T)*(a-lo)/(hi-lo)}}};
-  sf=mk(fm-span/2,fm+span/2);sg=mk(gm-span*RATIO/2,gm+span*RATIO/2)}
+  /* 한쪽이 높이의 절반도 못 채우면(외국인 누적이 아주 큰 날 지수가 납작해짐) 비율 고정을 풀고 각자 꽉 차게 */
+  if(Math.min(sf.hi-sf.lo,(sg.hi-sg.lo)/RATIO)>=span*.5){sf=mk(fm-span/2,fm+span/2);sg=mk(gm-span*RATIO/2,gm+span*RATIO/2)}}
  var path=function(ps,y){var o="",q=null;ps.forEach(function(p){o+=(q===null||p[0]-q>5?" M":" L")+x(p[0]).toFixed(1)+","+y(p[1]).toFixed(1);q=p[0]});return o.trim()};
  /* 기록이 5분 넘게 빈 구간은 실선 대신 옅은 점선으로 이어 준다(끊어 버리면 듬성듬성 기록된 날 점들만 흩어져 보인다) */
  var link=function(ps,y){var o="",q=null;ps.forEach(function(p){if(q&&p[0]-q[0]>5)o+=" M"+x(q[0]).toFixed(1)+","+y(q[1]).toFixed(1)+" L"+x(p[0]).toFixed(1)+","+y(p[1]).toFixed(1);q=p});return o.trim()};
