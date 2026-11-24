@@ -841,7 +841,7 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
  function kst(){var n=new Date(Date.now()+9*3600e3);return {d:n.toISOString().slice(0,10).replace(/-/g,''),hm:n.toISOString().slice(11,16),wd:n.getUTCDay()}}
  /* 장중(08:00~16:10)은 실시간. 그 뒤에도 사이트가 아직 오늘 장마감 리포트로 다시 빌드되기 전(이 페이지가 지난 날짜)이면
     오늘 마지막 스냅샷(장마감 수급·외국인 선물 기록)을 그대로 보여 준다 */
- var DAY='__DAY__';
+ var DAY='__DAY__',ORIG=window.__SNAPSHOT__;  /* ORIG = 이 페이지에 들어 있는 직전 거래일 자료 */
  function on(){var k=kst();return k.wd>0&&k.wd<6&&k.hm>='08:00'&&(k.hm<='16:10'||DAY!==k.d)}
  /* 16:10 뒤 오늘 장마감 리포트로 바뀐 때: 그 리포트에 외국인 분 단위 선이 없고(PC 수집이 중간에 끊긴 날) flow-live 에 오늘 기록이 있으면
     그 기록으로 빨간 선만 채운다(지수·마감 합계는 리포트 값 그대로). 15:01 같은 마지막 기록 뒤는 비고, 마감 합계는 점으로 찍는다 */
@@ -854,13 +854,26 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
   var nd=Object.assign({},d,{flows:f.flows.slice()}),cf=d.current_flows||{},bl=(d.bars||[]).slice(-1)[0],lt=fl[fl.length-1].t;
   if(cf['외국인']!=null&&bl&&bl.t>lt)nd.flows.push({t:bl.t,'외국인':cf['외국인']});
   fb.hidden=!futChart(c,nd,false)}
+ /* 개장 전(~09:30)에는 오늘 강세 테마가 전부 0 이라 순서가 아무 의미가 없다 → 화면에 들어 있는 직전 거래일 강세 테마를 날짜를 밝혀 보여 준다 */
+ function zeroTh(t){return !t||!(t.themes||[]).length||t.themes.every(function(r){return !r.change_pct})}
+ function staleFix(){var t=window.__SNAPSHOT__&&window.__SNAPSHOT__['/api/themes'],sd=t&&t.stale_day,src=document.getElementById('themes-source'),box=document.getElementById('themes');
+  if(!sd||!src||!box)return;var md=(+String(sd).slice(4,6))+'/'+(+String(sd).slice(6,8)),h=src.previousElementSibling,lead=box.querySelector('.theme-lead');
+  if(h&&h.tagName==='H2'&&h.textContent.indexOf('직전 거래일')<0)h.textContent='직전 거래일('+md+') 강세 테마';
+  if(src.textContent.indexOf('장 시작 전')<0)src.textContent='오늘 장 시작 전 · '+src.textContent;
+  if(lead&&lead.firstChild&&lead.firstChild.nodeType===3&&/^오늘은 /.test(lead.firstChild.nodeValue))lead.firstChild.nodeValue=lead.firstChild.nodeValue.replace(/^오늘은 /,'직전 거래일에는 ')}
+ var thObs=false;
+ function watchTh(){if(thObs)return;var a=document.getElementById('themes'),b=document.getElementById('themes-source');if(!a||!b)return;thObs=true;
+  var mo=new MutationObserver(staleFix);mo.observe(a,{childList:true,subtree:true});mo.observe(b,{childList:true,characterData:true,subtree:true})}
  function apply(j,only){if(only)return fill(j);
   if(!j||j.date!==kst().d||!j.data||!j.data['/api/market']){var q=kst(),bb=document.getElementById('snapshot-banner');  /* 장중인데 오늘 기록이 아직 없으면 어제 화면이라고 분명히 알린다 */
    if(bb&&q.wd>0&&q.wd<6&&q.hm>='08:10'&&q.hm<='16:10'&&DAY!==q.d){bb.textContent='⚠️ 오늘 장중 수급이 아직 안 올라왔어요(수집 대기 중) · 아래는 어제 '+DAY.slice(4,6)+'/'+DAY.slice(6,8)+' 장마감 자료예요';bb.hidden=false}
    return}
-  window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');
-  var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':kst().hm<'09:00'?'⏳ 개장 전 · 정규장 09:00 시작 · 지수는 어제 종가, 수급은 개장 후 채워져요 ('+j.time+' 기준)':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
+  var oth=ORIG&&ORIG['/api/themes'];
+  if(DAY!==kst().d&&kst().hm<'09:30'&&oth&&(oth.themes||[]).length&&!zeroTh(oth)&&zeroTh(j.data['/api/themes'])&&!(j.data['/api/themes']||{}).stale_day)j.data['/api/themes']=Object.assign({},oth,{stale_day:DAY});
+  window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');watchTh();
+  var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':kst().hm<'08:45'?'⏳ 개장 전 · 선물 08:45 · 정규장 09:00 시작 · 지수는 어제 종가 ('+j.time+' 기준)':kst().hm<'09:00'?'⏳ 선물은 개장(08:45), 선물 수급은 아래에 나와요 · 현물·지수는 09:00 개장 후 채워져요 ('+j.time+' 기준)':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
   try{refreshFast();refreshSlow()}catch(e){}
+  setTimeout(staleFix,1500);
   var f=j.data['/api/futures?minutes=1'],fb=document.getElementById('futbox');
   if(f&&window.futIdx){f=Object.assign({},f,{idx:futIdx(j.data['/api/indices/intraday'])})}
   if(f&&fb&&window.futChart){fb.hidden=!futChart(fb.lastChild,f,true)}
