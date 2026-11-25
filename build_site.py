@@ -744,7 +744,8 @@ function futChart(el,d,live){
  var hh=lf[0]+525,hhmm=Math.floor(hh/60)+':'+('0'+hh%60).slice(-2);
  var tabs=Object.keys(IX).length?'<div class="ftab">'+[['fut','외국인 선물<br>× K200 선물']].concat(Object.keys(IX).map(function(k){return [k,'외국인 '+k+'<br>× '+k+' 지수']})).map(function(t){
    return '<button type="button" data-fs="'+t[0]+'"'+(t[0]===S?' class="on"':'')+'>'+t[1]+'</button>'}).join('')+'</div>':'';
- el.innerHTML=tabs+badge+'<p class="lg">'+(hf?'<b style="color:#e03131">━ '+FN+' 순매수 누적</b> (우, 억원) · ':'')+
+ var nt=d.night,nl=(S==='fut'&&nt&&nt.price!=null)?'<p class="lg" style="margin:8px 0 2px">🌙 <b>야간선물 마감</b> '+f2(nt.price)+(nt.change!=null?' ('+(nt.change<0?'▼':'▲')+f2(Math.abs(nt.change))+', '+(nt.change_pct>0?'+':'')+nt.change_pct.toFixed(2)+'%)':'')+(nt.volume?' · 야간 거래량 '+n0(nt.volume)+'계약':'')+'<br><span style="font-size:12px">'+nt.at+' 시세(주간 개장 직전 값) 기준</span></p>':'';
+ el.innerHTML=tabs+badge+nl+'<p class="lg">'+(hf?'<b style="color:#e03131">━ '+FN+' 순매수 누적</b> (우, 억원) · ':'')+
   '<b style="color:#495057">━ '+NM+'</b> (좌) '+f2(last)+'<br><span style="font-size:12px">'+(S==='fut'?'※ 주간장 기준(08:45~15:45) · 야간장 미포함 — MTS·HTS 투자자동향(야간 포함)과 다를 수 있음':
   '※ 정규장 당일 누적(억원) · 두 선은 각자 범위에 맞춰 그림'+(hf?'':' · 외국인 현물 분 단위 기록은 10/27 장부터 쌓여요'))+'</span></p>'+svg+
   '<p class="note">'+(live?'<span class="dot"></span>'+hhmm+' 기준 · 1분마다 기록, 화면은 1~2분마다 자동 갱신':
@@ -757,7 +758,8 @@ def _fut_data(d):
     keep = ("t", "외국인", "기관계", "개인", "외국인·코스피", "외국인·코스닥")
     return {"futures": d.get("futures"), "bars": [{"t": b["t"], "c": b.get("c")} for b in d.get("bars") or []],
             "flows": [{k: r[k] for k in keep if k in r} for r in d.get("flows") or []],
-            "current_flows": {k: v for k, v in (d.get("current_flows") or {}).items() if k in keep}, "idx": d.get("idx") or {}}
+            "current_flows": {k: v for k, v in (d.get("current_flows") or {}).items() if k in keep}, "idx": d.get("idx") or {},
+            "night": d.get("night")}
 
 
 def _idx_data(it):
@@ -855,6 +857,7 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
   if(cf['외국인']!=null&&bl&&bl.t>lt)nd.flows.push({t:bl.t,'외국인':cf['외국인']});
   fb.hidden=!futChart(c,nd,false)}
  /* 개장 전(~09:30)에는 오늘 강세 테마가 전부 0 이라 순서가 아무 의미가 없다 → 화면에 들어 있는 직전 거래일 강세 테마를 날짜를 밝혀 보여 준다 */
+ function nightTxt(j){var f=((j.data||{})['/api/futures?minutes=1']||{}).futures;return f&&f.price!=null&&f.change_pct!=null?' · 🌙 야간선물 '+f.price.toFixed(2)+' ('+(f.change_pct>0?'+':'')+f.change_pct+'%%)':''}
  function zeroTh(t){return !t||!(t.themes||[]).length||t.themes.every(function(r){return !r.change_pct})}
  function staleFix(){var t=window.__SNAPSHOT__&&window.__SNAPSHOT__['/api/themes'],sd=t&&t.stale_day,src=document.getElementById('themes-source'),box=document.getElementById('themes');
   if(!sd||!src||!box)return;var md=(+String(sd).slice(4,6))+'/'+(+String(sd).slice(6,8)),h=src.previousElementSibling,lead=box.querySelector('.theme-lead');
@@ -871,7 +874,7 @@ LIVE_CLOSE_JS = """<style>body.live-close .site-extra .prev,body.live-close #rep
   var oth=ORIG&&ORIG['/api/themes'];
   if(DAY!==kst().d&&kst().hm<'09:30'&&oth&&(oth.themes||[]).length&&!zeroTh(oth)&&zeroTh(j.data['/api/themes'])&&!(j.data['/api/themes']||{}).stale_day)j.data['/api/themes']=Object.assign({},oth,{stale_day:DAY});
   window.__SNAPSHOT__=j.data;window.__SNAPSHOT_TIME__=j.time;document.body.classList.add('live-close');watchTh();
-  var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':kst().hm<'08:45'?'⏳ 개장 전 · 선물 08:45 · 정규장 09:00 시작 · 지수는 어제 종가 ('+j.time+' 기준)':kst().hm<'09:00'?'⏳ 선물은 개장(08:45), 선물 수급은 아래에 나와요 · 현물·지수는 09:00 개장 후 채워져요 ('+j.time+' 기준)':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
+  var b=document.getElementById('snapshot-banner');if(b){b.textContent=kst().hm>'16:10'?'📊 오늘 장마감 · '+j.time+' 기준':kst().hm<'08:45'?'⏳ 개장 전'+nightTxt(j)+' · 선물 08:45 · 정규장 09:00 시작 · 지수는 어제 종가 ('+j.time+' 기준)':kst().hm<'09:00'?'⏳ 선물은 개장(08:45), 선물 수급은 아래에 나와요 · 현물·지수는 09:00 개장 후 채워져요 ('+j.time+' 기준)':'🔴 실시간 · '+j.time+' 기준 (1분마다 갱신)';b.hidden=false}
   try{refreshFast();refreshSlow()}catch(e){}
   setTimeout(staleFix,1500);
   var f=j.data['/api/futures?minutes=1'],fb=document.getElementById('futbox');
