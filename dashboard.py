@@ -651,7 +651,28 @@ def headline_title(n):
     return re.sub(r"\s*(…|⋯|\.{2,})[^…⋯]*\d[^…⋯]*$", "", n["title"]).strip(" ….⋯") or n["title"]
 
 
-def headline_block(news, quotes=()):
+def us_closed_day(now, session_day):
+    """어제 미국장이 휴장이었으면 (휴장 날짜, 이름), 아니면 None.
+    미국 동부시간 기준 오늘이 평일이고 장이 끝난 뒤(16:30↑)인데 가장 최근 일봉이 그보다 이전이면 휴장으로 본다
+    (2026-11-26 추수감사절 휴장인데 어제 새벽 기사가 헤드라인으로 나온 일, 사용자 지시 2026-11-27)."""
+    et = now.astimezone(US_DAY_TZ)
+    day = et.date() if et.hour * 60 + et.minute >= 16 * 60 + 30 else et.date() - timedelta(days=1)
+    if day.weekday() >= 5 or session_day >= day:
+        return None
+    name = "추수감사절" if day.month == 11 and day.weekday() == 3 and 22 <= day.day <= 28 else "휴장일"
+    return day, name
+
+
+def closed_block(closed, session_day, quotes=()):
+    day, name = closed
+    return (f'<div class="headline">어제({day:%m/%d}) 미국 증시는 {escape(name)}로 휴장했어요</div>'
+            f'<div class="hl-foot"><div class="hl-src">지난밤 정규장 거래 없음 · 아래 등락률은 직전 거래일({session_day:%m/%d}) 기준</div>'
+            f'{index_chips(quotes)}</div>')
+
+
+def headline_block(news, quotes=(), closed=None, session_day=None):
+    if closed:
+        return closed_block(closed, session_day, quotes)
     n = pick_headline(news)
     if not n:
         return '<p class="err">뉴스를 가져오지 못했습니다.</p>'
@@ -799,9 +820,9 @@ def putcall_block(cnn):
     return f'<section class="panel pc-solo">{putcall_badge(cnn)}</section>'
 
 
-def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact="", weekly=(), done=()):
+def top_section(cnn, news, earnings, kr, quotes=(), cal=(), impact="", weekly=(), done=(), closed=None, session_day=None):
     return f'''<section class="fg driver">
-  {headline_block(news, quotes)}
+  {headline_block(news, quotes, closed, session_day)}
 </section>
 {earnings_block(earnings, putcall_badge(cnn)) if earnings else putcall_block(cnn)}
 {impact}
@@ -813,7 +834,7 @@ BRIEF_EXTRA = (("다우", "^DJI"), ("필라델피아 반도체", "^SOX"))  # 화
 BRIEF_JSON = OUT.with_name("briefing.json")
 
 
-def save_briefing_data(now, session_day, quotes, cnn, news, earnings, kr):
+def save_briefing_data(now, session_day, quotes, cnn, news, earnings, kr, closed=None):
     """briefing.py(출근길 음성 브리핑)가 읽을 재료를 briefing.json으로 남긴다. 실패해도 데일리에는 영향 없음."""
     try:
         qs = [dict(name=q["name"], sym=q["sym"], kind=q["kind"], last=q["pts"][-1][1], prev=q["pts"][-2][1],
@@ -828,6 +849,7 @@ def save_briefing_data(now, session_day, quotes, cnn, news, earnings, kr):
                             prev=fg.get("previous_close"), week=fg.get("previous_1_week")) if fg else None,
             putcall=dict(value=pc, signal=sig) if pc is not None else None,
             headline=headline_title(hl) if hl else None,
+            us_closed=(f"{closed[0]:%Y-%m-%d} {closed[1]}" if closed else None),
             news=[n["title"] for n in news if n is not hl],
             earnings={k: (str(v) if k == "day" else v) for k, v in earnings.items()} if earnings else None,
             kr=[k["title"] for k in kr],
@@ -1441,8 +1463,9 @@ def main():
     # 일봉 타임스탬프(미 동부 개장 시각)의 날짜 = 가장 최근 미국 거래일
     session_day = (datetime.fromtimestamp(nas["pts"][-1][0], US_DAY_TZ).date()
                    if nas else (datetime.now(KST) - timedelta(days=1)).date())
-    news = fetch_news(since)
-    earnings = fetch_earnings(session_day)
+    closed = us_closed_day(datetime.now(KST), session_day)  # 어제 미국장 휴장이면 지난 기사·실적을 어제 일처럼 내지 않는다
+    news = [] if closed else fetch_news(since)
+    earnings = None if closed else fetch_earnings(session_day)
     kr = fetch_kr_news(quotes=quotes)
     impact = ""  # '글로벌 뉴스 · 관련 종목' 패널(newsimpact.py)은 사용자 요청으로 데일리에서 뺐다
 
@@ -1457,7 +1480,7 @@ def main():
 <div data-part="a"><header class="top"><div><div class="kicker">DAILY US MARKET</div><h1>{report_title(now)}</h1>
 <div class="sub">{now:%Y-%m-%d}({weekday}) {now:%H:%M} KST 기준<span class="sub-x"> · 일봉 종가 기준 (장중이면 현재가)</span></div></div>
 <div class="tools"><button id="bc"></button><button id="bt">라이트/다크</button></div></header>
-{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now), impact, theme_weekly(now), calendar_done(now))}
+{top_section(cnn, news, earnings, kr, quotes + extra, calendar_events(now), impact, theme_weekly(now), calendar_done(now), closed, session_day)}
 </div>
 <div data-part="bci"><h2 class="ind-h">주요 지표</h2>
 <div class="grid">{cards}</div></div>
@@ -1468,7 +1491,7 @@ SK하이닉스 ADR은 나스닥 SKHY, 스페이스X는 나스닥 SPCX 기준.
 <script>document.documentElement.dataset.h=Math.ceil(document.querySelector('.wrap').getBoundingClientRect().bottom)</script></body></html>'''
     OUT.write_text(html, encoding="utf-8")
     print(f"생성 완료: {OUT}" + (f" (실패: {', '.join(failed)})" if failed else ""))
-    save_briefing_data(now, session_day, quotes + extra, cnn, news, earnings, kr)
+    save_briefing_data(now, session_day, quotes + extra, cnn, news, earnings, kr, closed)
     if "--notify" in sys.argv:
         notify(quotes, cnn, now)
     if "--no-open" not in sys.argv:
