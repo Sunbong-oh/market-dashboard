@@ -159,9 +159,42 @@ def cleanup_recap(t):
 
 
 # ---------- 원고 ----------
+def build_closed_script(data):
+    """미국 휴장일 판(2026-11-27 사용자 지시): 지난 장 지수·이유·실적·신고가는 빼고 휴장 안내 + 전일 강세종목 + 한국 관전 포인트 + 일정만."""
+    now = datetime.fromisoformat(data["now"])
+    wd = "월화수목금토일"
+    out = []
+    say = out.append
+    P, GAP = PAUSE, PAUSE * 2
+    say(f"{HOST}입니다. {now.month}월 {now.day}일 {wd[now.weekday()]}요일 출근길 브리핑 들어보시죠.")
+    day, _, name = str(data["us_closed"]).partition(" ")
+    d = date.fromisoformat(day)
+    say(f"{GAP}어제 {d.month}월 {d.day}일 미국 증시는 {name or '휴장일'}로 쉬었습니다. 지난밤에는 정규장 거래가 없어 새로 전할 지수 등락은 없습니다.")
+    picks = data.get("strong") or []
+    if picks:
+        say(f"{GAP}전일 강세종목입니다.{P}오늘 투자노트에 올린 강세종목 리포트는 {len(picks)}종목입니다.")
+        for e in picks:
+            say(strong_sentence(e, False))
+        say("리포트 전문은 투자노트 홈페이지 강세종목 메뉴에서 보실 수 있습니다.")
+    kr = [t for t in data.get("kr") or [] if t][:3]
+    if kr:
+        say(f"{GAP}오늘 한국 증시 관전 포인트입니다.{P}" + f"{P}".join(f"{speakable(t)}." for t in kr))
+    days = []
+    for label, items in (("오늘", data.get("cal_today")), ("내일", data.get("cal_tomorrow"))):
+        hot = [short_event(e, v) for e, v in items or [] if e.startswith("★")]
+        if hot:
+            days.append(f"{label}은 " + ", ".join(hot))
+    if days:
+        say(f"{GAP}핵심 일정입니다.{P}" + ". ".join(days) + "입니다.")
+    say(f"{GAP}이상 {HOST}이었습니다. 오늘도 안전 운전하세요.")
+    return "\n".join(out)
+
+
 def build_script(data):
     """순서: 나스닥과 이유(+어젯밤 지표 결과) -> 필라델피아 반도체(+이유) -> 풋콜 -> 주요 지표(+증시 소식) -> 실적 -> AI 급등락과 이유(+공통 키워드 해설)
     -> 전일 강세종목 리포트 -> 52주 신고가 -> 오늘·내일 일정."""
+    if data.get("us_closed"):
+        return build_closed_script(data)
     now = datetime.fromisoformat(data["now"])
     sday = date.fromisoformat(data["session_day"])
     wd = "월화수목금토일"
@@ -854,7 +887,7 @@ def main():
     now = datetime.fromisoformat(data["now"])
     sday = date.fromisoformat(data["session_day"])
     try:
-        data["ai_movers"] = ai_movers(sday)
+        data["ai_movers"] = None if data.get("us_closed") else ai_movers(sday)
     except Exception as e:  # 이 칸이 빠져도 나머지 브리핑은 나간다
         print("AI 급등락 실패:", type(e).__name__, e, file=sys.stderr)
     data["new_highs"] = new_highs_names(sday)
