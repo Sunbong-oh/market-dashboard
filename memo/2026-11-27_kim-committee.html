@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>한 사람이 한국 증시를 바꿀까</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 세로로 이어지는 A4 리서치 지면, 표지 우측 KEY DATA 패널, 지면마다 상단 노란 띠와 하단 출처·쪽번호 */
+:root {
+  --kb: #F2A900; --kb-soft: #FBE7B0; --ink: #3D3A35; --ink-2: #6B665D;
+  --paper: #FFFFFF; --ground: #FAF8F3; --rule: #E6E0D2; --tint: #F4EFE3;
+  --good: #2F7D4F; --warn: #B7791F; --bad: #B23A3A;
+  --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: light;
+}
+body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px; }
+.page { max-width: 920px; margin: 0 auto 28px; background: var(--paper); box-shadow: 0 1px 3px rgba(61,58,53,.12); display: flex; flex-direction: column; }
+.ph { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 6px solid var(--kb); padding: 12px 32px 10px; border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+.ph b { color: var(--ink); font-weight: 700; }
+.pb { padding: 24px 32px 28px; display: flex; flex-direction: column; gap: 22px; flex: 1; }
+.pf { display: flex; justify-content: space-between; gap: 16px; padding: 10px 32px 14px; border-top: 1px solid var(--rule); font-size: 11px; color: var(--ink-2); }
+.pf .pn { font-weight: 700; color: var(--ink); white-space: nowrap; }
+h1 { font-size: 30px; line-height: 1.3; font-weight: 900; margin: 0; text-wrap: balance; letter-spacing: -0.5px; }
+h2 { font-size: 19px; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; text-wrap: balance; }
+h2::before { content: ""; width: 5px; height: 20px; background: var(--kb); flex: none; }
+h3 { font-size: 15px; margin: 0 0 6px; font-weight: 700; }
+p { margin: 0; }
+.lead { font-size: 15px; font-weight: 500; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--ink-2); font-weight: 700; }
+.sec { display: flex; flex-direction: column; gap: 12px; }
+.cover { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 24px; }
+.keydata { background: var(--ink); color: #FAF8F3; padding: 18px 18px 14px; align-self: start; }
+.keydata h3 { color: var(--kb); font-size: 13px; letter-spacing: .12em; margin-bottom: 10px; }
+.keydata dl { margin: 0; display: grid; grid-template-columns: auto auto; row-gap: 7px; column-gap: 10px; font-size: 12.5px; }
+.keydata dt { color: #CFC8B8; }
+.keydata dd { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.keydata .krw { display: block; font-size: 11px; font-weight: 500; color: #E9D9A8; }
+.keydata dd.up, .pricebar .up { color: #E0483E; }
+.pricebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; background: var(--tint); padding: 8px 12px; font-size: 12.5px; color: var(--ink-2); }
+.pricebar b { font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pricebar b.up { font-size: 15px; color: #C8372D; }
+.keydata .src { margin-top: 12px; font-size: 10.5px; color: #CFC8B8; line-height: 1.5; }
+.typebox { background: var(--tint); border-left: 5px solid var(--kb); padding: 12px 16px; }
+.typebox b { font-size: 16px; }
+ul.pts { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+ul.pts li { padding-left: 18px; position: relative; }
+ul.pts li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 7px; height: 7px; background: var(--kb); }
+.grid2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+.box { border: 1px solid var(--rule); padding: 14px 16px; }
+.box .big { font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.box .cap { font-size: 12px; color: var(--ink-2); }
+.tw { overflow-x: auto; }
+table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+table.t th, table.t td { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+table.t thead th { background: var(--ink); color: #FAF8F3; font-weight: 500; white-space: nowrap; }
+table.t tbody th { font-weight: 500; white-space: nowrap; background: var(--tint); }
+table.num td { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.num thead th { text-align: right; } table.num thead th:first-child { text-align: left; }
+table.sm { font-size: 11.5px; } table.sm th, table.sm td { padding: 5px 6px; }
+td.est, th.est { background: #FFF7E0; } thead th.est { background: #8A6A1E; } th.est span { font-size: 10px; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .ax { font-size: 11px; fill: var(--ink-2); font-family: var(--sans); }
+.chart .xl { font-size: 11.5px; fill: var(--ink); font-family: var(--sans); font-weight: 500; }
+.chart .bv { font-size: 10.5px; fill: var(--ink); font-family: var(--sans); font-weight: 700; }
+.chart .mv { font-size: 10.5px; fill: var(--ink); font-family: var(--sans); }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 10px; display: inline-block; }
+.photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.photos.p3 { grid-template-columns: repeat(3, 1fr); }
+.photos figure { margin: 0; background: #fff; border: 1px solid var(--rule); }
+.photos img { width: 100%; aspect-ratio: 5/4; object-fit: cover; display: block; }
+.photos figcaption { font-size: 11.5px; padding: 6px 8px; line-height: 1.45; color: var(--ink-2); }
+.photos figcaption b { color: var(--ink); display: block; font-size: 12px; }
+@media (max-width: 640px) { .photos, .photos.p3 { grid-template-columns: repeat(2, 1fr); } }
+.figt { font-size: 13px; font-weight: 700; }
+.note { font-size: 11.5px; color: var(--ink-2); }
+.mixrow { display: grid; grid-template-columns: 70px minmax(0,1fr); align-items: center; gap: 10px; }
+.mixlab { font-size: 12px; font-weight: 700; }
+.mixbar { display: flex; height: 24px; }
+.mixbar i { font-style: normal; font-size: 11px; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.c0 { background: #F2A900; } .c1 { background: #3D3A35; } .c2 { background: #C98B00; } .c3 { background: #8C877C; } .c4 { background: #D9C79A; } .c5 { background: #BDB6A6; }
+.mixbar .c0, .mixbar .c4, .mixbar .c5 { color: var(--ink); }
+.legend i { width: 12px; height: 12px; display: inline-block; }
+.struct { display: grid; grid-template-columns: minmax(0,1.25fr) minmax(0,1fr); gap: 14px; }
+.core { background: var(--ink); color: #FAF8F3; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.core h3 { color: var(--kb); }
+.core .kv { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.core .kv div { background: rgba(250,248,243,.08); padding: 8px; }
+.core .kv b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.core .kv span { font-size: 11px; color: #CFC8B8; }
+.newb { display: flex; flex-direction: column; gap: 8px; }
+.newb div { border: 1px solid var(--rule); padding: 8px 12px; font-size: 12.5px; }
+.newb b { display: block; font-size: 13px; }
+.newb .end { background: var(--tint); }
+.pill { display: inline-block; padding: 1px 9px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.ok { background: #E3F1E8; color: var(--good); } .chk { background: #FCF0D6; color: var(--warn); } .ng { background: #F6E1E1; color: var(--bad); }
+.disc { font-size: 11.5px; color: var(--ink-2); line-height: 1.7; display: flex; flex-direction: column; gap: 8px; }
+.callout { background: #FFF7E0; border: 1px solid var(--kb-soft); padding: 12px 16px; font-size: 13px; }
+@media (max-width: 720px) {
+  .cover, .grid2, .struct { grid-template-columns: minmax(0,1fr); }
+  .grid3 { grid-template-columns: minmax(0,1fr); }
+  .ph, .pb, .pf { padding-left: 16px; padding-right: 16px; }
+  h1 { font-size: 24px; }
+  .pf { flex-direction: column; gap: 4px; }
+}
+
+.chg-up { color: #C8372D; font-weight: 700; } .chg-dn { color: #2B5FB3; font-weight: 700; }
+table.t td.neg { color: #2B5FB3; }
+.pricebar b.dn { font-size: 15px; color: #2B5FB3; }
+.keydata dd.dn { color: #8FB4F0; }
+.mixwrap { display: flex; flex-direction: column; gap: 6px; }
+.ctx { border: 2px solid var(--kb); background: #FFFBEF; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.ctx b.k { font-size: 12px; letter-spacing: .08em; color: #8A6A1E; }
+table.t td.wrap { white-space: normal; text-align: left; }
+
+.part { background: var(--ink, #3D3A35); color: #fff; padding: 10px 16px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.part b { color: #F2A900; font-size: 13px; letter-spacing: .1em; } .part span { font-size: 15px; font-weight: 700; }
+tr.hl th, tr.hl td { background: #FBE7B0; }
+.pill { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 2px; white-space: nowrap; }
+.pill.pg { background: #3D3A35; color: #fff; } .pill.pw { background: #FBE7B0; color: #3D3A35; } .pill.pb { border: 1px solid #E6E0D2; color: #6B665D; } .pill.pc { background: #FAF8F3; border: 1px solid #E6E0D2; color: #3D3A35; }
+svg.chart .grid { stroke: #E6E0D2; } svg.chart .base { stroke: #6B665D; stroke-dasharray: 4 3; } svg.chart .lb { font-size: 12px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; }
+/* 움직이는 그림: 화면에 들어오면 .on → 막대가 자라고 선이 그려짐. 누르면 다시 재생 */
+.anim { cursor: pointer; }
+.anim .grow { transform: scaleX(0); transform-origin: left center; transition: transform 1.1s cubic-bezier(.2,.7,.2,1); transition-delay: calc(var(--i, 0) * .18s + .1s); }
+.anim.on .grow { transform: scaleX(1); }
+.anim .grow + em, .anim .ab em { opacity: 0; transition: opacity .4s; transition-delay: calc(var(--i, 0) * .18s + 1s); }
+.anim.on .grow + em, .anim.on .ab em { opacity: 1; }
+.abars { display: flex; flex-direction: column; gap: 5px; }
+.ab { display: grid; grid-template-columns: 120px minmax(0,1fr) 56px; gap: 8px; align-items: center; font-size: 12.5px; }
+.ab .grow { transition-delay: calc(var(--i) * .12s + .1s); }
+.abl { text-align: right; white-space: nowrap; }
+.abt { position: relative; height: 20px; background: linear-gradient(#6B665D,#6B665D) 50% 0 / 1px 100% no-repeat; }
+.abt i { position: absolute; top: 3px; height: 14px; display: block; }
+.ab em { font-style: normal; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.abaxis { display: flex; justify-content: space-between; margin: 0 64px 0 128px; font-size: 11px; color: #6B665D; }
+.funnel { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.fn { display: flex; align-items: center; gap: 14px; background: #3D3A35; color: #fff; padding: 8px 14px; min-width: 260px; opacity: 0; transform: translateY(10px); transition: opacity .5s, transform .5s; transition-delay: calc(var(--i) * .35s); }
+.fn:nth-child(2) { background: #4D4943; } .fn:nth-child(3) { background: #5E5A53; } .fn:nth-child(4) { background: #6B665D; } .fn:nth-child(5) { background: #8A6A1E; }
+.fn.last { background: #F2A900; color: #3D3A35; }
+.anim.on .fn { opacity: 1; transform: none; }
+.fn b { font-size: 22px; font-weight: 900; min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+.fn span { display: flex; flex-direction: column; line-height: 1.35; } .fn small { font-size: 11px; opacity: .85; }
+.glp .t1 { font-size: 16px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; fill: #3D3A35; }
+.glp .t2 { font-size: 11.5px; font-family: 'Noto Sans KR', sans-serif; fill: #3D3A35; }
+.glp .t3 { font-size: 13px; font-family: 'Noto Sans KR', sans-serif; fill: #3D3A35; font-weight: 500; }
+.glp .ring { transform-box: fill-box; transform-origin: center; animation: ring 2.4s ease-out infinite; }
+@keyframes ring { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.5); opacity: 0; } }
+.hbar { display: flex; flex-direction: column; gap: 10px; }
+.hr { display: grid; grid-template-columns: 230px minmax(0,1fr) 64px; gap: 10px; align-items: center; }
+.hn { display: flex; flex-direction: column; line-height: 1.35; font-size: 12.5px; } .hn small { color: #6B665D; font-size: 11px; }
+.ht { height: 22px; background: #FAF8F3; border: 1px solid #E6E0D2; position: relative; } .ht i { display: block; height: 100%; }
+.hr em { font-style: normal; font-weight: 900; font-size: 15px; font-variant-numeric: tabular-nums; }
+.keys { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.kc { border: 1px solid #E6E0D2; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+.kc b { font-size: 16px; } .kc small { font-size: 11.5px; color: #6B665D; }
+.locks { display: flex; gap: 6px; flex-wrap: wrap; min-height: 30px; }
+.locks span { font-size: 12px; font-weight: 700; padding: 4px 10px; border: 2px dashed #E6E0D2; color: #B5AFA2; transition: all .4s; transition-delay: calc(var(--j) * .3s + .2s); }
+.anim.on .locks span { border: 2px solid #F2A900; background: #F2A900; color: #3D3A35; }
+.ptl { --pl: 250px; position: relative; display: flex; flex-direction: column; gap: 10px; padding: 22px 0 20px; }
+.pax { position: absolute; top: 0; left: var(--pl); right: 0; height: 18px; font-size: 11px; color: #6B665D; }
+.pax span { position: absolute; transform: translateX(-50%); }
+.prow { display: grid; grid-template-columns: calc(var(--pl) - 10px) minmax(0,1fr); gap: 10px; align-items: center; }
+.pn2 { display: flex; flex-direction: column; line-height: 1.35; font-size: 12.5px; } .pn2 small { font-size: 11px; color: #6B665D; }
+.ptr { position: relative; height: 22px; background: linear-gradient(90deg, #E6E0D2 1px, transparent 1px) 0 0 / 16.667% 100%; }
+.ptr i { position: absolute; top: 3px; height: 16px; display: block; }
+.ptr em { position: absolute; top: 2px; font-style: normal; font-size: 11.5px; font-weight: 700; }
+.now { position: absolute; top: 18px; bottom: 18px; width: 0; border-left: 2px solid #C8372D; }
+.now span { position: absolute; bottom: -18px; left: 4px; font-size: 11px; color: #C8372D; font-weight: 700; white-space: nowrap; }
+svg .draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 2.4s ease-out; }
+.anim.on svg .draw { stroke-dashoffset: 0; }
+.replay { font-size: 11px; color: #8A6A1E; }
+.glpn { display: none; }
+.epg { display: flex; flex-direction: column; gap: 12px; } .ep { display: flex; flex-direction: column; gap: 3px; }
+.eph { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 13px; } .eph small { color: #6B665D; font-size: 11px; }
+.why { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.why .box h3 { margin: 0 0 4px; font-size: 15px; } .why .box h3 i { font-style: normal; color: #F2A900; margin-right: 6px; }
+@media (max-width: 720px) {
+  .keys, .why { grid-template-columns: minmax(0,1fr); }
+  .hr { grid-template-columns: minmax(0,1fr) 56px; } .hr .hn { grid-column: 1 / -1; }
+  .ab { grid-template-columns: 76px minmax(0,1fr) 50px; font-size: 11.5px; gap: 6px; } .abaxis { margin: 0 56px 0 82px; }
+  .glpn { display: block; }
+  .glpw { overflow-x: auto; -webkit-overflow-scrolling: touch; } .glpw svg { min-width: 680px; }
+  .ptl { --pl: 0px; } .prow { grid-template-columns: minmax(0,1fr); gap: 2px; } .now { display: none; } .pax { left: 0; }
+  .fn { min-width: 0; } .fn b { font-size: 18px; min-width: 40px; }
+}
+@media print, (prefers-reduced-motion: reduce) {
+  .anim .grow { transform: none !important; transition: none !important; } .anim em, .anim .ab em { opacity: 1 !important; transition: none !important; }
+  .fn { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .locks span { border: 2px solid #F2A900 !important; background: #F2A900 !important; color: #3D3A35 !important; transition: none !important; }
+  svg .draw { stroke-dashoffset: 0 !important; transition: none !important; } .glp .ring { animation: none; }
+}
+table.t td.wrap { min-width: 180px; }
+@media print {
+  .glp .dot { display: none; } .replay, .glpn { display: none !important; }
+  section.page + section.page { break-before: page; }
+  .glpw svg { min-width: 0 !important; }
+}
+
+.ab { grid-template-columns: var(--lw,120px) minmax(0,1fr) var(--vw,56px); }
+.ab small { color: #6B665D; font-size: .85em; margin-left: 4px; }
+.sub2 { font-size: 13px; font-weight: 700; color: #3D3A35; margin: 2px 0 6px; }
+.anim .draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.8s ease-out; transition-delay: calc(var(--i,0) * .25s); }
+.anim.on .draw { stroke-dashoffset: 0; }
+.anim .fl { opacity: 0; transition: opacity .5s; transition-delay: calc(var(--i,0) * .25s + 1.3s); }
+.anim.on .fl { opacity: 1; }
+.anim .growy { transform: scaleY(0); transform-box: fill-box; transform-origin: center bottom; transition: transform .6s; transition-delay: calc(var(--i,0) * .06s + .4s); }
+.anim.on .growy { transform: none; }
+.minis { display: grid; gap: 10px; }
+.lead { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.lh, .lr, .lax { display: grid; grid-template-columns: 130px minmax(0,1fr) minmax(0,1fr); gap: 14px; align-items: center; }
+.lh b { font-size: 12.5px; } .lax small { font-size: 11px; color: #6B665D; }
+.lt { position: relative; height: 22px; background: #FAF8F3; border: 1px solid #E6E0D2; }
+.lt i { position: absolute; left: 0; top: 0; bottom: 0; transform-origin: left center; }
+.lt s { position: absolute; top: -4px; bottom: -4px; width: 3px; background: #C8372D; text-decoration: none; }
+.lt em { position: absolute; right: 6px; top: 1px; font-style: normal; font-weight: 700; font-size: 12px; }
+.verd { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.vc { border-top: 5px solid #F2A900; background: #fff; border-left: 1px solid #E6E0D2; border-right: 1px solid #E6E0D2; border-bottom: 1px solid #E6E0D2; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.vc .k { font-size: 11px; letter-spacing: .1em; color: #8A6A1E; } .vc h3 { margin: 0; font-size: 16px; } .vc p { margin: 0; font-size: 13px; }
+li.nt { color: #6B665D; font-size: .9em; } li.nt::before { background: #B5AFA2 !important; }
+@media (max-width: 720px) { .verd { grid-template-columns: minmax(0,1fr); } .minis { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+  .lh, .lr, .lax { grid-template-columns: 84px minmax(0,1fr) minmax(0,1fr); gap: 6px; } .ab { grid-template-columns: 110px minmax(0,1fr) 54px; font-size: 12px !important; } }
+@media print, (prefers-reduced-motion: reduce) { .anim .draw { stroke-dashoffset: 0 !important; transition: none !important; } .anim .fl { opacity: 1 !important; transition: none !important; }
+  .anim .growy { transform: none !important; transition: none !important; } }
+
+.keydata dd.dn { color: #8FB4F0; }
+.chart .bv{font-weight:700} .narrow{display:none} @media (max-width:640px){ .wide{display:none} .narrow{display:block} .narrow .chart .xl{font-size:11px} .narrow .chart .bv{font-size:10px} .tw table.t th, .tw table.t td{white-space:normal!important;min-width:0!important;word-break:keep-all;overflow-wrap:anywhere;padding:5px 4px} .tw table.t{font-size:11.5px} }
+@media print { body{padding:0;background:#fff} .page{box-shadow:none;page-break-after:always;margin:0 auto} }
+
+.db { display: flex; flex-direction: column; gap: 6px; }
+.dbl { display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; }
+.dbl span { display: inline-flex; align-items: center; gap: 6px; }
+.dr { display: grid; grid-template-columns: 170px minmax(0,1fr) 104px; gap: 10px; align-items: center; }
+.dn2 { display: flex; flex-direction: column; line-height: 1.3; font-size: 12.5px; font-weight: 700; }
+.dn2 small { font-weight: 400; font-size: 11px; color: var(--ink-2); }
+.dt { position: relative; height: 30px; background: linear-gradient(#6B665D,#6B665D) var(--z) 0 / 1px 100% no-repeat, #FAF8F3; }
+.dt i { position: absolute; height: 11px; display: block; }
+.dr em { font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dax { position: relative; height: 16px; margin: 0 114px 0 180px; font-size: 11px; color: var(--ink-2); }
+.dax span { position: absolute; transform: translateX(-50%); }
+@media (max-width: 640px) {
+  .dr { grid-template-columns: minmax(0,1fr) 92px; gap: 2px 8px; }
+  .dr .dn2 { grid-column: 1 / -1; flex-direction: row; gap: 6px; align-items: baseline; }
+  .dax { margin: 0 100px 0 0; }
+  .dr em { font-size: 11.5px; }
+}
+</style></head><body><section class='page'><div class='ph'><span><b>표지</b> · 한 사람이 한국 증시를 바꿀까</span><span>2026년 11월 27일</span></div><div class='pb'><div class='cover'><div class='sec'><span class='eyebrow'>KOREA MARKET · POLICY CHECK</span>
+<h1>한 사람이 한국 증시를 바꿀까:<br>김용범 위원장 내정과 코스닥 +8%</h1>
+<p class='lead'>11월 26일 장이 끝난 뒤 정부가 '자본시장 대전환 위원회'(가칭)를 만들고 초대 위원장에 김용범 메리츠금융지주 부회장(청와대 전 정책실장과 동명이인)을 내정했다. 다음 날 코스닥은 8.13% 올라 12거래일 만에 700선을 되찾았다. 두 사건이 정말 이어져 있는지, 이 인선이 앞으로 무엇을 바꿀 수 있는지, 이 인선을 반긴 한 투자자의 글(SNS)이 던진 주장과 함께 숫자로 따져 봤다.</p>
+<div class='sec' style='gap:8px'><h2>세 줄 결론</h2><ul class='pts'>
+<li><b>오늘 +8%의 엔진은 위원회가 아니다.</b> 발표 다음 날 코스닥 시가는 +1.3%였고, 코스피는 9시 30분 무렵 오히려 전날보다 0.6% 낮았다. 상승은 오후까지 외국인·기관 매수로 쌓였다. 은행은 내리고(증안펀드 출자 부담) 증권은 평균 +12.1% 뛴 '증안펀드 지문'이 뚜렷했고, 지배구조 개혁의 수혜주인 지주사는 엇갈렸다. 위원회는 정책 묶음의 하나로 심리를 받친 정도다(따로 떼어 잴 자료는 없다).</li>
+<li><b>그래도 '아무나'의 인선은 아니다.</b> 김 위원장이 이끈 메리츠는 2022년 상장 자회사 둘(화재·증권)을 흡수해 중복상장을 스스로 없애고 이익의 50% 환원을 약속했다. 대주주 지분이 약 79%에서 47%로 줄어드는 결정이었다. 주가는 다음 날 상한가, 2025년 말까지 +323%(같은 기간 코스피 +74%). 그가 내건 기준은 "대주주 1주 = 일반주주 1주"다.</li>
+<li><b>시장을 바꾼 건 늘 '사람'보다 '강제력 있는 규칙 + 이익 + 돈'이었다.</b> 자율에 맡긴 밸류업 첫해(2024) 코스피 −9.6%, 법으로 강제한 상법 개정에 이익 증가가 겹친 2025년 +75.6%, 일본 거래소의 PBR 개선 요구 뒤 1년 닛케이 +44%. 위원회는 권한 없는 민간 자문기구다. 볼 것은 위원 명단, 첫 과제가 '법'인지, 국회 통과다.</li>
+</ul></div></div>
+<aside class='keydata'><h3>KEY DATA</h3><dl>
+<dt>코스닥 (11/27)</dt><dd class='up'>708.99 · +8.13%</dd>
+<dt>코스피 (11/27)</dt><dd class='up'>4,915.68 · +4.34%</dd>
+<dt>대만 가권 (11/27)</dt><dd>39,308 · +0.40%</dd>
+<dt>코스닥 고점 대비</dt><dd class='dn'>−42.2% · 4/27</dd>
+<dt>코스피 고점 대비</dt><dd class='dn'>−46.1% · 6/22</dd>
+<dt>외국인 순매수 (코스피)</dt><dd>+1.1~1.4조 원</dd>
+<dt>기관 순매수 (코스닥)</dt><dd>+5,867억 원</dd>
+<dt>증권 5사 평균</dt><dd class='up'>+12.1%</dd>
+<dt>은행 3사 평균</dt><dd class='dn'>−0.7%</dd>
+<dt>메리츠금융 (11/27)</dt><dd>124,900원 · +1.71%</dd>
+<dt>증안펀드 (약정→거론)</dt><dd>10.8조 → 20~40조</dd>
+<dt>위원회 발표</dt><dd>11/26 17시대</dd>
+<dt>코스피 PBR</dt><dd>1.21배</dd>
+</dl><p class='src'>지수·주가: Yahoo Finance 일봉·5분봉(11/27 종가). 수급: 파이낸셜뉴스·한국경제 11/27 마감 기사(외국인 코스피 순매수는 1조1,358억·1조4,233억으로 보도 시각마다 다름). 위원회: 파이낸셜뉴스 11/26 17:29·재경일보 17:43. 증안펀드: 한국경제 11/27. PBR: 이 사이트 저점신호기 계산(11/27 15:55, 시가총액 ÷ DART 자본총계 × 보정계수).</p></aside></div></div><div class='pf'><span>자료: Yahoo Finance, 파이낸셜뉴스·한국경제·재경일보 11/26~27(금융위원회 발표 보도), 이 사이트 저점신호기</span><span class='pn'>1 / 6</span></div></section><section class='page'><div class='ph'><span><b>1 · 오늘의 +8% 뜯어보기</b> · 한 사람이 한국 증시를 바꿀까</span><span>2026년 11월 27일</span></div><div class='pb'><div class='sec'><h2>발표는 전날 저녁, 상승은 오후 내내</h2>
+<p>위원회 소식은 11월 26일 오후 5시대, 장이 끝난 뒤 나왔다(파이낸셜뉴스 17:29, 재경일보 17:43). 같은 저녁 금융위가 증안펀드 투자관리위원회(29일)와 5대 금융지주 회장 긴급 점검회의(30일)를 잡았다는 소식도 나왔다. 밤사이 나온 재료가 주식의 값을 다시 매기는 종류라면 다음 날 시가에 대부분 반영된다. 오늘은 반대였다.</p>
+<p class='figt'>그림 1. 11월 27일 코스피·코스닥 장중 흐름 (전일 종가 대비, 5분 간격)</p>
+<div class='wide'><svg viewBox='0 0 720 300' class='chart' role='img' aria-label='11월 27일 코스피 코스닥 장중 흐름'><text x='44' y='14' class='ax' style='font-size:12px'>전일 종가 대비 %</text><line x1='44' x2='602' y1='242.4' y2='242.4' stroke='#3D3A35'/><text x='38' y='246.6' text-anchor='end' class='ax' style='font-size:12px'>0%</text><line x1='44' x2='602' y1='196.5' y2='196.5' stroke='#E6E0D2'/><text x='38' y='200.7' text-anchor='end' class='ax' style='font-size:12px'>+2%</text><line x1='44' x2='602' y1='150.6' y2='150.6' stroke='#E6E0D2'/><text x='38' y='154.8' text-anchor='end' class='ax' style='font-size:12px'>+4%</text><line x1='44' x2='602' y1='104.7' y2='104.7' stroke='#E6E0D2'/><text x='38' y='108.9' text-anchor='end' class='ax' style='font-size:12px'>+6%</text><line x1='44' x2='602' y1='58.7' y2='58.7' stroke='#E6E0D2'/><text x='38' y='62.9' text-anchor='end' class='ax' style='font-size:12px'>+8%</text><text x='44.0' y='292' text-anchor='middle' class='xl' style='font-size:12px'>09:00</text><text x='129.8' y='292' text-anchor='middle' class='xl' style='font-size:12px'>10:00</text><text x='215.7' y='292' text-anchor='middle' class='xl' style='font-size:12px'>11:00</text><text x='301.5' y='292' text-anchor='middle' class='xl' style='font-size:12px'>12:00</text><text x='387.4' y='292' text-anchor='middle' class='xl' style='font-size:12px'>13:00</text><text x='473.2' y='292' text-anchor='middle' class='xl' style='font-size:12px'>14:00</text><text x='559.1' y='292' text-anchor='middle' class='xl' style='font-size:12px'>15:00</text><line x1='161.3' x2='161.3' y1='22' y2='270' stroke='#6B665D' stroke-dasharray='4 3'/><text x='165.3' y='34' text-anchor='start' class='mv' style='font-size:12px'>10:22경 코스닥 매수 사이드카</text><path d='M44.0,211.6 L51.2,187.7 L58.3,190.9 L65.5,176.8 L72.6,176.9 L79.8,174.0 L86.9,183.1 L94.1,159.4 L101.2,151.6 L108.4,147.2 L115.5,145.6 L122.7,147.0 L129.8,147.0 L137.0,142.3 L144.2,139.6 L151.3,129.6 L158.5,122.6 L165.6,123.0 L172.8,111.0 L179.9,107.2 L187.1,114.6 L194.2,111.3 L201.4,108.6 L208.5,122.5 L215.7,111.6 L222.8,107.4 L230.0,105.4 L237.2,112.7 L244.3,108.7 L251.5,109.4 L258.6,111.8 L265.8,112.3 L272.9,112.6 L280.1,117.7 L287.2,111.0 L294.4,108.2 L301.5,111.3 L308.7,110.6 L315.8,106.1 L323.0,104.4 L330.2,100.3 L337.3,103.5 L344.5,104.9 L351.6,102.9 L358.8,102.3 L365.9,98.5 L373.1,97.8 L380.2,96.6 L387.4,96.9 L394.5,95.1 L401.7,96.1 L408.8,90.0 L416.0,92.3 L423.2,89.8 L430.3,88.5 L437.5,86.8 L444.6,84.1 L451.8,86.0 L458.9,80.4 L466.1,80.9 L473.2,80.2 L480.4,74.3 L487.5,67.1 L494.7,64.6 L501.8,66.3 L509.0,62.1 L516.2,61.9 L523.3,54.3 L530.5,49.5 L537.6,50.3 L544.8,53.1 L551.9,51.2 L559.1,51.2 L602.0,55.9' fill='none' stroke='#F2A900' stroke-width='2.6' stroke-linejoin='round'/><circle cx='602.0' cy='55.9' r='3.5' fill='#F2A900'/><text x='609.0' y='60.1' class='bv' style='font-size:12px'>코스닥 +8.13%</text><path d='M51.2,225.4 L58.3,233.3 L65.5,238.3 L72.6,247.9 L79.8,244.8 L86.9,256.5 L94.1,243.3 L101.2,237.0 L108.4,231.8 L115.5,230.5 L122.7,232.2 L129.8,228.3 L137.0,224.3 L144.2,223.4 L151.3,206.8 L158.5,210.6 L165.6,204.4 L172.8,192.2 L179.9,193.9 L187.1,205.2 L194.2,202.2 L201.4,200.7 L208.5,210.9 L215.7,203.7 L222.8,199.3 L230.0,194.1 L237.2,196.0 L244.3,190.2 L251.5,185.8 L258.6,181.9 L265.8,179.1 L272.9,175.8 L280.1,181.6 L287.2,174.9 L294.4,176.0 L301.5,177.7 L308.7,179.7 L315.8,174.8 L323.0,171.9 L330.2,165.1 L337.3,165.2 L344.5,163.0 L351.6,166.0 L358.8,167.8 L365.9,161.4 L373.1,162.3 L380.2,162.6 L387.4,162.0 L394.5,156.7 L401.7,158.5 L408.8,150.6 L416.0,154.6 L423.2,154.7 L430.3,153.7 L437.5,152.8 L444.6,151.2 L451.8,154.1 L458.9,154.5 L466.1,159.8 L473.2,160.9 L480.4,157.4 L487.5,146.5 L494.7,150.3 L501.8,154.4 L509.0,151.1 L516.2,151.0 L523.3,148.3 L530.5,143.2 L537.6,140.1 L544.8,142.1 L551.9,146.1 L559.1,145.5 L602.0,142.8' fill='none' stroke='#3D3A35' stroke-width='2.2' stroke-linejoin='round'/><circle cx='602.0' cy='142.8' r='3.5' fill='#3D3A35'/><text x='609.0' y='151.0' class='bv' style='font-size:12px'>코스피 +4.34%</text><circle cx='44.0' cy='211.6' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='54.0' y='216.6' text-anchor='start' class='mv' style='font-size:12px'>코스닥 시가 +1.3%</text><circle cx='86.9' cy='256.5' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='94.9' y='272.5' text-anchor='start' class='mv' style='font-size:12px'>코스피 9:30 −0.6%</text></svg></div><div class='narrow'><svg viewBox='0 0 360 250' class='chart' role='img' aria-label='11월 27일 장중 흐름(휴대폰)'><text x='38' y='14' class='ax' style='font-size:11px'>전일 종가 대비 %</text><line x1='38' x2='272' y1='198.0' y2='198.0' stroke='#3D3A35'/><text x='32' y='201.8' text-anchor='end' class='ax' style='font-size:11px'>0%</text><line x1='38' x2='272' y1='161.3' y2='161.3' stroke='#E6E0D2'/><text x='32' y='165.2' text-anchor='end' class='ax' style='font-size:11px'>+2%</text><line x1='38' x2='272' y1='124.7' y2='124.7' stroke='#E6E0D2'/><text x='32' y='128.5' text-anchor='end' class='ax' style='font-size:11px'>+4%</text><line x1='38' x2='272' y1='88.0' y2='88.0' stroke='#E6E0D2'/><text x='32' y='91.8' text-anchor='end' class='ax' style='font-size:11px'>+6%</text><line x1='38' x2='272' y1='51.3' y2='51.3' stroke='#E6E0D2'/><text x='32' y='55.2' text-anchor='end' class='ax' style='font-size:11px'>+8%</text><text x='38.0' y='242' text-anchor='middle' class='xl' style='font-size:11px'>9시</text><text x='110.0' y='242' text-anchor='middle' class='xl' style='font-size:11px'>11시</text><text x='182.0' y='242' text-anchor='middle' class='xl' style='font-size:11px'>13시</text><text x='254.0' y='242' text-anchor='middle' class='xl' style='font-size:11px'>15시</text><line x1='87.2' x2='87.2' y1='22' y2='220' stroke='#6B665D' stroke-dasharray='4 3'/><text x='91.2' y='33' text-anchor='start' class='mv' style='font-size:11px'>사이드카</text><path d='M38.0,173.4 L41.0,154.3 L44.0,156.8 L47.0,145.6 L50.0,145.7 L53.0,143.4 L56.0,150.6 L59.0,131.7 L62.0,125.5 L65.0,122.0 L68.0,120.7 L71.0,121.8 L74.0,121.8 L77.0,118.1 L80.0,115.9 L83.0,107.9 L86.0,102.3 L89.0,102.7 L92.0,93.1 L95.0,90.0 L98.0,95.9 L101.0,93.3 L104.0,91.2 L107.0,102.2 L110.0,93.5 L113.0,90.2 L116.0,88.6 L119.0,94.4 L122.0,91.3 L125.0,91.8 L128.0,93.7 L131.0,94.1 L134.0,94.3 L137.0,98.4 L140.0,93.1 L143.0,90.9 L146.0,93.3 L149.0,92.8 L152.0,89.2 L155.0,87.8 L158.0,84.5 L161.0,87.0 L164.0,88.2 L167.0,86.6 L170.0,86.1 L173.0,83.1 L176.0,82.6 L179.0,81.5 L182.0,81.8 L185.0,80.3 L188.0,81.2 L191.0,76.3 L194.0,78.1 L197.0,76.2 L200.0,75.1 L203.0,73.7 L206.0,71.6 L209.0,73.1 L212.0,68.6 L215.0,69.0 L218.0,68.5 L221.0,63.8 L224.0,58.0 L227.0,56.0 L230.0,57.3 L233.0,54.0 L236.0,53.9 L239.0,47.8 L242.0,44.0 L245.0,44.6 L248.0,46.9 L251.0,45.3 L254.0,45.3 L272.0,49.0' fill='none' stroke='#F2A900' stroke-width='2.4' stroke-linejoin='round'/><circle cx='272.0' cy='49.0' r='3.5' fill='#F2A900'/><text x='279.0' y='52.9' class='bv' style='font-size:11px'>코스닥 +8.1%</text><path d='M41.0,184.4 L44.0,190.7 L47.0,194.7 L50.0,202.3 L53.0,199.9 L56.0,209.2 L59.0,198.7 L62.0,193.7 L65.0,189.5 L68.0,188.4 L71.0,189.8 L74.0,186.7 L77.0,183.5 L80.0,182.8 L83.0,169.5 L86.0,172.6 L89.0,167.7 L92.0,157.9 L95.0,159.3 L98.0,168.2 L101.0,165.9 L104.0,164.6 L107.0,172.8 L110.0,167.0 L113.0,163.5 L116.0,159.4 L119.0,160.9 L122.0,156.3 L125.0,152.8 L128.0,149.7 L131.0,147.4 L134.0,144.8 L137.0,149.4 L140.0,144.1 L143.0,144.9 L146.0,146.3 L149.0,147.9 L152.0,144.0 L155.0,141.7 L158.0,136.3 L161.0,136.3 L164.0,134.6 L167.0,136.9 L170.0,138.4 L173.0,133.3 L176.0,134.0 L179.0,134.2 L182.0,133.8 L185.0,129.5 L188.0,131.0 L191.0,124.6 L194.0,127.9 L197.0,128.0 L200.0,127.2 L203.0,126.4 L206.0,125.2 L209.0,127.4 L212.0,127.8 L215.0,132.0 L218.0,132.9 L221.0,130.1 L224.0,121.4 L227.0,124.4 L230.0,127.7 L233.0,125.1 L236.0,125.0 L239.0,122.8 L242.0,118.7 L245.0,116.3 L248.0,117.9 L251.0,121.1 L254.0,120.6 L272.0,118.4' fill='none' stroke='#3D3A35' stroke-width='2.0' stroke-linejoin='round'/><circle cx='272.0' cy='118.4' r='3.5' fill='#3D3A35'/><text x='279.0' y='126.3' class='bv' style='font-size:11px'>코스피 +4.3%</text><circle cx='38.0' cy='173.4' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='46.0' y='178.4' text-anchor='start' class='mv' style='font-size:11px'>시가 +1.3%</text></svg></div>
+<div class='legend'><span><i class='sw' style='background:#F2A900'></i>코스닥</span><span><i class='sw' style='background:#3D3A35'></i>코스피</span></div>
+<p class='src'>자료: Yahoo Finance 5분봉(각 5분 구간의 끝 값), 코스닥 시가 664.52는 파이낸셜뉴스. 사이드카 시각은 보도마다 10:22·10:26.</p>
+<ul class='pts'>
+<li>코스닥은 664.52(+1.3%)로 출발해 오전 10시 20분대 매수 사이드카(코스닥150 선물 급등) 뒤에도 꾸준히 올라 708.99(+8.13%)로 마쳤다. 7월 31일(+11.63%) 이후 가장 큰 하루 상승이다.</li>
+<li>코스피는 첫 5분 +0.7%였다가 9시 30분 무렵 4,682(−0.6%)까지 밀렸고, 그 뒤 오후 2시 45분까지 거의 쉬지 않고 올랐다. 밤사이 재료로 '한 번에 뛴' 날이 아니라 사는 돈이 계속 들어온 날이다.</li>
+<li>돈의 주인: 코스피 외국인 +1.1~1.4조 원, 코스닥 기관 +5,867억 원(9/10 이후 최대)·외국인 +3,000~3,800억 원(7/7 이후 최대). 개인은 두 시장에서 2.6조 원 넘게 팔았다(파이낸셜뉴스). 미국이 추수감사절로 쉰 날이라 외국인이 한국만 볼 수 있었던 날이기도 하다.</li>
+</ul></div>
+<div class='sec'><h2>업종 지문: 은행은 내리고 증권은 날았다</h2>
+<p>같은 급등일이라도 무엇이 올랐는지를 보면 원인이 보인다. 미국 나스닥 +6.5% 다음 날이던 11/24(세계 동반 반등)과, 대만이 +0.4%로 잠잠한데 한국만 급등한 오늘을 코스피 대비로 비교했다.</p>
+<p class='figt'>그림 2. 코스피보다 얼마나 더(덜) 올랐나 (%p, 11/24 vs 11/27)</p>
+<div class='db'><div class='dbl'><span><i class='sw' style='background:#BDB6A6'></i>11/24 세계 동반 반등일(코스피 +6.32%)</span><span><i class='sw' style='background:#F2A900'></i>11/27 한국만 급등(코스피 +4.34%)</span></div><div class='dr'><span class='dn2'>증권 5사 평균<small>미래·키움·한투·NH·삼성</small></span><div class='dt' style='--z:40.00%'><i style='left:30.41%;width:9.59%;top:3px;background:#BDB6A6'></i><i style='left:40.00%;width:51.71%;top:15px;background:#F2A900'></i></div><em><b style='color:#2B5FB3'>−1.4</b> / <b style='color:#C8372D'>+7.8</b></em></div><div class='dr'><span class='dn2'>코스닥 지수<small></small></span><div class='dt' style='--z:40.00%'><i style='left:29.80%;width:10.20%;top:3px;background:#BDB6A6'></i><i style='left:40.00%;width:25.27%;top:15px;background:#F2A900'></i></div><em><b style='color:#2B5FB3'>−1.5</b> / <b style='color:#C8372D'>+3.8</b></em></div><div class='dr'><span class='dn2'>지주사 6곳 평균<small>SK·한화·LG·GS·CJ·삼성물산</small></span><div class='dt' style='--z:40.00%'><i style='left:36.80%;width:3.20%;top:3px;background:#BDB6A6'></i><i style='left:40.00%;width:10.26%;top:15px;background:#F2A900'></i></div><em><b style='color:#2B5FB3'>−0.5</b> / <b style='color:#C8372D'>+1.5</b></em></div><div class='dr'><span class='dn2'>삼성전자·SK하이닉스<small>평균</small></span><div class='dt' style='--z:40.00%'><i style='left:40.00%;width:2.63%;top:3px;background:#BDB6A6'></i><i style='left:40.00%;width:4.27%;top:15px;background:#F2A900'></i></div><em><b style='color:#C8372D'>+0.4</b> / <b style='color:#C8372D'>+0.6</b></em></div><div class='dr'><span class='dn2'>메리츠금융<small>위원장 회사</small></span><div class='dt' style='--z:40.00%'><i style='left:7.80%;width:32.20%;top:3px;background:#BDB6A6'></i><i style='left:22.47%;width:17.53%;top:15px;background:#F2A900'></i></div><em><b style='color:#2B5FB3'>−4.8</b> / <b style='color:#2B5FB3'>−2.6</b></em></div><div class='dr'><span class='dn2'>은행 3사 평균<small>KB·신한·하나</small></span><div class='dt' style='--z:40.00%'><i style='left:32.36%;width:7.64%;top:3px;background:#BDB6A6'></i><i style='left:6.64%;width:33.36%;top:15px;background:#F2A900'></i></div><em><b style='color:#2B5FB3'>−1.1</b> / <b style='color:#2B5FB3'>−5.0</b></em></div><div class='dr'><span class='dn2'>대만 가권(참고)<small></small></span><div class='dt' style='--z:40.00%'><i style='left:40.00%;width:17.80%;top:3px;background:#BDB6A6'></i><i style='left:13.73%;width:26.27%;top:15px;background:#F2A900'></i></div><em><b style='color:#C8372D'>+2.7</b> / <b style='color:#2B5FB3'>−3.9</b></em></div><div class='dax' style='--z:40.00%'><span style='left:0'>−6.0</span><span style='left:40.00%'>0</span><span style='left:100%'>+9.0</span></div></div>
+<p class='src'>자료: Yahoo Finance 일봉 종가. 각 묶음은 단순 평균, 값 = 그날 등락률 − 코스피 등락률.</p>
+<ul class='pts'>
+<li><b>증권 5사</b>는 11/24엔 코스피보다 덜 올랐는데(−1.4%p) 오늘은 +7.8%p 더 올랐다(미래에셋 +15.9%, 키움 +14.2%). 거래 증가와 '자본시장 정책 묶음'(증안펀드·위원회)을 함께 사는 업종이다. 위원회 효과가 있다면 여기에 가장 많이 묻어 있다.</li>
+<li><b>은행 3사</b>는 오늘 코스피보다 5.0%p 덜 올랐다(실제로는 하락). 증안펀드 출자 약정이 자본비율(CET1) 부담이 될 수 있다는 우려 때문이다(한국경제). 오늘 시장이 증안펀드를 주인공으로 봤다는 증거다.</li>
+<li><b>지주사</b>는 지배구조 개혁의 직접 수혜주인데 엇갈렸다. SK +10.9%·한화 +10.2%(SK하이닉스 등 자회사 재료가 겹침) vs LG +2.6%·GS +2.3%·CJ +3.7%. 6곳 중간값 +4.6%는 코스피(+4.3%)와 비슷하다. '거버넌스 재평가'가 주인공이었다면 이 줄이 맨 앞에 있어야 한다.</li>
+<li>위원장의 회사 <b>메리츠금융</b>은 +1.7%로 코스피보다 2.6%p 덜 올랐다.</li>
+</ul></div></div><div class='pf'><span>자료: Yahoo Finance 일봉·5분봉, 파이낸셜뉴스·한국경제 11/27 마감 시황, 재경일보 11/26</span><span class='pn'>2 / 6</span></div></section><section class='page'><div class='ph'><span><b>2 · 원인 저울질</b> · 한 사람이 한국 증시를 바꿀까</span><span>2026년 11월 27일</span></div><div class='pb'><div class='sec'><h2>오늘 반등의 원인, 무게를 달아 보면</h2>
+<div class='tw'><table class='t'><thead><tr><th>후보</th><th>근거</th><th>무게</th></tr></thead><tbody><tr><th>증안펀드 증액 기대</th><td class='wrap'>10조7,600억 원 약정을 20~40조 원으로 키우는 방안 거론, 11/29 투자관리위·11/30 금융권 긴급 점검회의 예정. 실제로 주식을 사면 2008년 이후 18년 만(한국경제). 시장이 작은 코스닥에 효과가 더 클 것이란 기대. 은행↓·증권↑ 지문과 맞는다.</td><td><span class='pill pg'>강 · 주 엔진</span></td></tr><tr><th>낙폭 과대 · 빚 정리</th><td class='wrap'>코스닥 고점 대비 −48%(11/23 종가 635). 신용융자 잔고가 줄어 반등 때 강제 매도 물량이 적어졌다(한국경제). 낙폭이 컸던 로봇·바이오·2차전지가 앞장섰고 시가총액 상위 70종목 중 69종목이 올랐다.</td><td><span class='pill pg'>강</span></td></tr><tr><th>미국 휴장 중 외국인·기관 귀환</th><td class='wrap'>미국 추수감사절 휴장, 대만 +0.4%로 잠잠. 외국인·기관이 3거래일 만에 두 시장에서 함께 순매수.</td><td><span class='pill pw'>중</span></td></tr><tr><th>삼성전자 배당 30조 원 지급일</th><td class='wrap'>3분기 배당(주당 4,601원, 총 30조 원) 지급일이 11/27. 재투자 기대(한국경제). 다만 상당 부분은 외국인 몫이다.</td><td><span class='pill pw'>중</span></td></tr><tr><th>종목별 재료</th><td class='wrap'>알테오젠 머크 기술료 538억 원(+9.4%), 펩트론 페링 계약(+15.7%), CES 2027 기대 로봇주(레인보우로보틱스 +13.7%).</td><td><span class='pill pw'>중 · 종목</span></td></tr><tr><th>자본시장 대전환 위원회</th><td class='wrap'>장 마감 뒤 발표인데 시가 반응이 작았고, 지주사는 엇갈리고 메리츠는 뒤처졌다. 주요 마감 시황 기사에도 원인으로 나오지 않는다. 다만 증권주 초과 상승의 일부와 "정부가 진심"이라는 심리에는 보탬.</td><td><span class='pill pb'>약~중 · 배경</span></td></tr><tr><th>코스닥 승강제 논의</th><td class='wrap'>일부 증권가가 언급(파이낸셜뉴스). 그러나 제도는 2027년 중 시행으로 미뤄졌고, 11월에 새 발표는 확인되지 않았다.</td><td><span class='pill pb'>약</span></td></tr></tbody></table></div>
+<div class='callout'><b>한 줄 정리.</b> 오늘은 '가격' 이야기(증안펀드·낙폭·수급)가 '구조' 이야기(위원회)를 업고 간 날이다. 위원회만 따로 떼어 몇 %라고 말할 수 있는 자료는 없다.</div></div>
+<div class='sec'><h2>증안펀드 반등은 오래가나: 3주 전 대만</h2>
+<p>대만은 11/6 국가금융안정기금(약 5,000억 대만달러)의 시장 개입을 승인했다(Focus Taiwan). 첫 주 가권지수는 +10.0% 올랐지만 11/20에는 개입 전보다 9% 아래까지 내려갔다. AI 매도가 계속되는 동안 기금은 '속도'를 늦췄을 뿐 '방향'을 바꾸지 못했다.</p>
+<p class='figt'>그림 3. 대만 가권지수, 기금 개입 승인일(11/6 종가) = 100</p>
+<div class='wide'><svg viewBox='0 0 720 280' class='chart' role='img' aria-label='대만 국가안정기금 개입 뒤 가권지수'><text x='44' y='14' class='ax' style='font-size:12px'>대만 가권지수 (11/6 종가 = 100)</text><line x1='44' x2='624' y1='234.3' y2='234.3' stroke='#E6E0D2'/><text x='38' y='238.5' text-anchor='end' class='ax' style='font-size:12px'>90</text><line x1='44' x2='624' y1='195.0' y2='195.0' stroke='#E6E0D2'/><text x='38' y='199.2' text-anchor='end' class='ax' style='font-size:12px'>95</text><line x1='44' x2='624' y1='155.7' y2='155.7' stroke='#3D3A35'/><text x='38' y='159.9' text-anchor='end' class='ax' style='font-size:12px'>100</text><line x1='44' x2='624' y1='116.3' y2='116.3' stroke='#E6E0D2'/><text x='38' y='120.5' text-anchor='end' class='ax' style='font-size:12px'>105</text><line x1='44' x2='624' y1='77.0' y2='77.0' stroke='#E6E0D2'/><text x='38' y='81.2' text-anchor='end' class='ax' style='font-size:12px'>110</text><line x1='44' x2='624' y1='37.7' y2='37.7' stroke='#E6E0D2'/><text x='38' y='41.9' text-anchor='end' class='ax' style='font-size:12px'>115</text><text x='71.6' y='272' text-anchor='middle' class='xl' style='font-size:12px'>10/30</text><text x='209.7' y='272' text-anchor='middle' class='xl' style='font-size:12px'>11/6</text><text x='347.8' y='272' text-anchor='middle' class='xl' style='font-size:12px'>11/13</text><text x='485.9' y='272' text-anchor='middle' class='xl' style='font-size:12px'>11/20</text><text x='624.0' y='272' text-anchor='middle' class='xl' style='font-size:12px'>11/27</text><path d='M44.0,23.6 L71.6,46.5 L99.2,52.3 L126.9,84.2 L154.5,91.3 L182.1,118.6 L209.7,155.7 L237.3,116.8 L265.0,96.0 L292.6,65.4 L320.2,88.5 L347.8,77.0 L375.4,129.2 L403.0,147.9 L430.7,145.9 L458.3,180.9 L485.9,228.3 L513.5,212.9 L541.1,147.3 L568.8,185.5 L596.4,166.5 L624.0,163.4' fill='none' stroke='#3D3A35' stroke-width='2.4' stroke-linejoin='round'/><circle cx='624.0' cy='163.4' r='3.5' fill='#3D3A35'/><text x='631.0' y='167.6' class='bv' style='font-size:12px'>11/27 99.0</text><circle cx='209.7' cy='155.7' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='217.7' y='173.7' text-anchor='start' class='mv' style='font-size:12px'>11/6 기금 개입 승인 = 100</text><circle cx='347.8' cy='77.0' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='347.8' y='65.0' text-anchor='middle' class='mv' style='font-size:12px'>11/13 110.0 (첫 주 +10.0%)</text><circle cx='485.9' cy='228.3' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='485.9' y='248.3' text-anchor='middle' class='mv' style='font-size:12px'>11/20 90.8</text></svg></div><div class='narrow'><svg viewBox='0 0 360 240' class='chart' role='img' aria-label='대만 가권(휴대폰)'><text x='34' y='14' class='ax' style='font-size:11px'>11/6 = 100</text><line x1='34' x2='312' y1='197.0' y2='197.0' stroke='#E6E0D2'/><text x='28' y='200.9' text-anchor='end' class='ax' style='font-size:11px'>90</text><line x1='34' x2='312' y1='132.2' y2='132.2' stroke='#3D3A35'/><text x='28' y='136.1' text-anchor='end' class='ax' style='font-size:11px'>100</text><line x1='34' x2='312' y1='67.4' y2='67.4' stroke='#E6E0D2'/><text x='28' y='71.2' text-anchor='end' class='ax' style='font-size:11px'>110</text><line x1='34' x2='312' y1='132.2' y2='132.2' stroke='#3D3A35'/><text x='28' y='136.1' text-anchor='end' class='ax' style='font-size:11px'>100</text><text x='113.4' y='232' text-anchor='middle' class='xl' style='font-size:11px'>11/6</text><text x='245.8' y='232' text-anchor='middle' class='xl' style='font-size:11px'>11/20</text><text x='47.2' y='232' text-anchor='middle' class='xl' style='font-size:11px'>10/30</text><path d='M34.0,23.3 L47.2,42.2 L60.5,47.0 L73.7,73.3 L87.0,79.2 L100.2,101.6 L113.4,132.2 L126.7,100.2 L139.9,83.1 L153.1,57.8 L166.4,76.8 L179.6,67.3 L192.9,110.4 L206.1,125.8 L219.3,124.2 L232.6,153.0 L245.8,192.1 L259.0,179.4 L272.3,125.3 L285.5,156.8 L298.8,141.2 L312.0,138.6' fill='none' stroke='#3D3A35' stroke-width='2.2' stroke-linejoin='round'/><circle cx='312.0' cy='138.6' r='3.5' fill='#3D3A35'/><text x='319.0' y='142.5' class='bv' style='font-size:11px'>99.0</text><circle cx='113.4' cy='132.2' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='119.4' y='148.2' text-anchor='start' class='mv' style='font-size:11px'>기금 승인</text><circle cx='179.6' cy='67.3' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='179.6' y='57.3' text-anchor='middle' class='mv' style='font-size:11px'>110.0</text><circle cx='245.8' cy='192.1' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='245.8' y='210.1' text-anchor='middle' class='mv' style='font-size:11px'>90.8</text></svg></div>
+<p class='src'>자료: Yahoo Finance(^TWII 일봉 종가), Focus Taiwan 2026-11-06.</p>
+<ul class='pts'>
+<li>한국 2020년 3월: 증안펀드 10.76조 원을 만들었지만 실제로 주식을 사지는 않았다. 코스피 바닥(3/19 1,457.64)은 한미 통화스와프(3/19)·미 연준 무제한 양적완화(3/23) 같은 '밖의 돈'과 함께 왔다.</li>
+<li>이 사이트 저점신호기(11/27 21:01 계산)는 코스피·S&amp;P500 모두 '대기'다. 오늘 하루로 바닥이 확인됐다고 보기는 이르다.</li>
+</ul></div></div><div class='pf'><span>자료: 한국경제·파이낸셜뉴스·아시아투데이 11/26~27, Focus Taiwan 11/6, Yahoo Finance, 이 사이트 /bottom/</span><span class='pn'>3 / 6</span></div></section><section class='page'><div class='ph'><span><b>3 · 사람이 시장을 바꾼 적이 있나</b> · 한 사람이 한국 증시를 바꿀까</span><span>2026년 11월 27일</span></div><div class='pb'><div class='sec'><h2>김용범의 이력서: 메리츠에서 한 일</h2>
+<p>위원장 개인의 가장 중요한 경력은 '말'이 아니라 '한 일'이다. 2022년 11월 21일 장이 끝난 뒤 메리츠금융지주는 상장 자회사 메리츠화재·메리츠증권을 주식 교환으로 100% 자회사로 만들고(두 회사 상장폐지), 2023년부터 연결 순이익의 50%를 배당·자사주 소각으로 돌려주겠다고 발표했다(MTN·뉴스핌 2022-11-21).</p>
+<ul class='pts'>
+<li><b>한국 대기업 구조와 정반대 방향.</b> 보통은 알짜 자회사를 따로 상장(중복상장)해 지배력은 지키고 돈은 모은다. 메리츠는 반대로 상장 자회사를 흡수했고, 그 대가로 대주주(조정호 회장) 지분은 약 79%에서 47%로 줄었다(CEO스코어데일리, 보도마다 75~79%).</li>
+<li><b>시장의 답.</b> 다음 날 상한가(+29.9%). 2025년 말까지 주가 +323%(26,750원 → 113,100원), 같은 기간 코스피 +74%. 배당을 뺀 가격 기준이다.</li>
+<li><b>그가 내건 기준.</b> "대주주 1주 가치 = 일반주주 1주의 가치", "시장은 냉정하며 투자자들은 국경을 따지지 않는다"(위원장 내정 입장문, 파이낸셜뉴스). 이억원 금융위원장은 그를 "주주가치 제고, IR 활성화 등을 현장에서 먼저 실천해 온 분"이라 했다.</li>
+</ul>
+<p class='figt'>그림 4. 메리츠금융지주 vs 코스피 (2022-11-18 종가 = 100, 주간 종가)</p>
+<div class='wide'><svg viewBox='0 0 720 300' class='chart' role='img' aria-label='메리츠금융지주와 코스피 비교'><text x='44' y='14' class='ax' style='font-size:12px'>2022-11-18 종가 = 100, 주간 종가(배당 제외)</text><line x1='44' x2='596' y1='250.2' y2='250.2' stroke='#3D3A35'/><text x='38' y='254.4' text-anchor='end' class='ax' style='font-size:12px'>100</text><line x1='44' x2='596' y1='200.6' y2='200.6' stroke='#E6E0D2'/><text x='38' y='204.8' text-anchor='end' class='ax' style='font-size:12px'>200</text><line x1='44' x2='596' y1='151.0' y2='151.0' stroke='#E6E0D2'/><text x='38' y='155.2' text-anchor='end' class='ax' style='font-size:12px'>300</text><line x1='44' x2='596' y1='101.4' y2='101.4' stroke='#E6E0D2'/><text x='38' y='105.6' text-anchor='end' class='ax' style='font-size:12px'>400</text><line x1='44' x2='596' y1='51.8' y2='51.8' stroke='#E6E0D2'/><text x='38' y='56.0' text-anchor='end' class='ax' style='font-size:12px'>500</text><text x='62.3' y='292' text-anchor='middle' class='xl' style='font-size:12px'>2023</text><text x='198.4' y='292' text-anchor='middle' class='xl' style='font-size:12px'>2024</text><text x='337.0' y='292' text-anchor='middle' class='xl' style='font-size:12px'>2025</text><text x='473.0' y='292' text-anchor='middle' class='xl' style='font-size:12px'>2026</text><path d='M44.0,250.2 L46.6,234.2 L49.2,228.5 L51.8,234.8 L54.5,231.2 L57.1,225.1 L59.7,224.3 L62.3,233.3 L64.9,222.1 L67.5,216.7 L70.2,222.8 L72.8,224.4 L75.4,224.6 L78.0,224.5 L80.6,222.7 L83.2,225.9 L85.9,222.8 L88.5,225.2 L91.1,229.1 L93.7,231.5 L96.3,222.6 L98.9,221.1 L101.6,224.4 L104.2,218.6 L106.8,219.0 L109.4,217.9 L112.0,218.2 L114.6,221.1 L117.3,216.9 L119.9,220.8 L122.5,222.1 L125.1,225.4 L127.7,226.4 L130.3,227.0 L132.9,219.2 L135.6,214.9 L138.2,214.5 L140.8,211.0 L143.4,211.8 L146.0,212.1 L148.6,208.7 L151.3,203.7 L153.9,202.5 L156.5,201.6 L159.1,198.3 L161.7,202.2 L164.3,205.3 L167.0,205.2 L169.6,211.2 L172.2,211.9 L174.8,208.0 L177.4,206.2 L180.0,200.9 L182.7,203.6 L185.3,201.3 L187.9,196.3 L190.5,198.6 L193.1,200.0 L195.7,195.3 L198.4,199.7 L201.0,194.9 L203.6,194.0 L206.2,188.4 L208.8,173.0 L211.4,172.8 L214.0,167.5 L216.7,153.7 L219.3,152.8 L221.9,155.6 L224.5,152.6 L227.1,150.9 L229.7,155.3 L232.4,153.3 L235.0,161.5 L237.6,167.1 L240.2,158.8 L242.8,159.9 L245.4,154.2 L248.1,156.0 L250.7,162.5 L253.3,163.8 L255.9,166.3 L258.5,170.5 L261.1,164.5 L263.8,159.9 L266.4,152.3 L269.0,154.8 L271.6,153.9 L274.2,155.6 L276.8,157.9 L279.5,154.9 L282.1,142.7 L284.7,133.5 L287.3,138.3 L289.9,141.1 L292.5,135.1 L295.1,131.6 L297.8,127.2 L300.4,128.1 L303.0,119.9 L305.6,112.3 L308.2,114.4 L310.8,118.0 L313.5,112.7 L316.1,119.8 L318.7,114.8 L321.3,119.4 L323.9,121.9 L326.5,120.6 L329.2,125.8 L331.8,120.3 L334.4,112.7 L337.0,115.0 L339.6,102.1 L342.2,106.5 L344.9,97.8 L347.5,104.7 L350.1,91.6 L352.7,78.7 L355.3,86.2 L357.9,89.3 L360.5,95.5 L363.2,92.2 L365.8,82.3 L368.4,90.4 L371.0,102.6 L373.6,97.3 L376.2,89.2 L378.9,83.0 L381.5,90.8 L384.1,100.3 L386.7,106.7 L389.3,102.2 L391.9,103.3 L394.6,105.1 L397.2,111.6 L399.8,101.4 L402.4,99.4 L405.0,90.6 L407.6,94.3 L410.3,95.0 L412.9,102.4 L415.5,99.8 L418.1,86.2 L420.7,71.7 L423.3,76.1 L426.0,82.1 L428.6,75.5 L431.2,84.9 L433.8,101.0 L436.4,97.3 L439.0,102.8 L441.6,102.1 L444.3,98.7 L446.9,104.4 L449.5,96.1 L452.1,84.2 L454.7,105.6 L457.3,107.7 L460.0,103.5 L462.6,103.5 L465.2,106.0 L467.8,108.4 L470.4,102.4 L473.0,120.3 L475.7,113.4 L478.3,109.8 L480.9,93.6 L483.5,83.0 L486.1,58.7 L488.7,41.2 L491.4,75.0 L494.0,97.5 L496.6,101.7 L499.2,105.1 L501.8,93.9 L504.4,101.2 L507.1,95.3 L509.7,91.6 L512.3,97.3 L514.9,102.2 L517.5,101.0 L520.1,112.7 L522.7,106.7 L525.4,117.8 L528.0,110.0 L530.6,107.2 L533.2,108.6 L535.8,121.9 L538.4,100.1 L541.1,96.4 L543.7,90.6 L546.3,81.7 L548.9,80.5 L551.5,76.4 L554.1,93.4 L556.8,95.7 L559.4,84.0 L562.0,60.2 L564.6,72.7 L567.2,75.4 L569.8,77.7 L572.5,72.0 L575.1,74.7 L577.7,70.2 L580.3,73.8 L582.9,64.2 L585.5,66.0 L588.2,89.9 L590.8,77.1 L593.4,82.6 L596.0,78.9' fill='none' stroke='#F2A900' stroke-width='2.6' stroke-linejoin='round'/><circle cx='596.0' cy='78.9' r='3.5' fill='#F2A900'/><text x='603.0' y='83.1' class='bv' style='font-size:12px'>메리츠금융 445</text><path d='M44.0,250.2 L46.6,250.3 L49.2,250.4 L51.8,251.3 L54.5,251.9 L57.1,252.8 L59.7,254.4 L62.3,253.3 L64.9,251.3 L67.5,251.2 L70.2,249.4 L72.8,249.4 L75.4,249.6 L78.0,250.0 L80.6,250.6 L83.2,250.4 L85.9,251.2 L88.5,251.1 L91.1,250.8 L93.7,249.5 L96.3,249.2 L98.9,247.6 L101.6,248.1 L104.2,249.0 L106.8,249.0 L109.4,249.5 L112.0,248.3 L114.6,247.8 L117.3,247.0 L119.9,246.2 L122.5,246.5 L125.1,247.6 L127.7,247.7 L130.3,248.5 L132.9,246.4 L135.6,246.8 L138.2,246.8 L140.8,246.9 L143.4,247.2 L146.0,248.9 L148.6,248.6 L151.3,247.7 L153.9,248.1 L156.5,247.0 L159.1,248.9 L161.7,249.7 L164.3,250.9 L167.0,249.9 L169.6,251.6 L172.2,253.0 L174.8,251.7 L177.4,250.9 L180.0,249.6 L182.7,249.1 L185.3,248.9 L187.9,248.7 L190.5,247.7 L193.1,247.0 L195.7,245.9 L198.4,247.4 L201.0,248.5 L203.6,249.6 L206.2,249.5 L208.8,246.7 L211.4,246.6 L214.0,246.0 L216.7,245.6 L219.3,246.1 L221.9,245.4 L224.5,245.6 L227.1,244.0 L229.7,244.0 L232.4,244.7 L235.0,245.3 L237.6,247.2 L240.2,245.9 L242.8,245.4 L245.4,244.4 L248.1,244.5 L250.7,245.2 L253.3,246.3 L255.9,244.5 L258.5,243.8 L261.1,243.3 L263.8,243.0 L266.4,241.7 L269.0,241.8 L271.6,243.0 L274.2,244.3 L276.8,245.5 L279.5,247.2 L282.1,245.0 L284.7,244.9 L287.3,245.5 L289.9,248.1 L292.5,247.5 L295.1,247.1 L297.8,246.0 L300.4,247.6 L303.0,247.1 L305.6,247.1 L308.2,247.3 L310.8,248.2 L313.5,247.8 L316.1,250.7 L318.7,249.0 L321.3,249.9 L323.9,250.5 L326.5,249.1 L329.2,251.0 L331.8,251.0 L334.4,250.2 L337.0,248.7 L339.6,248.6 L342.2,248.3 L344.9,248.7 L347.5,248.6 L350.1,247.2 L352.7,245.9 L355.3,248.4 L357.9,247.7 L360.5,247.7 L363.2,246.1 L365.8,247.9 L368.4,249.7 L371.0,250.4 L373.6,249.4 L376.2,248.1 L378.9,247.8 L381.5,247.5 L384.1,246.5 L386.7,247.2 L389.3,245.0 L391.9,242.7 L394.6,241.0 L397.2,238.4 L399.8,237.8 L402.4,237.8 L405.0,235.3 L407.6,235.1 L410.3,234.9 L412.9,236.5 L415.5,234.6 L418.1,234.3 L420.7,235.5 L423.3,235.1 L426.0,234.7 L428.6,230.9 L431.2,229.9 L433.8,231.1 L436.4,227.7 L439.0,226.5 L441.6,223.7 L444.3,219.8 L446.9,216.4 L449.5,219.5 L452.1,218.4 L454.7,221.6 L457.3,220.1 L460.0,216.6 L462.6,215.2 L465.2,218.2 L467.8,216.0 L470.4,212.3 L473.0,206.7 L475.7,201.5 L478.3,198.5 L480.9,193.8 L483.5,196.5 L486.1,188.0 L488.7,181.9 L491.4,173.1 L494.0,186.4 L496.6,188.4 L499.2,182.5 L501.8,189.4 L504.4,190.7 L507.1,180.9 L509.7,174.1 L512.3,168.4 L514.9,165.9 L517.5,147.6 L520.1,147.7 L522.7,140.5 L525.4,127.8 L528.0,134.2 L530.6,134.9 L533.2,116.1 L535.8,129.1 L538.4,135.6 L541.1,148.1 L543.7,161.4 L546.3,164.0 L548.9,165.9 L551.5,172.8 L554.1,158.2 L556.8,159.5 L559.4,162.0 L562.0,164.1 L564.6,159.6 L567.2,159.9 L569.8,156.1 L572.5,157.6 L575.1,165.3 L577.7,184.8 L580.3,187.1 L582.9,183.5 L585.5,197.1 L588.2,192.4 L590.8,200.9 L593.4,204.2 L596.0,200.0' fill='none' stroke='#3D3A35' stroke-width='2.0' stroke-linejoin='round'/><circle cx='596.0' cy='200.0' r='3.5' fill='#3D3A35'/><text x='603.0' y='208.2' class='bv' style='font-size:12px'>코스피 201</text><circle cx='46.6' cy='234.2' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='54.6' y='268.2' text-anchor='start' class='mv' style='font-size:12px'>2022-11-21 통합·환원 50% 발표 → 다음 날 상한가</text></svg></div><div class='narrow'><svg viewBox='0 0 360 240' class='chart' role='img' aria-label='메리츠와 코스피(휴대폰)'><text x='34' y='14' class='ax' style='font-size:11px'>2022-11-18 = 100</text><line x1='34' x2='282' y1='195.0' y2='195.0' stroke='#3D3A35'/><text x='28' y='198.8' text-anchor='end' class='ax' style='font-size:11px'>100</text><line x1='34' x2='282' y1='157.4' y2='157.4' stroke='#E6E0D2'/><text x='28' y='161.2' text-anchor='end' class='ax' style='font-size:11px'>200</text><line x1='34' x2='282' y1='119.8' y2='119.8' stroke='#E6E0D2'/><text x='28' y='123.6' text-anchor='end' class='ax' style='font-size:11px'>300</text><line x1='34' x2='282' y1='82.2' y2='82.2' stroke='#E6E0D2'/><text x='28' y='86.0' text-anchor='end' class='ax' style='font-size:11px'>400</text><line x1='34' x2='282' y1='44.6' y2='44.6' stroke='#E6E0D2'/><text x='28' y='48.4' text-anchor='end' class='ax' style='font-size:11px'>500</text><text x='42.2' y='232' text-anchor='middle' class='xl' style='font-size:11px'>23년</text><text x='103.3' y='232' text-anchor='middle' class='xl' style='font-size:11px'>24년</text><text x='165.6' y='232' text-anchor='middle' class='xl' style='font-size:11px'>25년</text><text x='226.8' y='232' text-anchor='middle' class='xl' style='font-size:11px'>26년</text><path d='M34.0,195.0 L35.2,182.9 L36.4,178.5 L37.5,183.3 L38.7,180.6 L39.9,175.9 L41.1,175.3 L42.2,182.2 L43.4,173.7 L44.6,169.6 L45.8,174.2 L46.9,175.5 L48.1,175.6 L49.3,175.5 L50.5,174.1 L51.6,176.6 L52.8,174.2 L54.0,176.1 L55.2,179.0 L56.3,180.8 L57.5,174.0 L58.7,172.9 L59.9,175.5 L61.0,171.0 L62.2,171.3 L63.4,170.5 L64.6,170.8 L65.7,172.9 L66.9,169.8 L68.1,172.7 L69.3,173.7 L70.4,176.2 L71.6,176.9 L72.8,177.4 L74.0,171.5 L75.1,168.2 L76.3,167.9 L77.5,165.3 L78.7,165.9 L79.8,166.1 L81.0,163.5 L82.2,159.8 L83.4,158.8 L84.5,158.2 L85.7,155.6 L86.9,158.6 L88.1,161.0 L89.2,160.8 L90.4,165.4 L91.6,165.9 L92.8,163.0 L93.9,161.6 L95.1,157.6 L96.3,159.6 L97.5,157.9 L98.6,154.1 L99.8,155.9 L101.0,157.0 L102.2,153.3 L103.3,156.7 L104.5,153.1 L105.7,152.4 L106.9,148.1 L108.0,136.4 L109.2,136.3 L110.4,132.3 L111.6,121.8 L112.7,121.2 L113.9,123.3 L115.1,121.0 L116.3,119.7 L117.5,123.0 L118.6,121.6 L119.8,127.7 L121.0,132.0 L122.2,125.7 L123.3,126.5 L124.5,122.2 L125.7,123.6 L126.9,128.5 L128.0,129.5 L129.2,131.4 L130.4,134.6 L131.6,130.0 L132.7,126.5 L133.9,120.8 L135.1,122.6 L136.3,122.0 L137.4,123.3 L138.6,125.1 L139.8,122.8 L141.0,113.5 L142.1,106.6 L143.3,110.2 L144.5,112.3 L145.7,107.8 L146.8,105.1 L148.0,101.7 L149.2,102.4 L150.4,96.2 L151.5,90.5 L152.7,92.1 L153.9,94.8 L155.1,90.7 L156.2,96.1 L157.4,92.3 L158.6,95.8 L159.8,97.7 L160.9,96.8 L162.1,100.7 L163.3,96.5 L164.5,90.7 L165.6,92.5 L166.8,82.7 L168.0,86.0 L169.2,79.5 L170.3,84.7 L171.5,74.8 L172.7,65.0 L173.9,70.6 L175.0,73.0 L176.2,77.7 L177.4,75.2 L178.6,67.7 L179.7,73.8 L180.9,83.1 L182.1,79.1 L183.3,72.9 L184.4,68.2 L185.6,74.1 L186.8,81.4 L188.0,86.2 L189.1,82.8 L190.3,83.6 L191.5,85.0 L192.7,89.9 L193.8,82.2 L195.0,80.7 L196.2,74.0 L197.4,76.8 L198.5,77.3 L199.7,83.0 L200.9,81.0 L202.1,70.6 L203.3,59.6 L204.4,63.0 L205.6,67.5 L206.8,62.6 L208.0,69.7 L209.1,81.9 L210.3,79.1 L211.5,83.2 L212.7,82.7 L213.8,80.1 L215.0,84.4 L216.2,78.1 L217.4,69.2 L218.5,85.4 L219.7,87.0 L220.9,83.8 L222.1,83.8 L223.2,85.6 L224.4,87.5 L225.6,83.0 L226.8,96.5 L227.9,91.3 L229.1,88.6 L230.3,76.3 L231.5,68.2 L232.6,49.9 L233.8,36.6 L235.0,62.2 L236.2,79.2 L237.3,82.4 L238.5,85.0 L239.7,76.5 L240.9,82.0 L242.0,77.6 L243.2,74.8 L244.4,79.1 L245.6,82.8 L246.7,81.9 L247.9,90.7 L249.1,86.2 L250.3,94.6 L251.4,88.7 L252.6,86.6 L253.8,87.7 L255.0,97.7 L256.1,81.2 L257.3,78.4 L258.5,74.0 L259.7,67.3 L260.8,66.3 L262.0,63.3 L263.2,76.1 L264.4,77.9 L265.5,69.0 L266.7,50.9 L267.9,60.4 L269.1,62.5 L270.2,64.2 L271.4,59.9 L272.6,61.9 L273.8,58.6 L274.9,61.2 L276.1,54.0 L277.3,55.4 L278.5,73.4 L279.6,63.8 L280.8,68.0 L282.0,65.1' fill='none' stroke='#F2A900' stroke-width='2.4' stroke-linejoin='round'/><circle cx='282.0' cy='65.1' r='3.5' fill='#F2A900'/><text x='289.0' y='69.0' class='bv' style='font-size:11px'>메리츠 445</text><path d='M34.0,195.0 L35.2,195.1 L36.4,195.1 L37.5,195.8 L38.7,196.3 L39.9,197.0 L41.1,198.2 L42.2,197.3 L43.4,195.9 L44.6,195.7 L45.8,194.4 L46.9,194.4 L48.1,194.6 L49.3,194.9 L50.5,195.3 L51.6,195.2 L52.8,195.7 L54.0,195.7 L55.2,195.4 L56.3,194.5 L57.5,194.3 L58.7,193.0 L59.9,193.4 L61.0,194.1 L62.2,194.1 L63.4,194.5 L64.6,193.5 L65.7,193.2 L66.9,192.5 L68.1,191.9 L69.3,192.2 L70.4,193.0 L71.6,193.1 L72.8,193.7 L74.0,192.1 L75.1,192.4 L76.3,192.4 L77.5,192.5 L78.7,192.7 L79.8,194.0 L81.0,193.8 L82.2,193.1 L83.4,193.4 L84.5,192.5 L85.7,194.0 L86.9,194.6 L88.1,195.5 L89.2,194.8 L90.4,196.0 L91.6,197.1 L92.8,196.1 L93.9,195.5 L95.1,194.6 L96.3,194.2 L97.5,194.0 L98.6,193.8 L99.8,193.1 L101.0,192.6 L102.2,191.7 L103.3,192.9 L104.5,193.7 L105.7,194.5 L106.9,194.4 L108.0,192.3 L109.2,192.3 L110.4,191.8 L111.6,191.5 L112.7,191.9 L113.9,191.3 L115.1,191.5 L116.3,190.3 L117.5,190.3 L118.6,190.8 L119.8,191.3 L121.0,192.7 L122.2,191.7 L123.3,191.4 L124.5,190.6 L125.7,190.7 L126.9,191.2 L128.0,192.0 L129.2,190.7 L130.4,190.1 L131.6,189.7 L132.7,189.5 L133.9,188.5 L135.1,188.6 L136.3,189.6 L137.4,190.5 L138.6,191.4 L139.8,192.7 L141.0,191.1 L142.1,191.0 L143.3,191.4 L144.5,193.4 L145.7,192.9 L146.8,192.7 L148.0,191.8 L149.2,193.0 L150.4,192.6 L151.5,192.7 L152.7,192.8 L153.9,193.5 L155.1,193.2 L156.2,195.4 L157.4,194.1 L158.6,194.8 L159.8,195.2 L160.9,194.2 L162.1,195.6 L163.3,195.6 L164.5,195.0 L165.6,193.9 L166.8,193.7 L168.0,193.5 L169.2,193.8 L170.3,193.8 L171.5,192.7 L172.7,191.7 L173.9,193.6 L175.0,193.1 L176.2,193.1 L177.4,191.9 L178.6,193.2 L179.7,194.6 L180.9,195.1 L182.1,194.4 L183.3,193.4 L184.4,193.2 L185.6,192.9 L186.8,192.2 L188.0,192.7 L189.1,191.1 L190.3,189.3 L191.5,188.0 L192.7,186.1 L193.8,185.6 L195.0,185.6 L196.2,183.7 L197.4,183.5 L198.5,183.4 L199.7,184.6 L200.9,183.2 L202.1,182.9 L203.3,183.8 L204.4,183.6 L205.6,183.3 L206.8,180.3 L208.0,179.6 L209.1,180.5 L210.3,178.0 L211.5,177.0 L212.7,174.9 L213.8,171.9 L215.0,169.4 L216.2,171.7 L217.4,170.9 L218.5,173.3 L219.7,172.2 L220.9,169.5 L222.1,168.5 L223.2,170.7 L224.4,169.0 L225.6,166.3 L226.8,162.0 L227.9,158.1 L229.1,155.8 L230.3,152.2 L231.5,154.3 L232.6,147.9 L233.8,143.2 L235.0,136.5 L236.2,146.7 L237.3,148.2 L238.5,143.6 L239.7,148.9 L240.9,149.8 L242.0,142.4 L243.2,137.3 L244.4,133.0 L245.6,131.1 L246.7,117.2 L247.9,117.3 L249.1,111.8 L250.3,102.2 L251.4,107.0 L252.6,107.6 L253.8,93.3 L255.0,103.2 L256.1,108.1 L257.3,117.6 L258.5,127.6 L259.7,129.6 L260.8,131.1 L262.0,136.3 L263.2,125.2 L264.4,126.2 L265.5,128.1 L266.7,129.7 L267.9,126.3 L269.1,126.5 L270.2,123.6 L271.4,124.8 L272.6,130.6 L273.8,145.4 L274.9,147.2 L276.1,144.4 L277.3,154.7 L278.5,151.2 L279.6,157.7 L280.8,160.1 L282.0,156.9' fill='none' stroke='#3D3A35' stroke-width='1.8' stroke-linejoin='round'/><circle cx='282.0' cy='156.9' r='3.5' fill='#3D3A35'/><text x='289.0' y='164.8' class='bv' style='font-size:11px'>코스피 201</text><circle cx='35.2' cy='182.9' r='3.5' fill='#fff' stroke='#3D3A35' stroke-width='1.5'/><text x='41.2' y='212.9' text-anchor='start' class='mv' style='font-size:11px'>통합 발표</text></svg></div>
+<div class='legend'><span><i class='sw' style='background:#F2A900'></i>메리츠금융지주(138040)</span><span><i class='sw' style='background:#3D3A35'></i>코스피</span></div>
+<p class='src'>자료: Yahoo Finance 주간 종가(배당 제외). 2026-02-20 메리츠 종가 최고 146,200원.</p></div>
+<div class='sec'><h2>사람보다 '규칙의 강제력'이 시장을 바꿨다</h2>
+<div class='tw'><table class='t'><thead><tr><th>사례</th><th>바꾼 것</th><th>강제력</th><th>그 뒤 주가</th></tr></thead><tbody><tr class=hl><th class='wrap'>메리츠 통합 (2022.11.21)</th><td class='wrap'>상장 자회사 2곳 흡수로 중복상장 해소, 순이익 50% 환원</td><td class='wrap'>회사가 스스로 실행</td><td class='wrap'>다음 날 +29.9%, 2025년 말까지 +323%(코스피 +74%)</td></tr><tr><th class='wrap'>일본 도쿄거래소 PBR 개선 요구 (2023.3.31)</th><td class='wrap'>PBR 1배 미만 기업에 개선 계획 공개 요구</td><td class='wrap'>거래소 상장 관리(공개 압박)</td><td class='wrap'>닛케이 2023년 말 +19.3%, 1년 뒤 +44.0%(엔 약세 등도 겹침)</td></tr><tr><th class='wrap'>한국 기업 밸류업 프로그램 (2024.2.26)</th><td class='wrap'>기업가치 제고 계획 자율 공시</td><td class='wrap'>약함(자율)</td><td class='wrap'>기대 랠리 1/17→2/23 +9.5%, 발표일 −0.8%, 2024년 −9.6%</td></tr><tr><th class='wrap'>한국 상법 개정 1~3차 (2025.7·8, 2026.2)</th><td class='wrap'>이사의 주주 충실의무, 집중투표·감사위원 분리선출, 자사주 1년 안 소각</td><td class='wrap'>법</td><td class='wrap'>2025년 코스피 +75.6%(반도체 이익 급증이 겹침)</td></tr></tbody></table></div>
+<div class='callout'>같은 '코리아 디스카운트 해소'라도 자율(2024)과 법(2025)의 결과가 갈렸다. 한 사람의 등용이 의미를 가지려면 그 사람이 '법이 되는 과제'를 만들어 내야 한다.</div></div></div><div class='pf'><span>자료: Yahoo Finance(138040.KS·^KS11·^N225 종가), MTN·뉴스핌 2022-11-21, CEO스코어데일리 2022-11-22, 뉴시스 2026-02-25, 파이낸셜뉴스 2026-11-26</span><span class='pn'>4 / 6</span></div></section><section class='page'><div class='ph'><span><b>4 · 할 수 있는 것과 없는 것</b> · 한 사람이 한국 증시를 바꿀까</span><span>2026년 11월 27일</span></div><div class='pb'><div class='sec'><h2>자본시장의 세 바퀴: 실적·거버넌스·수급</h2>
+<p>이 인선을 반긴 한 투자자의 글(SNS)은 자본시장이 '기업 이익의 장기 우상향, 경영진에 대한 신뢰(거버넌스), 장기 자본(수급)' 세 바퀴로 굴러간다고 했다. 위원장이 손댈 수 있는 바퀴를 나눠 보면 기대할 크기가 정해진다.</p>
+<div class='grid3'>
+<div class='box'><h3>실적 — 손이 거의 안 닿는다</h3><p>코스피는 올해 필라델피아 반도체지수처럼 움직였다(고점까지 +116% vs +107%, 고점에서 −48.5% vs −42.5%). 지금 하락의 출발점은 미국 AI 투자에 대한 의구심이다. 위원회가 메모리 값을 올릴 수는 없다.</p></div>
+<div class='box'><h3>거버넌스 — 가장 큰 영향</h3><p>의제를 정하고 대통령에게 직접 올린다. 다만 실행은 금융위·법무부, 법은 국회 몫이다. 과제가 법이 되기까지 보통 1년 안팎(가정).</p></div>
+<div class='box'><h3>수급 — 간접</h3><p>국민연금(보건복지부 기금위)·퇴직연금(고용노동부)·세제(기획재정부)는 여러 부처의 일이다. '대통령 직접 보고' 구조가 힘을 낼 수 있는 곳이 여기다.</p></div>
+</div></div>
+<div class='sec'><h2>"한국은 덜 빠졌어야 했다"는 주장 점검</h2>
+<p class='figt'>그림 5. 2026년에 올라간 폭과 내려간 폭 (종가 기준, %)</p>
+<div class='db'><div class='dbl'><span><i class='sw' style='background:#F2A900'></i>2025년 말 → 2026년 고점(종가)</span><span><i class='sw' style='background:#3D3A35'></i>고점 → 저점(종가)</span></div><div class='dr'><span class='dn2'>코스피<small>올해 +16.6%</small></span><div class='dt' style='--z:33.33%'><i style='left:33.33%;width:64.44%;top:3px;background:#F2A900'></i><i style='left:6.39%;width:26.94%;top:15px;background:#3D3A35'></i></div><em><b style='color:#C8372D'>+116.0</b> / <b style='color:#2B5FB3'>−48.5</b></em></div><div class='dr'><span class='dn2'>필라델피아 반도체<small>올해 +23.9%</small></span><div class='dt' style='--z:33.33%'><i style='left:33.33%;width:59.44%;top:3px;background:#F2A900'></i><i style='left:9.72%;width:23.61%;top:15px;background:#3D3A35'></i></div><em><b style='color:#C8372D'>+107.0</b> / <b style='color:#2B5FB3'>−42.5</b></em></div><div class='dr'><span class='dn2'>대만 가권<small>올해 +35.7%</small></span><div class='dt' style='--z:33.33%'><i style='left:33.33%;width:40.00%;top:3px;background:#F2A900'></i><i style='left:17.94%;width:15.39%;top:15px;background:#3D3A35'></i></div><em><b style='color:#C8372D'>+72.0</b> / <b style='color:#2B5FB3'>−27.7</b></em></div><div class='dr'><span class='dn2'>닛케이225<small>올해 +16.6%</small></span><div class='dt' style='--z:33.33%'><i style='left:33.33%;width:24.44%;top:3px;background:#F2A900'></i><i style='left:21.11%;width:12.22%;top:15px;background:#3D3A35'></i></div><em><b style='color:#C8372D'>+44.0</b> / <b style='color:#2B5FB3'>−22.0</b></em></div><div class='dr'><span class='dn2'>코스닥<small>올해 −23.4%</small></span><div class='dt' style='--z:33.33%'><i style='left:33.33%;width:17.78%;top:3px;background:#F2A900'></i><i style='left:6.56%;width:26.78%;top:15px;background:#3D3A35'></i></div><em><b style='color:#C8372D'>+32.0</b> / <b style='color:#2B5FB3'>−48.2</b></em></div><div class='dr'><span class='dn2'>나스닥<small>올해 +1.5%</small></span><div class='dt' style='--z:33.33%'><i style='left:33.33%;width:10.56%;top:3px;background:#F2A900'></i><i style='left:23.28%;width:10.06%;top:15px;background:#3D3A35'></i></div><em><b style='color:#C8372D'>+19.0</b> / <b style='color:#2B5FB3'>−18.1</b></em></div><div class='dax' style='--z:33.33%'><span style='left:0'>−60.0</span><span style='left:33.33%'>0</span><span style='left:100%'>+120.0</span></div></div>
+<p class='src'>자료: Yahoo Finance 일봉 종가. 기준 2025-12-30(코스피·코스닥)·12-31(그 외). 고점·저점은 2026년 종가. 나스닥·필라델피아 반도체는 11/25, 그 외 11/27 종가.</p>
+<ul class='pts'>
+<li>그 글은 "나스닥 15%·대만 22% 하락 정도여야 정상인데 한국은 50% 넘게 빠졌다"고 했다. 지금 기준 나스닥 −14.5%, 대만 −21.1%로 맞고, 코스피 종가 기준 최대 하락은 −48.5%(6/22 9,115 → 11/25 4,698)다.</li>
+<li>그러나 코스피는 그전에 연초보다 +116% 올랐다(대만 +72%, 나스닥 +19%). 연초 대비로 보면 지금 코스피 +16.6%는 닛케이(+16.6%)와 같고 대만(+35.7%)보다 낮다. '덜 빠졌어야 할 시장이 더 빠졌다'기보다 '더 오른 만큼 더 빠졌다'에 가깝다.</li>
+<li>그래도 한국만 유독 더 빠진 구간은 있다. 6/22 고점에서 7/31 6,595까지 약 5주에 −27.6%, 같은 기간 필라델피아 반도체 −22.7%, 대만 −9.7%. 국민연금 국내주식 비중이 2월 말 24.5%로 목표(14.9%)를 크게 넘었고 리밸런싱 유예가 6월 말 끝났다(뉴시스). 그 글이 지목한 '국민연금 리밸런싱 지연·레버리지 쏠림'과 맞는 숫자다. 다만 인과까지 확인한 것은 아니다.</li>
+<li>진짜 구조 문제는 코스닥이다. 코스피보다 두 달 먼저(4/27) 꺾였고 올해 −23.4%다. 위원회 의제에 '코스닥 시장 재설계'가 따로 들어간 이유다.</li>
+</ul></div></div><div class='pf'><span>자료: Yahoo Finance(^KS11·^KQ11·^SOX·^TWII·^N225·^IXIC), 뉴시스·뉴데일리 2026-05(국민연금 비중), 한 투자자의 SNS 글</span><span class='pn'>5 / 6</span></div></section><section class='page'><div class='ph'><span><b>5 · 앞으로 일어날 변화</b> · 한 사람이 한국 증시를 바꿀까</span><span>2026년 11월 27일</span></div><div class='pb'><div class='sec'><h2>앞으로 1년, 이 순서로 확인한다</h2>
+<div class='tw'><table class='t'><thead><tr><th>시점</th><th>무엇</th><th>왜 중요한가</th><th>볼 숫자</th></tr></thead><tbody><tr><th class='wrap'>11/29(일)~11/30(월)</th><td class='wrap'>증안펀드 투자관리위 긴급회의 → 금융위원장·5대 금융지주 회장 긴급 점검회의</td><td class='wrap'>다음 몇 주 지수의 가장 큰 변수. 규모, 사는 대상(지수 전체? 코스닥?), 시작 시기</td><td class='wrap'>규모 20조 원 이상인지, 매입 시작일</td></tr><tr><th class='wrap'>12월(가정)</th><td class='wrap'>위원 명단 발표·첫 회의</td><td class='wrap'>대통령은 여야·거래소·투자기관·협회의 수평 참여를 말했다. 재계·운용사·해외 연기금·소액주주·학계의 균형</td><td class='wrap'>소액주주·해외 투자자 몫, 위원장의 이해상충 회피 장치(현직 금융지주 부회장)</td></tr><tr><th class='wrap'>2027년 1분기(가정)</th><td class='wrap'>첫 과제 묶음</td><td class='wrap'>"대주주 1주 = 일반주주 1주"에서 나올 후보: 의무공개매수(경영권 매각 때 일반주주도 같은 값), 중복상장·물적분할 자회사 상장 규율, 합병·분할 비율의 공정가치, M&A 장벽 정리(대통령 전수조사 지시), IR 의무 확대</td><td class='wrap'>'권고'인지 '법안'인지</td></tr><tr><th class='wrap'>2027년 중</th><td class='wrap'>코스닥 세그먼트(승강제) 시행(거래소 계획)</td><td class='wrap'>지수 전체보다 좋은 회사와 나쁜 회사의 차이가 커진다</td><td class='wrap'>편입 기준, 상장폐지 기준</td></tr><tr><th class='wrap'>2027년 정기국회(가정)</th><td class='wrap'>법 개정 통과 여부</td><td class='wrap'>2028년 4월 총선 전 사실상 마지막 큰 입법 창구(가정)</td><td class='wrap'>본회의 통과</td></tr></tbody></table></div></div>
+<div class='sec'><h2>세 갈래 시나리오 (가정)</h2>
+<div class='verd'>
+<div class='vc'><span class='k'>A · 규칙이 된다</span><h3>첫 과제가 법안으로, 국회 통과</h3><p>지주사·중복상장 모회사·대주주 지분이 높은 저PBR 종목의 할인이 줄어든다. 2025년처럼 이익 증가가 붙어야 효과가 커진다(반도체 이익 회복이 조건).</p></div>
+<div class='vc'><span class='k'>B · 말로 끝난다</span><h3>제언은 많고 법은 막힌다</h3><p>2024년 밸류업처럼 기대 랠리 뒤 실망. 위원회 소식에 시장이 반응하지 않게 된다.</p></div>
+<div class='vc'><span class='k'>C · 주가 방어로 섞인다</span><h3>증안펀드·지수 수준이 목표처럼 된다</h3><p>외국인은 '규칙'보다 '개입'을 보게 된다. 대만처럼 기금 효과가 빠지면 신뢰도 같이 빠진다.</p></div>
+</div>
+<div class='callout'><b>결론.</b> 한 사람의 등용은 '방향'을 바꾸는 사건이지 '가격'을 바꾸는 사건이 아니다. 오늘 +8%는 가격 이야기(증안펀드·낙폭·수급)였고, 김용범 위원장의 몫은 1~3년에 걸친 '배수(PBR)' 이야기다. 둘을 섞으면 실망한다. 대통령 스스로 11/13 간담회에서 "작년에 전담기구를 만들어 강하게 추진했어야 했는데 너무 쉽게 되는 것 같아 방심했다"는 취지로 말했다(아주경제). 이번에 볼 것은 주가가 다시 오를 때도 개혁 속도가 유지되는지다.</div></div>
+<div class='sec'><h2>고지사항</h2><div class='disc'>
+<p>이 메모는 개인 공부용 생각 정리이며 특정 종목·지수의 매수·매도를 권하는 글이 아닙니다.</p>
+<p>지수·주가는 Yahoo Finance 일봉·5분봉 종가(2026-11-27 장 마감 기준, 미국 지수는 11/25 종가)입니다. 수급·사이드카·증안펀드·위원회 내용은 언론 보도를 옮긴 것으로, 보도 시각에 따라 숫자가 다를 수 있습니다. 메리츠금융 주가 비교는 배당을 뺀 가격 기준입니다.</p>
+<p>'가정'이라고 적은 일정·시나리오는 작성자의 추정이며 실제와 다를 수 있습니다. 투자 판단과 책임은 투자자 본인에게 있습니다.</p>
+</div></div></div><div class='pf'><span>자료: 파이낸셜뉴스·재경일보 11/26, 아주경제·뉴스1 11/13, 한국경제 2026-10(코스닥 승강제), 아시아투데이 11/26~27</span><span class='pn'>6 / 6</span></div></section></body></html>
